@@ -217,7 +217,8 @@ async def get_cobrix_payment_data(
             merchant_name=device.merchant_name,
             phone=device.phone,
             doc_id=device.doc_id,
-            months=months
+            months=months,
+            email=device.email or ""
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -230,6 +231,7 @@ async def get_cobrix_payment_data(
         "merchant_name": device.merchant_name,
         "phone": device.phone,
         "doc_id": device.doc_id,
+        "email": device.email or "",
         "token": token,
         "payment_url": payment_url,
         "message_text": message_text,
@@ -266,7 +268,8 @@ async def get_whatsapp_payment_redirect(
             merchant_name=device.merchant_name,
             phone=device.phone,
             doc_id=device.doc_id,
-            months=months
+            months=months,
+            email=device.email or ""
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -7,6 +7,7 @@ data class UserProfile(
     val bankName: String = "Banesco",     // Nombre del banco receptor
     val phoneNumber: String = "",         // Teléfono registrado en Pago Móvil (ej. 04141234567)
     val idCard: String = "",              // Cédula o RIF (ej. V-18456789)
+    val email: String = "",               // Correo electrónico para notificaciones y facturación
     val qrImageUri: String? = null,       // URI de la imagen estática del QR descargada del banco
     val bcvRate: Double = 45.0,           // Tasa de cambio VES/USD
     val soundNotificationEnabled: Boolean = true, // Alarma / voz al recibir pago

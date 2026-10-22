@@ -66,7 +66,7 @@ object ZippySyncManager {
                 put("merchant_name", profile.merchantName.ifEmpty { "Comercio Zippy" })
                 put("phone", profile.phoneNumber)
                 put("doc_id", profile.idCard)
-                put("email", "")
+                put("email", profile.email)
                 put("app_version", "1.2.0")
             }
 

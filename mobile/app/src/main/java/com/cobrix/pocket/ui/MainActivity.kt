@@ -1496,6 +1496,7 @@ class MainActivity : AppCompatActivity() {
                 bankName = cleanBankName,
                 phoneNumber = binding.etSettingsPhone.text.toString().trim(),
                 idCard = binding.etSettingsId.text.toString().trim(),
+                email = binding.etSettingsEmail.text.toString().trim(),
                 bcvRate = parsedBcvRate,
                 soundboxMode = soundboxMode,
                 voiceAnnouncementEnabled = soundboxMode == "VOICE",
@@ -1615,6 +1616,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.etSettingsPhone.setText(profile.phoneNumber)
         binding.etSettingsId.setText(profile.idCard)
+        binding.etSettingsEmail.setText(profile.email)
         binding.etSettingsBcvRate.setText(String.format(Locale.US, "%.2f", profile.bcvRate))
 
         // Modo Soundbox

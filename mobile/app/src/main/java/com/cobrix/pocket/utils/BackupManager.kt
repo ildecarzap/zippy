@@ -63,6 +63,7 @@ object BackupManager {
             put("bankName", profile.bankName)
             put("phoneNumber", profile.phoneNumber)
             put("idCard", profile.idCard)
+            put("email", profile.email)
             put("bcvRate", profile.bcvRate)
             put("soundboxMode", profile.soundboxMode)
             put("biometricSecurityEnabled", profile.biometricSecurityEnabled)
@@ -175,6 +176,7 @@ object BackupManager {
                     bankName = p.optString("bankName", "Banesco"),
                     phoneNumber = p.optString("phoneNumber", ""),
                     idCard = p.optString("idCard", ""),
+                    email = p.optString("email", ""),
                     bcvRate = p.optDouble("bcvRate", 45.0),
                     soundboxMode = p.optString("soundboxMode", "VOICE"),
                     voiceAnnouncementEnabled = p.optString("soundboxMode", "VOICE") == "VOICE",

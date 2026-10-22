@@ -14,6 +14,7 @@ object PreferencesHelper {
     private const val KEY_BANK_NAME = "bank_name"
     private const val KEY_PHONE = "phone_number"
     private const val KEY_ID_CARD = "id_card"
+    private const val KEY_EMAIL = "merchant_email"
     private const val KEY_QR_URI = "qr_image_uri"
     private const val KEY_BCV_RATE = "bcv_rate"
     private const val KEY_SOUND_ENABLED = "sound_enabled"
@@ -161,6 +162,7 @@ object PreferencesHelper {
             bankName = prefs.getString(KEY_BANK_NAME, "Banesco") ?: "Banesco",
             phoneNumber = prefs.getString(KEY_PHONE, "04141234567") ?: "",
             idCard = prefs.getString(KEY_ID_CARD, "V-18456789") ?: "",
+            email = prefs.getString(KEY_EMAIL, "") ?: "",
             qrImageUri = bankQr,
             bcvRate = prefs.getFloat(KEY_BCV_RATE, 45.0f).toDouble(),
             soundNotificationEnabled = soundboxMode != "MUTED",
@@ -179,6 +181,7 @@ object PreferencesHelper {
             .putString(KEY_BANK_NAME, profile.bankName)
             .putString(KEY_PHONE, profile.phoneNumber)
             .putString(KEY_ID_CARD, profile.idCard)
+            .putString(KEY_EMAIL, profile.email)
             .putString(KEY_QR_URI, profile.qrImageUri)
             .putFloat(KEY_BCV_RATE, profile.bcvRate.toFloat())
             .putBoolean(KEY_SOUND_ENABLED, profile.soundboxMode != "MUTED")

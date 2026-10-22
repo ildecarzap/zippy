@@ -116,7 +116,8 @@ def create_or_get_cobrixpay_payment_url(
     merchant_name: str,
     phone: str,
     doc_id: Optional[str] = "",
-    months: int = 1
+    months: int = 1,
+    email: Optional[str] = ""
 ) -> Tuple[str, str]:
     """
     Llama a la API oficial de CobrixPay (POST /api/v1/debts) con token de autenticación
@@ -138,7 +139,7 @@ def create_or_get_cobrixpay_payment_url(
     if not clean_phone:
         clean_phone = "+584140000000"
 
-    email = f"{device_id.lower().replace('-', '')}@zippy.ciemtech.com"
+    target_email = email.strip() if (email and "@" in email) else f"{device_id.lower().replace('-', '')}@zippy.ciemtech.com"
 
     try:
         headers = get_cobrixpay_auth_headers()
@@ -153,7 +154,7 @@ def create_or_get_cobrixpay_payment_url(
             "allow_partial_payment": False,
             "debtor_data": {
                 "name": merchant_name.strip() or f"Comercio {device_id}",
-                "email": email,
+                "email": target_email,
                 "phone": clean_phone,
                 "document_number": doc_id.strip() if doc_id else "V-00000000",
                 "document_type": "RIF"

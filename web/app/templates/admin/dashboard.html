@@ -149,6 +149,9 @@
                 {% else %}
                 <span style="color: var(--color-text-light); font-size: 0.85rem;">No registrado</span>
                 {% endif %}
+                {% if device.email %}
+                <br><span style="color: var(--color-text-muted); font-size: 0.8rem;">✉️ {{ device.email }}</span>
+                {% endif %}
               </td>
 
               <!-- Plan Badge -->
@@ -341,7 +344,7 @@
         document.getElementById('modalLicenseId').value = currentModalLicenseId;
         document.getElementById('modalPhone').value = data.phone;
         document.getElementById('modalMerchantName').innerText = data.merchant_name;
-        document.getElementById('modalDetails').innerText = `ID: ${data.device_id} • Tel: ${data.phone || 'Sin teléfono'} • RIF: ${data.doc_id || 'No registrado'}`;
+        document.getElementById('modalDetails').innerText = `ID: ${data.device_id} • Tel: ${data.phone || 'Sin teléfono'} • Correo: ${data.email || 'No registrado'} • RIF: ${data.doc_id || 'No registrado'}`;
         document.getElementById('modalToken').value = data.token;
         document.getElementById('modalPaymentUrl').value = data.payment_url;
         document.getElementById('modalMessageText').value = data.message_text;
