@@ -27,7 +27,7 @@ object PlanCapabilityManager {
     const val SUPPORT_PHONE_CLEAN = "584242603112"
     const val SUPPORT_PHONE_DISPLAY = "+58 4242603112"
     const val SUPPORT_EMAIL = "ildemaro.carrasco@outlook.com"
-    const val OFFICIAL_WEBSITE = "www.ciemtech.com"
+    const val OFFICIAL_WEBSITE = "https://zippy-git-902301530733.europe-west1.run.app"
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

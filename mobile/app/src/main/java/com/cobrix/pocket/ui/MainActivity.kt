@@ -1540,21 +1540,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Hipervínculo Web Oficial e Instructivo
+        // Hipervínculo Web Oficial
         binding.tvAboutWebsite.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle("🌐 Ciem tech solutions C.A")
-                .setMessage("Visita nuestro sitio web oficial para conocer más sobre Zippy, consultar el instructivo de uso interactivo o resolver dudas.")
-                .setPositiveButton("Abrir Instructivo Web") { _, _ ->
-                    try {
-                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://ciemtech.com/guia"))
-                        startActivity(browserIntent)
-                    } catch (e: Exception) {
-                        Toast.makeText(this, "No se pudo abrir el navegador", Toast.LENGTH_SHORT).show()
-                    }
-                }
-                .setNegativeButton("Cerrar", null)
-                .show()
+            try {
+                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://zippy-git-902301530733.europe-west1.run.app"))
+                startActivity(browserIntent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "No se pudo abrir el navegador", Toast.LENGTH_SHORT).show()
+            }
         }
 
         // Botón para solicitar Link de Pago PRO por WhatsApp cuando vence la prueba
