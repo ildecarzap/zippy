@@ -95,8 +95,11 @@ async def admin_dashboard(
     db: Session = Depends(get_db)
 ):
     """Panel principal de gestión de licencias Zippy."""
-    # Barrer automáticamente deudas expiradas para anularlas en CobrixPay
-    cleanup_expired_pending_debts(db)
+    try:
+        # Barrer automáticamente deudas expiradas para anularlas en CobrixPay
+        cleanup_expired_pending_debts(db)
+    except Exception as e:
+        logger.warning(f"Error en cleanup_expired_pending_debts: {e}")
 
     query = db.query(DeviceLicense)
 
@@ -118,7 +121,7 @@ async def admin_dashboard(
     from app.services.cobrixpay import generate_activation_code
     dirty = False
     for d in devices:
-        if not d.activation_code:
+        if not getattr(d, 'activation_code', None):
             d.activation_code = generate_activation_code(d.device_id)
             dirty = True
     if dirty:

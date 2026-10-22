@@ -19,7 +19,7 @@ logger = logging.getLogger("zippy.main")
 try:
     Base.metadata.create_all(bind=engine)
     
-    # Asegurar columnas de prevención de spam y enlaces activos
+    # Asegurar columnas de prevención de spam, enlaces activos y código de activación
     from sqlalchemy import text
     with engine.connect() as conn:
         conn.execute(text("""
@@ -27,6 +27,8 @@ try:
             ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS pending_payment_token VARCHAR(200);
             ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS pending_payment_url VARCHAR(500);
             ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS pending_link_expires_at TIMESTAMP WITH TIME ZONE;
+            ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS activation_code VARCHAR(50);
+            CREATE INDEX IF NOT EXISTS ix_zippy_device_licenses_activation_code ON zippy_device_licenses (activation_code);
         """))
         conn.commit()
     
