@@ -18,6 +18,18 @@ logger = logging.getLogger("zippy.main")
 # Inicializar tablas en la Base de Datos
 try:
     Base.metadata.create_all(bind=engine)
+    
+    # Asegurar columnas de prevención de spam y enlaces activos
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        conn.execute(text("""
+            ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS pending_debt_id INTEGER;
+            ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS pending_payment_token VARCHAR(200);
+            ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS pending_payment_url VARCHAR(500);
+            ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS pending_link_expires_at TIMESTAMP WITH TIME ZONE;
+        """))
+        conn.commit()
+    
     logger.info("✅ Tablas de Zippy creadas/verificadas en la base de datos.")
     
     # Crear usuario administrador inicial si no existe
@@ -54,12 +66,30 @@ app.include_router(api.router)
 app.include_router(webhooks.router)
 app.include_router(admin.router)
 
+import asyncio
+from app.services.cobrixpay import cleanup_expired_pending_debts
+
+async def periodic_cobrixpay_cleanup():
+    """Tarea en segundo plano que anula deudas de CobrixPay cuyos enlaces hayan expirado sin pago."""
+    while True:
+        try:
+            await asyncio.sleep(1800)  # cada 30 minutos
+            with SessionLocal() as db:
+                cleanup_expired_pending_debts(db)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.warning(f"Error en tarea periódica de limpieza de deudas CobrixPay: {e}")
+
 @app.on_event("startup")
 async def startup_event():
     logger.info(f"🚀 {settings.APP_NAME} iniciado con éxito.")
     logger.info(f"🌐 Homepage: http://localhost:8088/")
     logger.info(f"📖 Instructivo: http://localhost:8088/guia")
     logger.info(f"🛡️ Panel Privado: http://localhost:8088/{settings.ADMIN_SECRET_PATH}/login")
+    
+    # Iniciar tarea en segundo plano de limpieza de deudas CobrixPay expiradas
+    asyncio.create_task(periodic_cobrixpay_cleanup())
 
 if __name__ == "__main__":
     import os

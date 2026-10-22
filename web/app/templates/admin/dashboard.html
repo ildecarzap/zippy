@@ -163,6 +163,9 @@
                 {% else %}
                 <span class="badge badge-basic">⚡ Básico</span>
                 {% endif %}
+                {% if device.pending_payment_token %}
+                <br><span class="badge" style="background: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; font-size: 0.72rem; margin-top: 4px; display: inline-block;" title="Enlace de pago CobrixPay generado y activo">🔗 Link Activo</span>
+                {% endif %}
               </td>
 
               <!-- Vencimiento -->
@@ -266,15 +269,18 @@
         <input type="hidden" id="modalLicenseId" name="license_id" value="">
         <input type="hidden" id="modalPhone" name="phone" value="">
 
-        <div style="background: var(--color-surface-soft); padding: 14px 18px; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: 18px;">
+        <div style="background: var(--color-surface-soft); padding: 14px 18px; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: 14px;">
           <div style="font-size: 0.95rem; font-weight: 700;" id="modalMerchantName">Cargando comercio...</div>
           <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 4px;" id="modalDetails"></div>
         </div>
 
+        <!-- Banner de Estado Anti-Spam y Expiración -->
+        <div id="modalStatusAlert" style="display: none; padding: 10px 14px; border-radius: var(--radius-md); margin-bottom: 14px; font-size: 0.84rem; line-height: 1.4;"></div>
+
         <div style="display: flex; gap: 14px; margin-bottom: 16px;">
           <div style="flex: 1;">
             <label class="form-label">Duración del Plan</label>
-            <select id="modalMonths" class="form-control" onchange="reloadCobrixData()">
+            <select id="modalMonths" class="form-control" onchange="reloadCobrixData(false)">
               <option value="1">1 Mes ($2.99 USD)</option>
               <option value="3">3 Meses ($8.97 USD)</option>
               <option value="6">6 Meses ($17.94 USD)</option>
@@ -292,6 +298,8 @@
           <div style="display: flex; gap: 8px;">
             <input type="text" id="modalPaymentUrl" class="form-control" style="font-family: monospace; font-size: 0.85rem;" readonly>
             <button type="button" class="btn btn-outline btn-sm" onclick="copyPaymentUrl()" title="Copiar enlace">📋</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="forceNewLink()" title="Anular deuda anterior en CobrixPay y generar nuevo enlace" style="color: var(--color-primary);">🔄 Nuevo</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="cancelPendingLink()" title="Anular deuda en CobrixPay" style="color: #963842; border-color: #F8D7DA;">❌ Anular</button>
           </div>
         </div>
 
@@ -322,19 +330,22 @@
       const modal = document.getElementById('cobrixModal');
       modal.style.display = 'flex';
       document.getElementById('modalMerchantName').innerText = 'Conectando con CobrixPay...';
-      document.getElementById('modalDetails').innerText = 'Generando token auténtico de pago...';
+      document.getElementById('modalDetails').innerText = 'Verificando enlace de pago...';
       document.getElementById('modalToken').value = '...';
       document.getElementById('modalPaymentUrl').value = '...';
       document.getElementById('modalMessageText').value = 'Cargando mensaje...';
+      document.getElementById('modalStatusAlert').style.display = 'none';
       
-      await reloadCobrixData();
+      await reloadCobrixData(false);
     }
 
-    async function reloadCobrixData() {
+    async function reloadCobrixData(forceNew = false) {
       if (!currentModalLicenseId) return;
       const months = document.getElementById('modalMonths').value;
+      const alertBox = document.getElementById('modalStatusAlert');
+
       try {
-        const res = await fetch(`/${secretPath}/licenses/${currentModalLicenseId}/cobrix-data?months=${months}`);
+        const res = await fetch(`/${secretPath}/licenses/${currentModalLicenseId}/cobrix-data?months=${months}&force_new=${forceNew}`);
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.detail || "Error en el servidor");
@@ -350,8 +361,51 @@
         document.getElementById('modalMessageText').value = data.message_text;
 
         document.getElementById('cobrixForm').action = `/${secretPath}/licenses/${currentModalLicenseId}/send-custom-whatsapp`;
+
+        // Renderizar banner informativo Anti-Spam / Expiración
+        if (data.is_reused) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#E8F5E9';
+          alertBox.style.color = '#1B5E20';
+          alertBox.style.border = '1px solid #A5D6A7';
+          const expText = data.expires_at ? new Date(data.expires_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'próximamente';
+          alertBox.innerHTML = `🛡️ <b>Anti-Spam Activo:</b> Este comercio ya posee un enlace vigente (expira hoy aprox. a las ${expText}). Se reutiliza este enlace para evitar crear deudas duplicadas en CobrixPay.`;
+        } else {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#E3F2FD';
+          alertBox.style.color = '#0D47A1';
+          alertBox.style.border = '1px solid #90CAF9';
+          alertBox.innerHTML = `⚡ <b>Nuevo Enlace Oficial:</b> Deuda registrada exitosamente en CobrixPay con expiración programada de 24h. Si el comercio no paga, se anulará automáticamente.`;
+        }
       } catch (e) {
-        alert('⚠️ ' + e.message);
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#FFEBEE';
+        alertBox.style.color = '#B71C1C';
+        alertBox.style.border = '1px solid #FFCDD2';
+        alertBox.innerHTML = `⚠️ <b>Error:</b> ${e.message}`;
+      }
+    }
+
+    async function forceNewLink() {
+      if (!confirm('¿Deseas anular la deuda activa anterior en CobrixPay y forzar la creación de un nuevo enlace?')) return;
+      await reloadCobrixData(true);
+    }
+
+    async function cancelPendingLink() {
+      if (!confirm('¿Deseas anular la deuda activa de este comercio en CobrixPay? El cliente ya no podrá pagar con ese enlace.')) return;
+      try {
+        const res = await fetch(`/${secretPath}/licenses/${currentModalLicenseId}/cancel-pending-link`, {
+          method: 'POST'
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ ' + data.message);
+          window.location.reload();
+        } else {
+          alert('⚠️ ' + (data.detail || 'No se pudo anular'));
+        }
+      } catch (e) {
+        alert('❌ Error: ' + e.message);
       }
     }
 
@@ -361,6 +415,7 @@
 
     function copyPaymentUrl() {
       const url = document.getElementById('modalPaymentUrl').value;
+      if (!url || url === '...') return;
       navigator.clipboard.writeText(url).then(() => {
         alert('¡Enlace de CobrixPay copiado al portapapeles!');
       });

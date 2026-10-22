@@ -111,25 +111,112 @@ def get_cobrixpay_auth_headers() -> Dict[str, str]:
         "Agrega COBRIXPAY_API_USER y COBRIXPAY_API_PASSWORD (o COBRIXPAY_API_KEY / COBRIXPAY_API_TOKEN) en las variables de entorno."
     )
 
+def cancel_cobrixpay_debt(debt_id: int, reason: str = "Tiempo de pago expirado") -> bool:
+    """
+    Llama a la API oficial de CobrixPay (POST /api/v1/debts/{debt_id}/cancel)
+    para anular la deuda en CobrixPay cuando el cliente no pagó a tiempo o se solicita un nuevo enlace.
+    Evita la proliferación de deudas fantasmas y protege contra ataques masivos.
+    """
+    if not debt_id:
+        return False
+    try:
+        headers = get_cobrixpay_auth_headers()
+        headers["Content-Type"] = "application/json"
+        url = f"{settings.COBRIXPAY_API_URL.rstrip('/')}/api/v1/debts/{debt_id}/cancel"
+        payload = {"reason": reason}
+        resp = requests.post(url, json=payload, headers=headers, timeout=12)
+        if resp.status_code in (200, 204):
+            logger.info(f"✅ Deuda #{debt_id} anulada exitosamente en CobrixPay ({reason}).")
+            return True
+        else:
+            logger.warning(f"⚠️ CobrixPay cancel retornó {resp.status_code}: {resp.text}")
+            return False
+    except Exception as e:
+        logger.error(f"❌ Error al anular deuda #{debt_id} en CobrixPay: {e}")
+        return False
+
+def cleanup_expired_pending_debts(db: Any) -> int:
+    """
+    Barre las licencias que tengan una deuda pendiente vencida (pending_link_expires_at <= utcnow)
+    y la anula automáticamente en CobrixPay, liberando la cuenta para futuras solicitudes.
+    """
+    from app.models import DeviceLicense
+    now = datetime.utcnow()
+    expired_licenses = db.query(DeviceLicense).filter(
+        DeviceLicense.pending_debt_id.isnot(None),
+        DeviceLicense.pending_link_expires_at.isnot(None),
+        DeviceLicense.pending_link_expires_at <= now
+    ).all()
+
+    cancelled_count = 0
+    for lic in expired_licenses:
+        if lic.pending_debt_id:
+            logger.info(f"⌛ Enlace expirado para dispositivo {lic.device_id}. Anulando deuda #{lic.pending_debt_id} en CobrixPay...")
+            cancel_cobrixpay_debt(lic.pending_debt_id, reason="Enlace de pago Zippy expiró sin pago")
+            lic.pending_debt_id = None
+            lic.pending_payment_token = None
+            lic.pending_payment_url = None
+            lic.pending_link_expires_at = None
+            cancelled_count += 1
+
+    if cancelled_count > 0:
+        db.commit()
+        logger.info(f"🧹 Se anularon y limpiaron {cancelled_count} deudas expiradas en CobrixPay.")
+    return cancelled_count
+
 def create_or_get_cobrixpay_payment_url(
-    device_id: str,
-    merchant_name: str,
-    phone: str,
-    doc_id: Optional[str] = "",
+    device: Any,
     months: int = 1,
-    email: Optional[str] = ""
-) -> Tuple[str, str]:
+    force_new: bool = False,
+    db: Optional[Any] = None
+) -> Tuple[str, str, bool, Optional[datetime], Optional[int]]:
     """
-    Llama a la API oficial de CobrixPay (POST /api/v1/debts) con token de autenticación
-    para registrar la deuda real del comercio CIEM y obtener su payment_token auténtico.
-    Devuelve (payment_token, payment_url).
-    URL resultante: https://app.cobrix-pay.com/pay/{payment_token}
+    Gestiona la creación o reutilización de enlaces de pago oficiales de CobrixPay.
+    
+    Reglas Anti-Spam y Expiración:
+    1. Si ya existe un enlace activo no vencido y not force_new:
+       Reutiliza el enlace existente (is_reused = True) y NO crea otra deuda en CobrixPay.
+    2. Si el enlace anterior venció (o force_new = True):
+       Anula la deuda previa en CobrixPay (POST /debts/{id}/cancel) y crea una nueva.
+    3. Al crear la nueva deuda en CobrixPay:
+       Envía 'expires_at' con el tiempo límite (COBRIXPAY_LINK_EXPIRE_HOURS) para que
+       CobrixPay también invalide el checkout si pasa el plazo.
     """
+    now = datetime.utcnow()
+
+    # 1. Verificar si ya tiene un enlace activo vigente (Anti-Spam)
+    if (
+        not force_new
+        and getattr(device, "pending_payment_token", None)
+        and getattr(device, "pending_payment_url", None)
+        and getattr(device, "pending_link_expires_at", None)
+        and device.pending_link_expires_at > now
+    ):
+        logger.info(f"🛡️ Reutilizando enlace de pago activo para dispositivo {device.device_id} (vigente hasta {device.pending_link_expires_at})")
+        return (
+            device.pending_payment_token,
+            device.pending_payment_url,
+            True,
+            device.pending_link_expires_at,
+            device.pending_debt_id
+        )
+
+    # 2. Si tenía un enlace anterior y venció (o se solicita forzar nuevo), anular en CobrixPay
+    old_debt_id = getattr(device, "pending_debt_id", None)
+    if old_debt_id:
+        reason = "Reemplazo de enlace solicitado por el comercio" if force_new else "Tiempo de pago expirado sin concretar"
+        cancel_cobrixpay_debt(old_debt_id, reason=reason)
+        device.pending_debt_id = None
+        device.pending_payment_token = None
+        device.pending_payment_url = None
+        device.pending_link_expires_at = None
+
+    # 3. Preparar parámetros para la nueva deuda
     amount = round(settings.COBRIXPAY_PLAN_PRICE_USD * months, 2)
     meses_txt = f"{months} mes{'es' if months > 1 else ''}"
-    description = f"Suscripción Zippy PRO ({meses_txt}) - Dispositivo {device_id}"
+    description = f"Suscripción Zippy PRO ({meses_txt}) - Dispositivo {device.device_id}"
 
-    clean_phone = phone.strip()
+    clean_phone = (getattr(device, "phone", "") or "").strip()
     if clean_phone.startswith("0"):
         clean_phone = f"+58{clean_phone[1:]}"
     elif not clean_phone.startswith("+") and len(clean_phone) == 10:
@@ -139,7 +226,11 @@ def create_or_get_cobrixpay_payment_url(
     if not clean_phone:
         clean_phone = "+584140000000"
 
-    target_email = email.strip() if (email and "@" in email) else f"{device_id.lower().replace('-', '')}@zippy.ciemtech.com"
+    device_email = (getattr(device, "email", "") or "").strip()
+    target_email = device_email if (device_email and "@" in device_email) else f"{device.device_id.lower().replace('-', '')}@zippy.ciemtech.com"
+
+    # Fecha de expiración estricta
+    expires_at = now + timedelta(hours=settings.COBRIXPAY_LINK_EXPIRE_HOURS)
 
     try:
         headers = get_cobrixpay_auth_headers()
@@ -150,13 +241,14 @@ def create_or_get_cobrixpay_payment_url(
             "amount": float(amount),
             "currency_code": "USD",
             "description": description,
-            "due_date": (date.today() + timedelta(days=7)).isoformat(),
+            "due_date": (now.date() + timedelta(days=7)).isoformat(),
+            "expires_at": expires_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "allow_partial_payment": False,
             "debtor_data": {
-                "name": merchant_name.strip() or f"Comercio {device_id}",
+                "name": (getattr(device, "merchant_name", "") or "").strip() or f"Comercio {device.device_id}",
                 "email": target_email,
                 "phone": clean_phone,
-                "document_number": doc_id.strip() if doc_id else "V-00000000",
+                "document_number": (getattr(device, "doc_id", "") or "").strip() if getattr(device, "doc_id", None) else "V-00000000",
                 "document_type": "RIF"
             }
         }
@@ -165,10 +257,20 @@ def create_or_get_cobrixpay_payment_url(
         if resp.status_code in (200, 201):
             debt_data = resp.json()
             payment_token = debt_data.get("payment_token")
+            debt_id = debt_data.get("debt_id")
             if payment_token:
                 payment_url = f"{settings.COBRIXPAY_BASE_URL.rstrip('/')}/pay/{payment_token}"
-                logger.info(f"✅ Deuda creada exitosamente en CobrixPay API para {device_id}: token {payment_token}")
-                return payment_token, payment_url
+                
+                # Actualizar estado de la licencia en BD
+                device.pending_debt_id = debt_id
+                device.pending_payment_token = payment_token
+                device.pending_payment_url = payment_url
+                device.pending_link_expires_at = expires_at
+                if db:
+                    db.commit()
+
+                logger.info(f"✅ Nueva deuda #{debt_id} creada en CobrixPay para {device.device_id}: token {payment_token} (Expira: {expires_at})")
+                return payment_token, payment_url, False, expires_at, debt_id
             else:
                 logger.error(f"⚠️ CobrixPay API retornó 200 pero sin payment_token: {debt_data}")
                 raise Exception(f"CobrixPay API retornó respuesta sin payment_token: {debt_data}")
@@ -180,7 +282,7 @@ def create_or_get_cobrixpay_payment_url(
         logger.error(f"Error al crear deuda en CobrixPay API: {api_err}")
         raise api_err
 
-def build_whatsapp_message_text(merchant_name: str, payment_url: str, months: int = 1) -> str:
+def build_whatsapp_message_text(merchant_name: str, payment_url: str, months: int = 1, expire_hours: int = 24) -> str:
     """
     Construye el texto plano del mensaje de WhatsApp para que el administrador pueda revisarlo y editarlo.
     """
@@ -191,6 +293,7 @@ def build_whatsapp_message_text(merchant_name: str, payment_url: str, months: in
         f"¡Hola {merchant_name}! 👋\n\n"
         f"⚡ Aquí tienes tu enlace oficial de CobrixPay para activar o renovar tu suscripción de *Zippy PRO* por {meses_txt} (${amount:.2f} USD):\n\n"
         f"🔗 {payment_url}\n\n"
+        f"⏳ *Nota:* Este enlace es válido por {expire_hours} horas. Pasado este tiempo se anula automáticamente por seguridad.\n\n"
         f"💳 Puedes pagar en Bolívares por Pago Móvil a la tasa oficial del día o con los métodos disponibles.\n"
         f"✅ Al confirmar el pago, tu aplicación *Zippy* activará todas las funciones PRO automáticamente sin necesidad de canjear códigos.\n\n"
         f"— Soporte CIEM Tech Solutions C.A"

@@ -20,6 +20,12 @@ class DeviceLicense(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     notes = Column(Text, nullable=True)
 
+    # Control de enlaces activos y prevención de spam (CobrixPay)
+    pending_debt_id = Column(Integer, nullable=True)
+    pending_payment_token = Column(String(200), nullable=True)
+    pending_payment_url = Column(String(500), nullable=True)
+    pending_link_expires_at = Column(DateTime, nullable=True)
+
     @property
     def is_pro_active(self) -> bool:
         if not self.is_active:

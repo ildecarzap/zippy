@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import DeviceLicense
 from app.config import settings
+from app.services.cobrixpay import create_or_get_cobrixpay_payment_url
 
 logger = logging.getLogger("zippy.api")
 router = APIRouter(prefix="/api/v1", tags=["Mobile App API"])
@@ -108,6 +109,53 @@ def register_device(
         "plan_type": license_obj.plan_type,
         "is_pro": license_obj.is_pro_active,
         "remaining_days": license_obj.remaining_days
+    }
+
+class RequestPaymentLinkRequest(BaseModel):
+    device_id: str
+    months: int = 1
+
+@router.post("/license/request-payment-link")
+def request_payment_link(
+    payload: RequestPaymentLinkRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Permite solicitar un enlace oficial de pago de CobrixPay para activar o renovar Zippy PRO.
+    Anti-Spam: Si ya cuenta con un enlace activo sin vencer, retorna el existente en vez de crear deudas masivas.
+    Expiración: Si el anterior venció, lo anula en CobrixPay antes de generar uno nuevo.
+    """
+    license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == payload.device_id).first()
+    if not license_obj:
+        raise HTTPException(status_code=404, detail="Dispositivo no encontrado en el sistema Zippy Hub")
+
+    if license_obj.is_pro_active and license_obj.plan_type == "PRO" and license_obj.remaining_days > 7:
+        return {
+            "status": "already_active",
+            "message": f"Tu suscripción PRO está activa con {license_obj.remaining_days} días restantes.",
+            "is_reused": False,
+            "payment_url": None,
+            "expires_at": None
+        }
+
+    try:
+        token, payment_url, is_reused, expires_at, debt_id = create_or_get_cobrixpay_payment_url(
+            device=license_obj,
+            months=payload.months,
+            force_new=False,
+            db=db
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error conectando con CobrixPay: {str(e)}")
+
+    return {
+        "status": "success",
+        "is_reused": is_reused,
+        "token": token,
+        "payment_url": payment_url,
+        "expires_at": expires_at.isoformat() if expires_at else None,
+        "debt_id": debt_id,
+        "message": "Enlace de pago activo recuperado (vigente)" if is_reused else "Nuevo enlace de pago generado exitosamente"
     }
 
 @router.get("/bcv")

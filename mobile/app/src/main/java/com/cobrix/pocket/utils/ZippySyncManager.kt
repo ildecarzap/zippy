@@ -131,6 +131,84 @@ object ZippySyncManager {
         return@withContext false
     }
 
+    data class PaymentLinkResult(
+        val success: Boolean,
+        val paymentUrl: String?,
+        val isReused: Boolean,
+        val expiresAt: String?,
+        val message: String
+    )
+
+    /**
+     * Solicita o recupera el enlace oficial de pago de CobrixPay para este dispositivo.
+     * Si ya existe un enlace activo no vencido, retorna el existente (anti-spam / protección contra ataques masivos).
+     */
+    suspend fun requestPaymentLink(context: Context, months: Int = 1): PaymentLinkResult = withContext(Dispatchers.IO) {
+        val deviceId = PlanCapabilityManager.getDeviceId(context)
+        val baseUrl = getServerUrl(context)
+
+        try {
+            val url = URL("$baseUrl/api/v1/license/request-payment-link")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("Accept", "application/json")
+            conn.connectTimeout = 10000
+            conn.readTimeout = 10000
+            conn.doOutput = true
+
+            val payload = JSONObject().apply {
+                put("device_id", deviceId)
+                put("months", months)
+            }
+
+            val writer = OutputStreamWriter(conn.outputStream)
+            writer.write(payload.toString())
+            writer.flush()
+            writer.close()
+
+            val code = conn.responseCode
+            val inputStream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val reader = BufferedReader(InputStreamReader(inputStream))
+            val sb = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                sb.append(line)
+            }
+            reader.close()
+            conn.disconnect()
+
+            val json = JSONObject(sb.toString())
+            if (code in 200..299 && json.optString("status") == "success") {
+                return@withContext PaymentLinkResult(
+                    success = true,
+                    paymentUrl = json.optString("payment_url"),
+                    isReused = json.optBoolean("is_reused", false),
+                    expiresAt = json.optString("expires_at"),
+                    message = json.optString("message", "Enlace listo")
+                )
+            } else {
+                val detail = json.optString("detail", json.optString("message", "Error al generar enlace"))
+                return@withContext PaymentLinkResult(
+                    success = false,
+                    paymentUrl = null,
+                    isReused = false,
+                    expiresAt = null,
+                    message = detail
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error solicitando link de pago: ${e.message}")
+            return@withContext PaymentLinkResult(
+                success = false,
+                paymentUrl = null,
+                isReused = false,
+                expiresAt = null,
+                message = "No se pudo conectar con el servidor Zippy Hub: ${e.localizedMessage}"
+            )
+        }
+    }
+
     private fun parseIsoDateOrAddDays(isoString: String, remainingDays: Int): Long {
         if (isoString.isNotEmpty()) {
             try {

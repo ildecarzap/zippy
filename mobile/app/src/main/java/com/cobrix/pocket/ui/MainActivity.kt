@@ -1561,14 +1561,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Botón para solicitar Link de Pago PRO por WhatsApp cuando vence la prueba
+        // Botón para solicitar Link de Pago PRO (en línea con CobrixPay o por WhatsApp)
         binding.btnTrialRequestPaymentLink.setOnClickListener {
-            val profile = PreferencesHelper.getUserProfile(this)
-            val deviceId = PlanCapabilityManager.getDeviceId(this)
-            val businessName = profile.merchantName.ifEmpty { "Mi Negocio" }
-            val text = Uri.encode("Hola Ciem tech solutions C.A, quiero solicitar mi link de pago para activar Zippy PRO en mi negocio '$businessName' (ID: $deviceId).")
-            val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
-            startActivity(Intent(Intent.ACTION_VIEW, uri))
+            handleRequestPaymentLinkOption()
         }
 
         // Botones Acerca de Ciem tech solutions C.A
@@ -1712,15 +1707,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val deviceId = PlanCapabilityManager.getDeviceId(this)
-
         dialogBinding.btnProWhatsapp.setOnClickListener {
             dialog.dismiss()
-            val profile = PreferencesHelper.getUserProfile(this)
-            val businessName = profile.merchantName.ifEmpty { "Mi Negocio" }
-            val text = Uri.encode("Hola Ciem tech solutions C.A, deseo activar el Plan Zippy PRO (\$2.99) para mi negocio '$businessName' (ID Dispositivo: $deviceId). Por favor envíenme el link de pago.")
-            val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
-            startActivity(Intent(Intent.ACTION_VIEW, uri))
+            handleRequestPaymentLinkOption()
         }
 
         dialogBinding.btnProRedeemCode.setOnClickListener {
@@ -1753,6 +1742,61 @@ class MainActivity : AppCompatActivity() {
                 dialog.dismiss()
             }
             .show()
+    }
+
+    private fun handleRequestPaymentLinkOption() {
+        val options = arrayOf(
+            "💳 Pagar en Línea con CobrixPay (Inmediato)",
+            "💬 Contactar a Soporte por WhatsApp"
+        )
+        AlertDialog.Builder(this)
+            .setTitle("Suscripción Zippy PRO")
+            .setItems(options) { dialog, which ->
+                dialog.dismiss()
+                if (which == 0) {
+                    initiateOnlineCobrixPayment()
+                } else {
+                    openSupportWhatsAppForPro()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun initiateOnlineCobrixPayment() {
+        Toast.makeText(this, "Conectando con CobrixPay...", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val result = ZippySyncManager.requestPaymentLink(this@MainActivity, 1)
+            if (result.success && !result.paymentUrl.isNullOrEmpty()) {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(result.paymentUrl))
+                    startActivity(intent)
+                    if (result.isReused) {
+                        Toast.makeText(this@MainActivity, "🛡️ Enlace activo recuperado (válido por 24h)", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(this@MainActivity, "✅ Enlace de pago generado con éxito", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "No se pudo abrir el navegador: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Atención")
+                    .setMessage(result.message)
+                    .setPositiveButton("Contactar por WhatsApp") { _, _ -> openSupportWhatsAppForPro() }
+                    .setNegativeButton("Cerrar", null)
+                    .show()
+            }
+        }
+    }
+
+    private fun openSupportWhatsAppForPro() {
+        val profile = PreferencesHelper.getUserProfile(this)
+        val deviceId = PlanCapabilityManager.getDeviceId(this)
+        val businessName = profile.merchantName.ifEmpty { "Mi Negocio" }
+        val text = Uri.encode("Hola Ciem tech solutions C.A, deseo activar el Plan Zippy PRO (\$2.99) para mi negocio '$businessName' (ID Dispositivo: $deviceId). Por favor envíenme el link de pago.")
+        val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
+        startActivity(Intent(Intent.ACTION_VIEW, uri))
     }
 
     private fun showRedeemCodeDialog() {

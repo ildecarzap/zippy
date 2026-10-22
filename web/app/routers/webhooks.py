@@ -75,6 +75,12 @@ async def receive_cobrixpay_webhook(
             license_obj.pro_expires_at = new_expiry
             license_obj.is_active = True
 
+            # Limpiar enlace y deuda pendiente al concretarse el pago
+            license_obj.pending_debt_id = None
+            license_obj.pending_payment_token = None
+            license_obj.pending_payment_url = None
+            license_obj.pending_link_expires_at = None
+
             # Guardar registro de la transacción
             tx = PaymentTransaction(
                 device_id=license_obj.device_id,
@@ -104,5 +110,20 @@ async def receive_cobrixpay_webhook(
                 "event": event_type,
                 "status": "unmatched_device"
             }
+
+    # 3. Manejar anulación o expiración de deudas desde CobrixPay
+    elif event_type in ("debt.cancelled", "debt.expired"):
+        debt_info = data.get("debt", {})
+        debt_id = debt_info.get("debt_id")
+        if debt_id:
+            lic = db.query(DeviceLicense).filter(DeviceLicense.pending_debt_id == debt_id).first()
+            if lic:
+                lic.pending_debt_id = None
+                lic.pending_payment_token = None
+                lic.pending_payment_url = None
+                lic.pending_link_expires_at = None
+                db.commit()
+                logger.info(f"🗑️ Deuda pendiente #{debt_id} limpiada en Zippy tras evento '{event_type}'")
+                return {"received": True, "event": event_type, "status": "pending_cleared"}
 
     return {"received": True, "event": event_type}

@@ -14,6 +14,8 @@ from app.auth import (
 )
 from app.services.cobrixpay import (
     create_or_get_cobrixpay_payment_url,
+    cancel_cobrixpay_debt,
+    cleanup_expired_pending_debts,
     build_whatsapp_message_text,
     build_whatsapp_direct_url
 )
@@ -93,6 +95,9 @@ async def admin_dashboard(
     db: Session = Depends(get_db)
 ):
     """Panel principal de gestión de licencias Zippy."""
+    # Barrer automáticamente deudas expiradas para anularlas en CobrixPay
+    cleanup_expired_pending_debts(db)
+
     query = db.query(DeviceLicense)
 
     if q:
@@ -203,6 +208,7 @@ async def toggle_device_status(
 async def get_cobrix_payment_data(
     license_id: int,
     months: int = 1,
+    force_new: bool = False,
     current_admin: AdminUser = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
@@ -212,18 +218,21 @@ async def get_cobrix_payment_data(
         raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
 
     try:
-        token, payment_url = create_or_get_cobrixpay_payment_url(
-            device_id=device.device_id,
-            merchant_name=device.merchant_name,
-            phone=device.phone,
-            doc_id=device.doc_id,
+        token, payment_url, is_reused, expires_at, debt_id = create_or_get_cobrixpay_payment_url(
+            device=device,
             months=months,
-            email=device.email or ""
+            force_new=force_new,
+            db=db
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    message_text = build_whatsapp_message_text(device.merchant_name, payment_url, months)
+    message_text = build_whatsapp_message_text(
+        merchant_name=device.merchant_name,
+        payment_url=payment_url,
+        months=months,
+        expire_hours=settings.COBRIXPAY_LINK_EXPIRE_HOURS
+    )
     wa_url = build_whatsapp_direct_url(device.phone, message_text)
 
     return JSONResponse({
@@ -234,6 +243,9 @@ async def get_cobrix_payment_data(
         "email": device.email or "",
         "token": token,
         "payment_url": payment_url,
+        "is_reused": is_reused,
+        "expires_at": expires_at.isoformat() if expires_at else None,
+        "debt_id": debt_id,
         "message_text": message_text,
         "whatsapp_url": wa_url
     })
@@ -263,18 +275,44 @@ async def get_whatsapp_payment_redirect(
         raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
 
     try:
-        token, payment_url = create_or_get_cobrixpay_payment_url(
-            device_id=device.device_id,
-            merchant_name=device.merchant_name,
-            phone=device.phone,
-            doc_id=device.doc_id,
+        token, payment_url, is_reused, expires_at, debt_id = create_or_get_cobrixpay_payment_url(
+            device=device,
             months=months,
-            email=device.email or ""
+            force_new=False,
+            db=db
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    message_text = build_whatsapp_message_text(device.merchant_name, payment_url, months)
+    message_text = build_whatsapp_message_text(
+        merchant_name=device.merchant_name,
+        payment_url=payment_url,
+        months=months,
+        expire_hours=settings.COBRIXPAY_LINK_EXPIRE_HOURS
+    )
     wa_url = build_whatsapp_direct_url(device.phone, message_text)
     
     return RedirectResponse(url=wa_url, status_code=status.HTTP_303_SEE_OTHER)
+
+@router.post("/licenses/{license_id}/cancel-pending-link")
+async def cancel_pending_link_endpoint(
+    license_id: int,
+    current_admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Anula manualmente la deuda y enlace activo de CobrixPay para este dispositivo."""
+    device = db.query(DeviceLicense).filter(DeviceLicense.id == license_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
+
+    if device.pending_debt_id:
+        cancel_cobrixpay_debt(device.pending_debt_id, reason="Anulado manualmente por administrador de Zippy")
+
+    device.pending_debt_id = None
+    device.pending_payment_token = None
+    device.pending_payment_url = None
+    device.pending_link_expires_at = None
+    db.commit()
+
+    logger.info(f"🚫 [ADMIN] Enlace pendiente de #{device.id} ({device.merchant_name}) anulado por {current_admin.username}")
+    return JSONResponse({"success": True, "message": "Enlace de pago y deuda anulados en CobrixPay exitosamente"})

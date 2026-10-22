@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     COBRIXPAY_API_PASSWORD: str = os.getenv("COBRIXPAY_API_PASSWORD", "")
     COBRIXPAY_API_KEY: str = os.getenv("COBRIXPAY_API_KEY", "")
     COBRIXPAY_API_TOKEN: str = os.getenv("COBRIXPAY_API_TOKEN", "")
+    COBRIXPAY_LINK_EXPIRE_HOURS: int = int(os.getenv("COBRIXPAY_LINK_EXPIRE_HOURS", "24"))
 
     # Datos Corporativos de CIEM
     COMPANY_NAME: str = "Ciem tech solutions C.A"
