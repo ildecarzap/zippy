@@ -72,7 +72,10 @@ class MainActivity : AppCompatActivity() {
 
     private var currentInput = "0"
     private var isVesMode = true // Por defecto: Bolívares (VES)
-    private var isAuthenticatedThisSession = false
+
+    companion object {
+        private var isAuthenticatedThisSession = false
+    }
 
     // Banco activo para cobro en pantalla de Caja (seleccionable con botones/chips)
     private var activeCashierBankCode = "0134"
@@ -170,6 +173,10 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        if (savedInstanceState != null) {
+            isAuthenticatedThisSession = savedInstanceState.getBoolean("KEY_AUTH_SESSION", isAuthenticatedThisSession)
+        }
+
         dbHelper = PocketDatabaseHelper.getInstance(this)
         soundHelper = SoundHelper(this)
 
@@ -186,6 +193,11 @@ class MainActivity : AppCompatActivity() {
 
         // Sincronización proactiva con Zippy Hub al iniciar
         syncLicenseStatus(showToastIfNoChange = false)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("KEY_AUTH_SESSION", isAuthenticatedThisSession)
     }
 
     override fun onResume() {
