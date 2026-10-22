@@ -114,6 +114,7 @@
               <th>Teléfono</th>
               <th>Plan Actual</th>
               <th>Vencimiento / Días</th>
+              <th>Código Activación</th>
               <th>Estado</th>
               <th style="text-align: right;">Acciones de Gestión</th>
             </tr>
@@ -184,6 +185,25 @@
                 {% endif %}
               </td>
 
+              <!-- Código de Activación -->
+              <td>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <code style="font-size: 0.84rem; font-weight: 700; background: #EBF3FB; color: #1E6091; padding: 3px 7px; border-radius: 4px; border: 1px solid #B5D6F4;" id="code-{{ device.id }}">
+                    {{ device.activation_code or 'SIN CÓDIGO' }}
+                  </code>
+                  {% if device.activation_code %}
+                  <button type="button" class="btn btn-outline btn-sm" style="padding: 2px 6px; font-size: 0.78rem;" onclick="copyCode('{{ device.activation_code }}')" title="Copiar código">
+                    📋
+                  </button>
+                  {% if device.phone %}
+                  <a href="https://wa.me/{{ device.phone | replace('+', '') | replace(' ', '') }}?text=¡Hola%20{{ device.merchant_name | urlencode }}!%20Tu%20código%20de%20activación%20para%20Zippy%20PRO%20es:%20*{{ device.activation_code }}*.%20Ingrésalo%20en%20tu%20app%20en%20Ajustes%20>%20Plan%20Zippy%20PRO%20>%20Tengo%20un%20código." target="_blank" class="btn btn-outline btn-sm" style="padding: 2px 6px; font-size: 0.78rem; color: #25D366; border-color: #A7F3D0;" title="Enviar código por WhatsApp">
+                    💬
+                  </a>
+                  {% endif %}
+                  {% endif %}
+                </div>
+              </td>
+
               <!-- Activo / Suspendido -->
               <td>
                 {% if device.is_active %}
@@ -232,7 +252,7 @@
             </tr>
             {% else %}
             <tr>
-              <td colspan="7" style="text-align: center; padding: 48px; color: var(--color-text-muted);">
+              <td colspan="8" style="text-align: center; padding: 48px; color: var(--color-text-muted);">
                 No se encontraron dispositivos registrados que coincidan con la búsqueda.
               </td>
             </tr>
@@ -418,6 +438,13 @@
       if (!url || url === '...') return;
       navigator.clipboard.writeText(url).then(() => {
         alert('¡Enlace de CobrixPay copiado al portapapeles!');
+      });
+    }
+
+    function copyCode(code) {
+      if (!code) return;
+      navigator.clipboard.writeText(code).then(() => {
+        alert('✅ Código copiado al portapapeles: ' + code);
       });
     }
 

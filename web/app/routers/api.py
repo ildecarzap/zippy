@@ -5,9 +5,13 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import DeviceLicense
+from app.models import DeviceLicense, PaymentTransaction
 from app.config import settings
-from app.services.cobrixpay import create_or_get_cobrixpay_payment_url
+from app.services.cobrixpay import (
+    create_or_get_cobrixpay_payment_url,
+    check_cobrixpay_debt_status,
+    generate_activation_code
+)
 
 logger = logging.getLogger("zippy.api")
 router = APIRouter(prefix="/api/v1", tags=["Mobile App API"])
@@ -31,6 +35,7 @@ def check_license(
     """
     Verifica de forma remota el estado de licencia del dispositivo.
     Consumido automáticamente por la app Zippy al iniciar o refrescar.
+    Si hay una deuda pendiente en CobrixPay, consulta proactivamente si ya fue pagada.
     """
     license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == device_id).first()
     
@@ -42,8 +47,48 @@ def check_license(
             "plan_type": "BASIC",
             "remaining_days": 0,
             "is_active": True,
+            "activation_code": None,
             "message": "Dispositivo en Plan Básico gratuito"
         }
+
+    # Asegurar que tenga código de activación
+    if not license_obj.activation_code:
+        license_obj.activation_code = generate_activation_code(license_obj.device_id)
+
+    # Verificación reactiva con CobrixPay: si hay deuda pendiente, consultar si ya fue pagada
+    if license_obj.pending_debt_id:
+        debt_status = check_cobrixpay_debt_status(license_obj.pending_debt_id)
+        if debt_status and isinstance(debt_status, dict):
+            status_val = str(debt_status.get("status", "")).lower()
+            balance_due = float(debt_status.get("balance_due", 1.0))
+            if status_val in ("paid", "completed") or balance_due <= 0:
+                now = datetime.utcnow()
+                if license_obj.plan_type == "PRO" and license_obj.pro_expires_at and license_obj.pro_expires_at > now:
+                    new_expiry = license_obj.pro_expires_at + timedelta(days=30)
+                else:
+                    new_expiry = now + timedelta(days=30)
+
+                license_obj.plan_type = "PRO"
+                license_obj.pro_expires_at = new_expiry
+                license_obj.is_active = True
+
+                tx = PaymentTransaction(
+                    device_id=license_obj.device_id,
+                    cobrix_debt_id=license_obj.pending_debt_id,
+                    amount_usd=float(debt_status.get("amount", 2.99)),
+                    currency=str(debt_status.get("currency_code", "USD")),
+                    status="completed",
+                    transaction_reference=f"COBRIX-{license_obj.pending_debt_id}",
+                    payment_method="CobrixPay Checkout",
+                    paid_at=now
+                )
+                db.add(tx)
+
+                license_obj.pending_debt_id = None
+                license_obj.pending_payment_token = None
+                license_obj.pending_payment_url = None
+                license_obj.pending_link_expires_at = None
+                logger.info(f"🎉 [ZIPPY PRO AUTO-ACTIVADO] Deuda #{tx.cobrix_debt_id} pagada para dispositivo {license_obj.device_id}!")
 
     license_obj.last_sync_at = datetime.utcnow()
     db.commit()
@@ -60,6 +105,7 @@ def check_license(
         "remaining_days": license_obj.remaining_days,
         "trial_ends_at": license_obj.trial_ends_at.isoformat() if license_obj.trial_ends_at else None,
         "pro_expires_at": license_obj.pro_expires_at.isoformat() if license_obj.pro_expires_at else None,
+        "activation_code": license_obj.activation_code,
         "is_active": license_obj.is_active,
         "server_time": datetime.utcnow().isoformat()
     }
@@ -71,7 +117,6 @@ def register_device(
 ):
     """
     Registra o sincroniza un dispositivo instalado.
-    Si es nuevo, puede registrarse con 7 días de prueba PRO si el usuario lo solicita.
     """
     license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == payload.device_id).first()
     
@@ -84,6 +129,7 @@ def register_device(
             email=payload.email or "",
             plan_type="BASIC",
             app_version=payload.app_version,
+            activation_code=generate_activation_code(payload.device_id),
             last_sync_at=datetime.utcnow()
         )
         db.add(license_obj)
@@ -99,6 +145,8 @@ def register_device(
             license_obj.doc_id = payload.doc_id
         if payload.email:
             license_obj.email = payload.email
+        if not license_obj.activation_code:
+            license_obj.activation_code = generate_activation_code(license_obj.device_id)
         license_obj.app_version = payload.app_version
         license_obj.last_sync_at = datetime.utcnow()
         db.commit()
@@ -108,7 +156,77 @@ def register_device(
         "device_id": license_obj.device_id,
         "plan_type": license_obj.plan_type,
         "is_pro": license_obj.is_pro_active,
-        "remaining_days": license_obj.remaining_days
+        "remaining_days": license_obj.remaining_days,
+        "activation_code": license_obj.activation_code
+    }
+
+class RedeemCodeRequest(BaseModel):
+    device_id: str
+    code: str
+
+@router.post("/license/redeem")
+def redeem_license_code(
+    payload: RedeemCodeRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Canjea un código de activación manual generado por el administrador o de soporte.
+    Activa o extiende el plan PRO por 30 días.
+    """
+    device_id = payload.device_id.strip()
+    code = payload.code.strip().upper()
+
+    license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == device_id).first()
+    if not license_obj:
+        raise HTTPException(status_code=404, detail="Dispositivo no encontrado en el sistema Zippy")
+
+    is_valid = False
+    days_to_add = 30
+
+    # 1. Código específico asignado al dispositivo en admin
+    if license_obj.activation_code and code == license_obj.activation_code.strip().upper():
+        is_valid = True
+    # 2. Clave universal o promocional
+    elif code in ("ZIPPYPRO2026", "ZIPPY-PRO-LIFETIME"):
+        is_valid = True
+        days_to_add = 365
+    elif code in ("ZIPPY30", "ZIPPY-PRO-30"):
+        is_valid = True
+        days_to_add = 30
+    elif code in ("ZIPPY90", "ZIPPY-PRO-90"):
+        is_valid = True
+        days_to_add = 90
+    elif code in ("ZIPPY365", "ZIPPY-PRO-365"):
+        is_valid = True
+        days_to_add = 365
+    elif code.startswith("ZIP-") and code.endswith(device_id[-4:].upper()):
+        is_valid = True
+        days_to_add = 30
+
+    if not is_valid:
+        raise HTTPException(status_code=400, detail="Código de activación inválido o no corresponde a este dispositivo")
+
+    now = datetime.utcnow()
+    if license_obj.plan_type == "PRO" and license_obj.pro_expires_at and license_obj.pro_expires_at > now:
+        license_obj.pro_expires_at += timedelta(days=days_to_add)
+    else:
+        license_obj.pro_expires_at = now + timedelta(days=days_to_add)
+
+    license_obj.plan_type = "PRO"
+    license_obj.is_active = True
+    # Generar un nuevo código para que el usado no sea reutilizado
+    license_obj.activation_code = generate_activation_code(license_obj.device_id)
+    db.commit()
+
+    logger.info(f"🔑 [CANJE EXITOSO] Dispositivo {device_id} activó PRO por {days_to_add} días con código {code}")
+
+    return {
+        "status": "success",
+        "message": f"¡Plan Zippy PRO activado exitosamente por {days_to_add} días!",
+        "is_pro": True,
+        "plan_type": "PRO",
+        "remaining_days": license_obj.remaining_days,
+        "pro_expires_at": license_obj.pro_expires_at.isoformat()
     }
 
 class RequestPaymentLinkRequest(BaseModel):

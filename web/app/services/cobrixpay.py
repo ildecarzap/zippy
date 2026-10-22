@@ -31,9 +31,22 @@ def canonical_python_json(value: Any) -> str:
     """Serialización canónica compatible al 100% con la firma de CobrixPay."""
     return json.dumps(value, sort_keys=True, separators=(',', ':'))
 
+def generate_activation_code(device_id: str) -> str:
+    """
+    Genera un código de activación único para el dispositivo en formato ZIP-XXXX-YYYY.
+    Es fácil de leer, tipear en la app y enviar por WhatsApp.
+    """
+    clean_id = "".join(c for c in (device_id or "") if c.isalnum()).upper()
+    prefix = clean_id[-4:] if len(clean_id) >= 4 else "PRO"
+    suffix = secrets.token_hex(2).upper()
+    return f"ZIP-{prefix}-{suffix}"
+
 def verify_cobrixpay_signature(payload: Dict[str, Any], signature_header: str) -> bool:
     """Verifica la firma HMAC-SHA256 del webhook recibido de CobrixPay."""
     if not settings.COBRIXPAY_WEBHOOK_SECRET:
+        return True # Si no se configuró secreto, se asume no estricto
+    
+    if not signature_header:
         return False
     
     payload_sin_firma = {k: v for k, v in payload.items() if k != "signature"}
@@ -60,7 +73,7 @@ def get_cobrixpay_auth_headers() -> Dict[str, str]:
     """
     Retorna los encabezados de autenticación para consumir la API de CobrixPay.
     Soporta:
-    1. API Key directa (X-API-Key: cb_live_...)
+    1. API Key directa (X-API-Key: cb_live_... y Authorization: Bearer cb_live_...)
     2. Token estático Bearer (Authorization: Bearer ...)
     3. Login OAuth2 dinámico (/api/v1/token) usando COBRIXPAY_API_USER y COBRIXPAY_API_PASSWORD
     """
@@ -68,11 +81,21 @@ def get_cobrixpay_auth_headers() -> Dict[str, str]:
 
     # 1. API Key
     if settings.COBRIXPAY_API_KEY:
-        return {"X-API-Key": settings.COBRIXPAY_API_KEY}
+        key = settings.COBRIXPAY_API_KEY.strip()
+        return {
+            "X-API-Key": key,
+            "Authorization": f"Bearer {key}"
+        }
 
     # 2. Token Bearer estático
     if settings.COBRIXPAY_API_TOKEN:
-        return {"Authorization": f"Bearer {settings.COBRIXPAY_API_TOKEN}"}
+        tok = settings.COBRIXPAY_API_TOKEN.strip()
+        if tok.startswith("Bearer "):
+            tok = tok[7:].strip()
+        headers = {"Authorization": f"Bearer {tok}"}
+        if tok.startswith("cb_"):
+            headers["X-API-Key"] = tok
+        return headers
 
     # 3. Login por usuario y contraseña
     if settings.COBRIXPAY_API_USER and settings.COBRIXPAY_API_PASSWORD:
@@ -134,6 +157,25 @@ def cancel_cobrixpay_debt(debt_id: int, reason: str = "Tiempo de pago expirado")
     except Exception as e:
         logger.error(f"❌ Error al anular deuda #{debt_id} en CobrixPay: {e}")
         return False
+
+def check_cobrixpay_debt_status(debt_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Consulta en tiempo real el estado de una deuda en CobrixPay API (GET /api/v1/debts/{debt_id}).
+    Permite validar si la deuda ya fue pagada incluso si el webhook no ha llegado todavía.
+    """
+    if not debt_id:
+        return None
+    try:
+        headers = get_cobrixpay_auth_headers()
+        url = f"{settings.COBRIXPAY_API_URL.rstrip('/')}/api/v1/debts/{debt_id}"
+        resp = requests.get(url, headers=headers, timeout=6)
+        if resp.status_code == 200:
+            return resp.json()
+        else:
+            logger.debug(f"CobrixPay GET /debts/{debt_id} retornó {resp.status_code}: {resp.text}")
+    except Exception as e:
+        logger.warning(f"No se pudo consultar estado de deuda #{debt_id} en CobrixPay: {e}")
+    return None
 
 def cleanup_expired_pending_debts(db: Any) -> int:
     """

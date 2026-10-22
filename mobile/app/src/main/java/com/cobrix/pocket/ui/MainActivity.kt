@@ -184,19 +184,8 @@ class MainActivity : AppCompatActivity() {
         checkNotificationPermission()
         checkBiometricAuthOnStart()
 
-        // Sincronización en segundo plano con Zippy Hub (Registro automático y validación PRO)
-        lifecycleScope.launch {
-            val updated = ZippySyncManager.syncWithBackend(this@MainActivity)
-            if (updated) {
-                runOnUiThread {
-                    loadSettings()
-                    updateLicenseBadge()
-                    if (PlanCapabilityManager.getPlanType(this@MainActivity) == PlanType.FREE && PlanCapabilityManager.hasHadPaidPro(this@MainActivity)) {
-                        showSubscriptionExpiredPrompt()
-                    }
-                }
-            }
-        }
+        // Sincronización proactiva con Zippy Hub al iniciar
+        syncLicenseStatus(showToastIfNoChange = false)
     }
 
     override fun onResume() {
@@ -206,6 +195,9 @@ class MainActivity : AppCompatActivity() {
         loadTodayLedger()
         setupCashierBankSelector()
         updateLicenseBadge()
+
+        // Sincronización reactiva inmediata al volver a la app (detecta pago de CobrixPay o activación de soporte)
+        syncLicenseStatus(showToastIfNoChange = false)
 
         // Verificar si llegó un pago mientras la pantalla estaba apagada o en otra app
         if (PreferencesHelper.isCelebrationScreenEnabled(this)) {
@@ -1811,84 +1803,107 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val title = if (planType == PlanType.PRO_ACTIVE || PlanCapabilityManager.hasHadPaidPro(this)) "Renovar Zippy PRO" else "Suscripción Zippy PRO"
-        val options = arrayOf(
-            "💳 Pagar en Línea con CobrixPay (Inmediato)",
-            "💬 Contactar a Soporte por WhatsApp"
-        )
-        AlertDialog.Builder(this)
-            .setTitle(title)
-            .setItems(options) { dialog, which ->
-                dialog.dismiss()
-                if (which == 0) {
-                    initiateOnlineCobrixPayment()
-                } else {
-                    openSupportWhatsAppForPro()
-                }
-            }
-            .setNegativeButton("Cancelar", null)
-            .show()
-    }
-
-    private fun initiateOnlineCobrixPayment() {
-        Toast.makeText(this, "Conectando con CobrixPay...", Toast.LENGTH_SHORT).show()
-        lifecycleScope.launch {
-            val result = ZippySyncManager.requestPaymentLink(this@MainActivity, 1)
-            if (result.success && !result.paymentUrl.isNullOrEmpty()) {
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(result.paymentUrl))
-                    startActivity(intent)
-                    if (result.isReused) {
-                        Toast.makeText(this@MainActivity, "🛡️ Enlace activo recuperado (válido por 24h)", Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(this@MainActivity, "✅ Enlace de pago generado con éxito", Toast.LENGTH_SHORT).show()
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(this@MainActivity, "No se pudo abrir el navegador: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                AlertDialog.Builder(this@MainActivity)
-                    .setTitle("Atención")
-                    .setMessage(result.message)
-                    .setPositiveButton("Contactar por WhatsApp") { _, _ -> openSupportWhatsAppForPro() }
-                    .setNegativeButton("Cerrar", null)
-                    .show()
-            }
-        }
+        // Abre directamente el contacto de WhatsApp con CIEM Tech para solicitar el enlace oficial de CobrixPay
+        openSupportWhatsAppForPro()
     }
 
     private fun openSupportWhatsAppForPro() {
         val profile = PreferencesHelper.getUserProfile(this)
         val deviceId = PlanCapabilityManager.getDeviceId(this)
         val businessName = profile.merchantName.ifEmpty { "Mi Negocio" }
-        val text = Uri.encode("Hola Ciem tech solutions C.A, deseo activar el Plan Zippy PRO (\$2.99) para mi negocio '$businessName' (ID Dispositivo: $deviceId). Por favor envíenme el link de pago.")
+        val rif = if (profile.idCard.isNotEmpty()) " (${profile.idCard})" else ""
+        val text = Uri.encode("Hola Ciem tech solutions C.A, deseo activar o renovar el Plan Zippy PRO (\$2.99) para mi negocio '$businessName'$rif (ID Dispositivo: $deviceId). Por favor envíenme el link de pago oficial de CobrixPay.")
         val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
         startActivity(Intent(Intent.ACTION_VIEW, uri))
     }
 
     private fun showRedeemCodeDialog() {
         val input = EditText(this).apply {
-            hint = "ZIPPYPRO2026"
+            hint = "Ej: ZIP-XXXX-YYYY"
             setPadding(40, 30, 40, 30)
+            isSingleLine = true
         }
 
         AlertDialog.Builder(this)
-            .setTitle("🔑 Activar Zippy PRO")
-            .setMessage("Ingresa el código proporcionado por soporte para activar tu suscripción:")
+            .setTitle("🔑 Activar Zippy PRO con Código")
+            .setMessage("Ingresa el código de activación asignado a tu dispositivo por el equipo de soporte de CIEM:")
             .setView(input)
             .setPositiveButton("Activar") { _, _ ->
                 val code = input.text.toString().trim()
-                if (PlanCapabilityManager.activateWithLicenseKey(this, code)) {
-                    Toast.makeText(this, "🎉 ¡Plan Zippy PRO activado exitosamente!", Toast.LENGTH_LONG).show()
-                    loadSettings()
-                    loadTodayLedger()
-                    setupCashierBankSelector()
-                    updateLicenseBadge()
-                } else {
-                    Toast.makeText(this, "❌ Código inválido o vencido", Toast.LENGTH_SHORT).show()
+                if (code.isEmpty()) return@setPositiveButton
+
+                Toast.makeText(this, "Validando código de activación...", Toast.LENGTH_SHORT).show()
+                lifecycleScope.launch {
+                    val result = ZippySyncManager.redeemActivationCode(this@MainActivity, code)
+                    runOnUiThread {
+                        if (result.success) {
+                            showProActivatedCelebrationDialog(result.remainingDays)
+                        } else {
+                            AlertDialog.Builder(this@MainActivity)
+                                .setTitle("Código Inválido")
+                                .setMessage(result.message)
+                                .setPositiveButton("Aceptar", null)
+                                .setNeutralButton("Solicitar Código") { _, _ ->
+                                    openSupportWhatsAppForPro()
+                                }
+                                .show()
+                        }
+                    }
                 }
             }
             .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun syncLicenseStatus(showToastIfNoChange: Boolean = false) {
+        lifecycleScope.launch {
+            val wasPro = PlanCapabilityManager.isPro(this@MainActivity)
+            val updated = ZippySyncManager.syncWithBackend(this@MainActivity)
+            val isProNow = PlanCapabilityManager.isPro(this@MainActivity)
+            val daysRemaining = PlanCapabilityManager.getDaysRemaining(this@MainActivity)
+
+            runOnUiThread {
+                loadSettings()
+                updateLicenseBadge()
+                updateShiftUI()
+
+                if (!wasPro && isProNow) {
+                    showProActivatedCelebrationDialog(daysRemaining)
+                } else if (wasPro && !isProNow && PlanCapabilityManager.hasHadPaidPro(this@MainActivity)) {
+                    showSubscriptionExpiredPrompt()
+                } else if (showToastIfNoChange) {
+                    Toast.makeText(this@MainActivity, "Estado de suscripción verificado (${PlanCapabilityManager.getPlanType(this@MainActivity)})", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun showProActivatedCelebrationDialog(daysRemaining: Int) {
+        try {
+            soundHelper?.playCashRegisterSound()
+        } catch (_: Exception) {}
+
+        AlertDialog.Builder(this)
+            .setTitle("🎉 ¡Plan Zippy PRO Activado! ⚡")
+            .setMessage(
+                "¡Tu suscripción ha sido confirmada con éxito!\n\n" +
+                "📅 Vigencia: $daysRemaining día${if (daysRemaining > 1) "s" else ""} restante${if (daysRemaining > 1) "s" else ""}.\n\n" +
+                "🚀 Ya puedes disfrutar de todas las funciones PRO:\n" +
+                "• Detección y confirmación Multibanco simultánea\n" +
+                "• Cobro y conversión de Divisas con Tasa BCV\n" +
+                "• Soundbox con voz parlante y altavoz Bluetooth\n" +
+                "• Carga rápida de ventas y gastos por voz\n" +
+                "• Respaldo en la nube y exportación de reportes\n\n" +
+                "¡Gracias por confiar en Ciem tech solutions C.A!"
+            )
+            .setPositiveButton("¡Empezar a Usar PRO!") { dialog, _ ->
+                dialog.dismiss()
+                loadSettings()
+                loadTodayLedger()
+                setupCashierBankSelector()
+                updateLicenseBadge()
+            }
+            .setCancelable(false)
             .show()
     }
 

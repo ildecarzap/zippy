@@ -209,6 +209,88 @@ object ZippySyncManager {
         }
     }
 
+    data class RedeemResult(
+        val success: Boolean,
+        val message: String,
+        val remainingDays: Int = 0
+    )
+
+    /**
+     * Canjea un código de activación manual con el servidor de Zippy Hub.
+     * Si no hay internet, valida con las claves locales de soporte como respaldo.
+     */
+    suspend fun redeemActivationCode(context: Context, rawCode: String): RedeemResult = withContext(Dispatchers.IO) {
+        val code = rawCode.trim().uppercase(Locale.US)
+        if (code.isEmpty()) {
+            return@withContext RedeemResult(success = false, message = "Por favor ingresa un código de activación")
+        }
+
+        val deviceId = PlanCapabilityManager.getDeviceId(context)
+        val baseUrl = getServerUrl(context)
+
+        try {
+            val url = URL("$baseUrl/api/v1/license/redeem")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("Accept", "application/json")
+            conn.connectTimeout = 8000
+            conn.readTimeout = 8000
+            conn.doOutput = true
+
+            val payload = JSONObject().apply {
+                put("device_id", deviceId)
+                put("code", code)
+            }
+
+            val writer = OutputStreamWriter(conn.outputStream)
+            writer.write(payload.toString())
+            writer.flush()
+            writer.close()
+
+            val responseCode = conn.responseCode
+            val stream = if (responseCode in 200..299) conn.inputStream else conn.errorStream
+            val reader = BufferedReader(InputStreamReader(stream))
+            val sb = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                sb.append(line)
+            }
+            reader.close()
+            conn.disconnect()
+
+            val json = JSONObject(sb.toString())
+            if (responseCode in 200..299 && json.optString("status") == "success") {
+                val remainingDays = json.optInt("remaining_days", 30)
+                val proExpiresAt = json.optString("pro_expires_at", "")
+                val expirationMs = parseIsoDateOrAddDays(proExpiresAt, remainingDays)
+                PlanCapabilityManager.setServerProExpiration(context, expirationMs)
+                return@withContext RedeemResult(
+                    success = true,
+                    message = json.optString("message", "¡Plan Zippy PRO activado!"),
+                    remainingDays = remainingDays
+                )
+            } else {
+                val detail = json.optString("detail", json.optString("message", "Código inválido o ya utilizado"))
+                return@withContext RedeemResult(success = false, message = detail)
+            }
+        } catch (e: Exception) {
+            // Respaldo offline inmediato
+            val localOk = PlanCapabilityManager.activateWithLicenseKey(context, code)
+            if (localOk) {
+                return@withContext RedeemResult(
+                    success = true,
+                    message = "¡Plan Zippy PRO activado localmente!",
+                    remainingDays = PlanCapabilityManager.getDaysRemaining(context)
+                )
+            }
+            return@withContext RedeemResult(
+                success = false,
+                message = "No se pudo validar el código: ${e.localizedMessage}"
+            )
+        }
+    }
+
     private fun parseIsoDateOrAddDays(isoString: String, remainingDays: Int): Long {
         if (isoString.isNotEmpty()) {
             try {

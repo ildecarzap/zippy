@@ -26,6 +26,9 @@ class DeviceLicense(Base):
     pending_payment_url = Column(String(500), nullable=True)
     pending_link_expires_at = Column(DateTime, nullable=True)
 
+    # Código de activación autogenerado para soporte manual
+    activation_code = Column(String(50), unique=True, index=True, nullable=True)
+
     @property
     def is_pro_active(self) -> bool:
         if not self.is_active:

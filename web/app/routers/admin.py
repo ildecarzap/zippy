@@ -114,6 +114,16 @@ async def admin_dashboard(
 
     devices = query.order_by(DeviceLicense.created_at.desc()).all()
 
+    # Asegurar que todos los dispositivos tengan un código de activación único
+    from app.services.cobrixpay import generate_activation_code
+    dirty = False
+    for d in devices:
+        if not d.activation_code:
+            d.activation_code = generate_activation_code(d.device_id)
+            dirty = True
+    if dirty:
+        db.commit()
+
     total_devices = db.query(DeviceLicense).count()
     pro_devices = sum(1 for d in devices if d.is_pro_active and d.plan_type == "PRO")
     trial_devices = sum(1 for d in devices if d.is_pro_active and d.plan_type == "TRIAL")

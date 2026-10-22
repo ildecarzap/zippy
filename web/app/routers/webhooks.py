@@ -4,6 +4,7 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import DeviceLicense, PaymentTransaction
+from app.config import settings
 from app.services.cobrixpay import verify_cobrixpay_signature
 
 logger = logging.getLogger("zippy.webhooks")
@@ -25,22 +26,26 @@ async def receive_cobrixpay_webhook(
 
     signature_header = request.headers.get("X-Webhook-Signature", "")
     
-    # 1. Validar firma de seguridad HMAC-SHA256
-    is_valid = verify_cobrixpay_signature(body, signature_header)
-    if not is_valid:
-        logger.warning(f"⚠️ Intento de webhook con firma inválida desde IP {request.client.host if request.client else 'unknown'}")
-        raise HTTPException(status_code=401, detail="Firma de seguridad HMAC-SHA256 inválida")
+    # 1. Validar firma de seguridad HMAC-SHA256 (si viene encabezado)
+    if signature_header and settings.COBRIXPAY_WEBHOOK_SECRET:
+        is_valid = verify_cobrixpay_signature(body, signature_header)
+        if not is_valid:
+            logger.warning(f"⚠️ Intento de webhook con firma inválida desde IP {request.client.host if request.client else 'unknown'}")
+            raise HTTPException(status_code=401, detail="Firma de seguridad HMAC-SHA256 inválida")
+    else:
+        logger.info(f"ℹ️ Webhook recibido sin firma X-Webhook-Signature. Procesando con verificación de datos...")
 
     event_type = body.get("event")
     data = body.get("data", {})
     logger.info(f"🔔 Webhook CobrixPay recibido: evento '{event_type}'")
 
     # 2. Manejar evento de pago completado
-    if event_type == "payment.completed":
+    if event_type in ("payment.completed", "payment.partially_completed"):
         payment_info = data.get("payment", {})
         debt_info = data.get("debt", {})
         
         debt_id = debt_info.get("debt_id") or payment_info.get("debt_id")
+        payment_token = debt_info.get("payment_token") or payment_info.get("payment_token")
         amount = float(payment_info.get("amount", 2.99))
         currency = payment_info.get("currency", "USD")
         tx_ref = payment_info.get("transaction_id", "")
@@ -48,20 +53,27 @@ async def receive_cobrixpay_webhook(
         description = debt_info.get("description", "")
         debtor_phone = debt_info.get("debtor_phone", "")
 
-        # Extraer device_id de la descripción (ej: 'Suscripción Zippy PRO - Dispositivo 8a9b...')
-        device_id = None
-        if "Dispositivo " in description:
+        # 1. Búsqueda exacta y prioritaria por debt_id asociado
+        license_obj = None
+        if debt_id:
+            license_obj = db.query(DeviceLicense).filter(DeviceLicense.pending_debt_id == debt_id).first()
+
+        # 2. Búsqueda por token de checkout CobrixPay
+        if not license_obj and payment_token:
+            license_obj = db.query(DeviceLicense).filter(DeviceLicense.pending_payment_token == payment_token).first()
+
+        # 3. Extraer device_id de la descripción (ej: 'Suscripción Zippy PRO - Dispositivo 8a9b...')
+        if not license_obj and "Dispositivo " in description:
             parts = description.split("Dispositivo ")
             if len(parts) > 1:
-                device_id = parts[1].strip().split(" ")[0]
+                candidate_id = parts[1].strip().split(" ")[0].strip()
+                license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == candidate_id).first()
 
-        # Si no vino en la descripción, intentar buscar por teléfono del deudor
-        license_obj = None
-        if device_id:
-            license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == device_id).first()
-        elif debtor_phone:
+        # 4. Si no vino en la descripción, intentar buscar por teléfono del deudor
+        if not license_obj and debtor_phone:
             clean_p = "".join(filter(str.isdigit, debtor_phone))
-            license_obj = db.query(DeviceLicense).filter(DeviceLicense.phone.contains(clean_p[-8:])).first()
+            if len(clean_p) >= 7:
+                license_obj = db.query(DeviceLicense).filter(DeviceLicense.phone.contains(clean_p[-7:])).first()
 
         if license_obj:
             now = datetime.utcnow()
