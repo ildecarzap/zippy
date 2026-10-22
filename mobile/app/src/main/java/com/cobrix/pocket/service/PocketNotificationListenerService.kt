@@ -130,8 +130,18 @@ class PocketNotificationListenerService : NotificationListenerService() {
         // 7. Notificación visual en Android
         showLocalPaymentNotification(parsedPayment.monto, parsedPayment.referenciaUltimos4, parsedPayment.bancoCodigo.displayName)
 
-        // 8. Notificar a la UI (MainActivity / FullScreenQrActivity) si está abierta
+        // 8. Guardar para celebración si la app se abre justo después
+        PreferencesHelper.savePendingCelebration(
+            context = this,
+            amount = parsedPayment.monto,
+            ref = parsedPayment.referenciaUltimos4,
+            bank = parsedPayment.bancoCodigo.displayName,
+            phone = parsedPayment.telefonoOrigen ?: ""
+        )
+
+        // 9. Notificar a la UI (MainActivity / FullScreenQrActivity) con package explícito para Android 14+
         val broadcastIntent = Intent(ACTION_PAYMENT_RECEIVED).apply {
+            setPackage(packageName)
             putExtra(EXTRA_AMOUNT, parsedPayment.monto)
             putExtra(EXTRA_REF, parsedPayment.referenciaUltimos4)
             putExtra(EXTRA_BANK, parsedPayment.bancoCodigo.displayName)

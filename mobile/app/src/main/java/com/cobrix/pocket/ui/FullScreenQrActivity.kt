@@ -44,6 +44,7 @@ class FullScreenQrActivity : AppCompatActivity() {
                 val phone = intent.getStringExtra(PocketNotificationListenerService.EXTRA_PHONE) ?: ""
 
                 runOnUiThread {
+                    PreferencesHelper.getAndClearPendingCelebration(this@FullScreenQrActivity)
                     if (PreferencesHelper.isCelebrationScreenEnabled(this@FullScreenQrActivity) && amount > 0.0) {
                         showPaymentCelebrationAndFinish(amount, ref, bank, phone)
                     } else {
@@ -106,6 +107,13 @@ class FullScreenQrActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (PreferencesHelper.isCelebrationScreenEnabled(this)) {
+            val pending = PreferencesHelper.getAndClearPendingCelebration(this)
+            if (pending != null && pending.amount > 0.0) {
+                showPaymentCelebrationAndFinish(pending.amount, pending.ref, pending.bank, pending.phone)
+                return
+            }
+        }
         val filter = IntentFilter(PocketNotificationListenerService.ACTION_PAYMENT_RECEIVED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(paymentReceiver, filter, Context.RECEIVER_NOT_EXPORTED)

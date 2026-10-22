@@ -47,6 +47,70 @@ def verify_cobrixpay_signature(payload: Dict[str, Any], signature_header: str) -
 
     return hmac.compare_digest(firma_calculada, signature_header)
 
+import logging
+import requests
+from datetime import datetime
+
+logger = logging.getLogger("zippy.cobrixpay")
+
+_cached_token = None
+_token_expires_at = None
+
+def get_cobrixpay_auth_headers() -> Dict[str, str]:
+    """
+    Retorna los encabezados de autenticación para consumir la API de CobrixPay.
+    Soporta:
+    1. API Key directa (X-API-Key: cb_live_...)
+    2. Token estático Bearer (Authorization: Bearer ...)
+    3. Login OAuth2 dinámico (/api/v1/token) usando COBRIXPAY_API_USER y COBRIXPAY_API_PASSWORD
+    """
+    global _cached_token, _token_expires_at
+
+    # 1. API Key
+    if settings.COBRIXPAY_API_KEY:
+        return {"X-API-Key": settings.COBRIXPAY_API_KEY}
+
+    # 2. Token Bearer estático
+    if settings.COBRIXPAY_API_TOKEN:
+        return {"Authorization": f"Bearer {settings.COBRIXPAY_API_TOKEN}"}
+
+    # 3. Login por usuario y contraseña
+    if settings.COBRIXPAY_API_USER and settings.COBRIXPAY_API_PASSWORD:
+        now = datetime.utcnow()
+        if _cached_token and _token_expires_at and now < _token_expires_at:
+            return {"Authorization": f"Bearer {_cached_token}"}
+
+        login_url = f"{settings.COBRIXPAY_API_URL.rstrip('/')}/api/v1/token"
+        try:
+            resp = requests.post(
+                login_url,
+                data={
+                    "username": settings.COBRIXPAY_API_USER,
+                    "password": settings.COBRIXPAY_API_PASSWORD
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=10
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                token = data.get("access_token")
+                if token:
+                    _cached_token = token
+                    _token_expires_at = now + timedelta(minutes=90)
+                    return {"Authorization": f"Bearer {token}"}
+                else:
+                    raise Exception(f"Respuesta de CobrixPay sin access_token: {data}")
+            else:
+                raise Exception(f"Credenciales de CobrixPay inválidas ({resp.status_code}): {resp.text}")
+        except Exception as e:
+            logger.error(f"Error autenticando con CobrixPay API: {e}")
+            raise e
+
+    raise Exception(
+        "Credenciales de CobrixPay API no configuradas. "
+        "Agrega COBRIXPAY_API_USER y COBRIXPAY_API_PASSWORD (o COBRIXPAY_API_KEY / COBRIXPAY_API_TOKEN) en las variables de entorno."
+    )
+
 def create_or_get_cobrixpay_payment_url(
     device_id: str,
     merchant_name: str,
@@ -55,87 +119,65 @@ def create_or_get_cobrixpay_payment_url(
     months: int = 1
 ) -> Tuple[str, str]:
     """
-    Crea o reutiliza una deuda en CobrixPay y obtiene el 'payment_token' auténtico.
+    Llama a la API oficial de CobrixPay (POST /api/v1/debts) con token de autenticación
+    para registrar la deuda real del comercio CIEM y obtener su payment_token auténtico.
     Devuelve (payment_token, payment_url).
     URL resultante: https://app.cobrix-pay.com/pay/{payment_token}
     """
     amount = round(settings.COBRIXPAY_PLAN_PRICE_USD * months, 2)
-    company_id = int(settings.COBRIXPAY_COMPANY_ID or "5")
     meses_txt = f"{months} mes{'es' if months > 1 else ''}"
     description = f"Suscripción Zippy PRO ({meses_txt}) - Dispositivo {device_id}"
+
+    clean_phone = phone.strip()
+    if clean_phone.startswith("0"):
+        clean_phone = f"+58{clean_phone[1:]}"
+    elif not clean_phone.startswith("+") and len(clean_phone) == 10:
+        clean_phone = f"+58{clean_phone}"
+    elif clean_phone and not clean_phone.startswith("+"):
+        clean_phone = f"+{clean_phone}"
+    if not clean_phone:
+        clean_phone = "+584140000000"
+
     email = f"{device_id.lower().replace('-', '')}@zippy.ciemtech.com"
 
-    # Intentar registrar directamente en CobrixPay si la BD contiene las tablas
-    active_engine = get_cobrixpay_engine()
     try:
-        with active_engine.connect() as conn:
-            # 1. Buscar o registrar deudor en la tabla debtors
-            debtor_id = None
-            existing_debtor = conn.execute(text("""
-                SELECT debtor_id FROM debtors 
-                WHERE company_id = :comp_id AND (
-                    (document_number IS NOT NULL AND document_number != '' AND document_number = :doc) OR 
-                    (phone IS NOT NULL AND phone != '' AND phone = :phone)
-                )
-                LIMIT 1;
-            """), {'comp_id': company_id, 'doc': doc_id or "", 'phone': phone}).first()
+        headers = get_cobrixpay_auth_headers()
+        headers["Content-Type"] = "application/json"
 
-            if existing_debtor:
-                debtor_id = existing_debtor[0]
+        debt_api_url = f"{settings.COBRIXPAY_API_URL.rstrip('/')}/api/v1/debts"
+        payload = {
+            "amount": float(amount),
+            "currency_code": "USD",
+            "description": description,
+            "due_date": (date.today() + timedelta(days=7)).isoformat(),
+            "allow_partial_payment": False,
+            "debtor_data": {
+                "name": merchant_name.strip() or f"Comercio {device_id}",
+                "email": email,
+                "phone": clean_phone,
+                "document_number": doc_id.strip() if doc_id else "V-00000000",
+                "document_type": "RIF"
+            }
+        }
+
+        resp = requests.post(debt_api_url, json=payload, headers=headers, timeout=12)
+        if resp.status_code in (200, 201):
+            debt_data = resp.json()
+            payment_token = debt_data.get("payment_token")
+            if payment_token:
+                payment_url = f"{settings.COBRIXPAY_BASE_URL.rstrip('/')}/pay/{payment_token}"
+                logger.info(f"✅ Deuda creada exitosamente en CobrixPay API para {device_id}: token {payment_token}")
+                return payment_token, payment_url
             else:
-                insert_debtor = conn.execute(text("""
-                    INSERT INTO debtors (company_id, name, email, phone, document_type, document_number, status, created_at)
-                    VALUES (:comp_id, :name, :email, :phone, 'RIF', :doc, 1, NOW())
-                    RETURNING debtor_id;
-                """), {
-                    'comp_id': company_id,
-                    'name': merchant_name,
-                    'email': email,
-                    'phone': phone,
-                    'doc': doc_id or "V-00000000"
-                })
-                debtor_id = insert_debtor.scalar()
-                conn.commit()
+                logger.error(f"⚠️ CobrixPay API retornó 200 pero sin payment_token: {debt_data}")
+                raise Exception(f"CobrixPay API retornó respuesta sin payment_token: {debt_data}")
+        else:
+            logger.error(f"⚠️ CobrixPay API respondió con error ({resp.status_code}): {resp.text}")
+            raise Exception(f"CobrixPay API respondió con error ({resp.status_code}): {resp.text}")
 
-            # 2. Buscar si ya existe una deuda pendiente para este dispositivo
-            desc_search = f"%Dispositivo {device_id}%"
-            existing_debt = conn.execute(text("""
-                SELECT debt_id, payment_token FROM debts 
-                WHERE company_id = :comp_id AND debtor_id = :debtor_id AND status = 'pending' AND description LIKE :desc
-                LIMIT 1;
-            """), {'comp_id': company_id, 'debtor_id': debtor_id, 'desc': desc_search}).first()
-
-            if existing_debt and existing_debt[1]:
-                token = existing_debt[1]
-            else:
-                new_token = secrets.token_urlsafe(18)
-                ref_num = f"ZIP-{secrets.token_hex(3).upper()}"
-                due = date.today() + timedelta(days=7)
-
-                conn.execute(text("""
-                    INSERT INTO debts (company_id, debtor_id, amount, balance_due, currency_code, description, reference_number, due_date, status, payment_token, allow_partial_payment, late_fee_applied, created_at)
-                    VALUES (:comp_id, :debtor_id, :amount, :balance, 'USD', :desc, :ref_num, :due, 'pending', :token, false, false, NOW());
-                """), {
-                    'comp_id': company_id,
-                    'debtor_id': debtor_id,
-                    'amount': amount,
-                    'balance': amount,
-                    'desc': description,
-                    'ref_num': ref_num,
-                    'due': due,
-                    'token': new_token
-                })
-                conn.commit()
-                token = new_token
-
-            payment_url = f"{settings.COBRIXPAY_BASE_URL}/pay/{token}"
-            return token, payment_url
-
-    except Exception as e:
-        # Contingencia si no está conectada la tabla de CobrixPay: generar token UUID seguro
-        token = secrets.token_urlsafe(18)
-        payment_url = f"{settings.COBRIXPAY_BASE_URL}/pay/{token}"
-        return token, payment_url
+    except Exception as api_err:
+        logger.error(f"Error al crear deuda en CobrixPay API: {api_err}")
+        raise api_err
 
 def build_whatsapp_message_text(merchant_name: str, payment_url: str, months: int = 1) -> str:
     """

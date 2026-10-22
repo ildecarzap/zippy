@@ -211,13 +211,16 @@ async def get_cobrix_payment_data(
     if not device:
         raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
 
-    token, payment_url = create_or_get_cobrixpay_payment_url(
-        device_id=device.device_id,
-        merchant_name=device.merchant_name,
-        phone=device.phone,
-        doc_id=device.doc_id,
-        months=months
-    )
+    try:
+        token, payment_url = create_or_get_cobrixpay_payment_url(
+            device_id=device.device_id,
+            merchant_name=device.merchant_name,
+            phone=device.phone,
+            doc_id=device.doc_id,
+            months=months
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     message_text = build_whatsapp_message_text(device.merchant_name, payment_url, months)
     wa_url = build_whatsapp_direct_url(device.phone, message_text)
@@ -257,13 +260,16 @@ async def get_whatsapp_payment_redirect(
     if not device:
         raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
 
-    token, payment_url = create_or_get_cobrixpay_payment_url(
-        device_id=device.device_id,
-        merchant_name=device.merchant_name,
-        phone=device.phone,
-        doc_id=device.doc_id,
-        months=months
-    )
+    try:
+        token, payment_url = create_or_get_cobrixpay_payment_url(
+            device_id=device.device_id,
+            merchant_name=device.merchant_name,
+            phone=device.phone,
+            doc_id=device.doc_id,
+            months=months
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     message_text = build_whatsapp_message_text(device.merchant_name, payment_url, months)
     wa_url = build_whatsapp_direct_url(device.phone, message_text)

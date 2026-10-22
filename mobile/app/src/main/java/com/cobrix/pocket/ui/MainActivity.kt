@@ -147,6 +147,7 @@ class MainActivity : AppCompatActivity() {
 
                 runOnUiThread {
                     loadTodayLedger()
+                    PreferencesHelper.getAndClearPendingCelebration(this@MainActivity)
                     if (PreferencesHelper.isCelebrationScreenEnabled(this@MainActivity) && amount > 0.0) {
                         showPaymentCelebrationDialog(amount, ref, bank, phone)
                     } else {
@@ -201,6 +202,15 @@ class MainActivity : AppCompatActivity() {
         loadTodayLedger()
         setupCashierBankSelector()
         updateLicenseBadge()
+
+        // Verificar si llegó un pago mientras la pantalla estaba apagada o en otra app
+        if (PreferencesHelper.isCelebrationScreenEnabled(this)) {
+            val pending = PreferencesHelper.getAndClearPendingCelebration(this)
+            if (pending != null && pending.amount > 0.0) {
+                showPaymentCelebrationDialog(pending.amount, pending.ref, pending.bank, pending.phone)
+            }
+        }
+
         val filter = IntentFilter(PocketNotificationListenerService.ACTION_PAYMENT_RECEIVED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(paymentReceiver, filter, Context.RECEIVER_NOT_EXPORTED)

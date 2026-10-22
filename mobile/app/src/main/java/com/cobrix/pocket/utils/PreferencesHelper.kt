@@ -200,4 +200,38 @@ object PreferencesHelper {
     fun setThemeMode(context: Context, mode: String) {
         getPrefs(context).edit().putString(KEY_THEME_MODE, mode).apply()
     }
+
+    data class CelebrationData(
+        val amount: Double,
+        val ref: String,
+        val bank: String,
+        val phone: String,
+        val timestamp: Long
+    )
+
+    fun savePendingCelebration(context: Context, amount: Double, ref: String, bank: String, phone: String) {
+        getPrefs(context).edit()
+            .putFloat("pending_celeb_amount", amount.toFloat())
+            .putString("pending_celeb_ref", ref)
+            .putString("pending_celeb_bank", bank)
+            .putString("pending_celeb_phone", phone)
+            .putLong("pending_celeb_time", System.currentTimeMillis())
+            .apply()
+    }
+
+    fun getAndClearPendingCelebration(context: Context): CelebrationData? {
+        val prefs = getPrefs(context)
+        val time = prefs.getLong("pending_celeb_time", 0L)
+        if (time == 0L || (System.currentTimeMillis() - time) > 60000L) {
+            prefs.edit().remove("pending_celeb_time").apply()
+            return null
+        }
+        val amount = prefs.getFloat("pending_celeb_amount", 0f).toDouble()
+        val ref = prefs.getString("pending_celeb_ref", "") ?: ""
+        val bank = prefs.getString("pending_celeb_bank", "") ?: ""
+        val phone = prefs.getString("pending_celeb_phone", "") ?: ""
+
+        prefs.edit().remove("pending_celeb_time").apply()
+        return CelebrationData(amount, ref, bank, phone, time)
+    }
 }

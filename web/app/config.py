@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     COBRIXPAY_PLAN_PRICE_USD: float = float(os.getenv("COBRIXPAY_PLAN_PRICE_USD", "2.99"))
     COBRIXPAY_DATABASE_URL: Optional[str] = os.getenv("COBRIXPAY_DATABASE_URL", None)
 
+    # Credenciales de Autenticación en CobrixPay API (para crear deudas y obtener tokens reales)
+    COBRIXPAY_API_USER: str = os.getenv("COBRIXPAY_API_USER", "")
+    COBRIXPAY_API_PASSWORD: str = os.getenv("COBRIXPAY_API_PASSWORD", "")
+    COBRIXPAY_API_KEY: str = os.getenv("COBRIXPAY_API_KEY", "")
+    COBRIXPAY_API_TOKEN: str = os.getenv("COBRIXPAY_API_TOKEN", "")
+
     # Datos Corporativos de CIEM
     COMPANY_NAME: str = "Ciem tech solutions C.A"
     COMPANY_RIF: str = "J-50849495-4"

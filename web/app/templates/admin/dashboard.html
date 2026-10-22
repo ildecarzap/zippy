@@ -332,7 +332,10 @@
       const months = document.getElementById('modalMonths').value;
       try {
         const res = await fetch(`/${secretPath}/licenses/${currentModalLicenseId}/cobrix-data?months=${months}`);
-        if (!res.ok) throw new Error("Error en servidor");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || "Error en el servidor");
+        }
         const data = await res.json();
         
         document.getElementById('modalLicenseId').value = currentModalLicenseId;
@@ -345,7 +348,7 @@
 
         document.getElementById('cobrixForm').action = `/${secretPath}/licenses/${currentModalLicenseId}/send-custom-whatsapp`;
       } catch (e) {
-        alert('No se pudo generar el token de CobrixPay: ' + e);
+        alert('⚠️ ' + e.message);
       }
     }
 
