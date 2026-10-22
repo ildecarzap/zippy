@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso Seguro • Control CIEM Zippy</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/static/images/zippy-logo.jpg">
+</head>
+
+<body
+  style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: var(--color-bg);">
+
+  <div style="width: 100%; max-width: 420px; padding: 24px;">
+
+    <div style="text-align: center; margin-bottom: 28px;">
+      <img src="/static/images/zippy-logo.jpg" alt="Zippy Logo"
+        style="width: 56px; height: 56px; border-radius: var(--radius-md); border: 1px solid var(--color-border); padding: 4px; background: white; margin-bottom: 12px;">
+      <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--color-text-main);">Panel de Control CIEM</h1>
+      <p style="color: var(--color-text-muted); font-size: 0.88rem;">Acceso restringido y monitoreado</p>
+    </div>
+
+    {% if error %}
+    <div
+      style="background-color: var(--badge-danger-bg); color: var(--badge-danger-text); border: 1px solid var(--badge-danger-border); padding: 12px 16px; border-radius: var(--radius-md); font-size: 0.88rem; margin-bottom: 20px;">
+      ⚠️ {{ error }}
+    </div>
+    {% endif %}
+
+    <div class="card" style="box-shadow: var(--shadow-md);">
+      <form action="/{{ secret_path }}/login" method="POST">
+
+        <div class="form-group">
+          <label class="form-label" for="username">Usuario Administrador</label>
+          <input type="text" id="username" name="username" class="form-control" placeholder="Ingrese su usuario"
+            required autofocus>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label class="form-label" for="password">Contraseña de Acceso</label>
+          <input type="password" id="password" name="password" class="form-control" placeholder="••••••••••••" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 16px;">
+          🔒 Ingresar de Forma Segura
+        </button>
+
+      </form>
+
+      {% if settings.AUTH0_DOMAIN and settings.AUTH0_CLIENT_ID %}
+      <div style="position: relative; text-align: center; margin: 20px 0;">
+        <hr style="border: none; border-top: 1px solid var(--color-border);">
+        <span
+          style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: white; padding: 0 10px; font-size: 0.78rem; color: var(--color-text-light);">o
+          ingresa con</span>
+      </div>
+
+      <a href="/{{ secret_path }}/auth0/login" class="btn btn-outline" style="width: 100%;">
+        🛡️ Auth0 Universal Login
+      </a>
+      {% endif %}
+
+      <div style="margin-top: 24px; text-align: center;">
+        <span style="font-size: 0.78rem; color: var(--color-text-light);">
+          Protección activa contra fuerza bruta y CSRF • {{ settings.COMPANY_NAME }}
+        </span>
+      </div>
+
+    </div>
+
+    <div style="text-align: center; margin-top: 24px;">
+      <a href="/" style="font-size: 0.85rem; color: var(--color-text-muted);">← Volver a Zippy Web</a>
+    </div>
+
+  </div>
+
+</body>
+
+</html>

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 48px 24px;">
+  
+  <!-- Encabezado de la Guía -->
+  <div style="text-align: center; margin-bottom: 48px;">
+    <span class="badge badge-pro" style="margin-bottom: 12px;">Manual Oficial de Usuario</span>
+    <h1 style="font-size: 2.25rem; font-weight: 800; margin-bottom: 12px;">
+      Guía de Inicio Rápido e Instructivo Zippy
+    </h1>
+    <p style="color: var(--color-text-muted); max-width: 650px; margin: 0 auto;">
+      Aprende a configurar tu cuenta, mostrar los códigos QR de tus bancos, recibir pagos con sonido de caja y cuadrar tu día con la tasa BCV oficial.
+    </p>
+  </div>
+
+  <div style="max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px;">
+
+    <!-- Paso 1 -->
+    <div class="card">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
+        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">1</span>
+        <h2 style="font-size: 1.35rem; font-weight: 700;">Configura tu Comercio y Bancos</h2>
+      </div>
+      <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
+        Al abrir Zippy por primera vez, ingresa en la pestaña <strong>Configuraciones</strong> en la barra inferior:
+      </p>
+      <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
+        <li><strong>Nombre del negocio:</strong> El nombre comercial con el que te identifican tus clientes.</li>
+        <li><strong>Rubro:</strong> Selecciona la categoría de tu comercio (Alimentos, Farmacia, Ropa, etc.).</li>
+        <li><strong>Teléfono de Pago Móvil:</strong> El número asociado a tus cuentas bancarias para recibir fondos.</li>
+        <li><strong>Bancos Disponibles:</strong> Elige entre <em>Banesco, Mercantil, BNC o Banco de Venezuela</em>. Puedes activar o desactivar cada banco con un simple toque.</li>
+        <li><strong>Cargar Código QR:</strong> Puedes asociar la imagen de tu código QR específico a cada banco seleccionado para que se guarde de forma independiente.</li>
+      </ul>
+    </div>
+
+    <!-- Paso 2 -->
+    <div class="card">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
+        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">2</span>
+        <h2 style="font-size: 1.35rem; font-weight: 700;">Cobro Inmediato con QR en Mostrador</h2>
+      </div>
+      <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
+        En la pantalla principal (<strong>Inicio</strong>), Zippy te muestra un carrusel o botones directos de tus bancos habilitados:
+      </p>
+      <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
+        <li>Toca el botón del banco que tu cliente desea utilizar para proyectar su código QR en pantalla grande.</li>
+        <li>El cliente solo debe escanear el QR desde la app de su banco sin tener que digitar tu teléfono ni cédula.</li>
+        <li><strong>Compartir por WhatsApp:</strong> Si el cliente está pagando a distancia, presiona el botón <em>"Compartir Datos"</em> para enviar los datos bancarios y el QR directamente por WhatsApp.</li>
+      </ul>
+    </div>
+
+    <!-- Paso 3 -->
+    <div class="card">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
+        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">3</span>
+        <h2 style="font-size: 1.35rem; font-weight: 700;">Soundbox: Confirmación Sonora de Cobro</h2>
+      </div>
+      <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
+        ¡No pierdas tiempo pidiendo capturas de pantalla ni revisando la banca en línea! Zippy detecta las notificaciones de tu banco al instante:
+      </p>
+      <div style="background-color: var(--color-surface-soft); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: 12px;">
+        <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>🔔 Plan Básico (Gratuito):</strong> Emite el sonido nítido de una auténtica campana de caja registradora <em>"¡Ka-ching!"</em> cuando recibes un Pago Móvil.</p>
+        <p style="font-size: 0.9rem;"><strong>🗣️ Zippy PRO:</strong> Además del sonido, una voz inteligente canta en voz alta el monto exacto y el banco (ej: <em>"Pago móvil recibido de 450 bolívares en Banesco"</em>).</p>
+      </div>
+    </div>
+
+    <!-- Paso 4 -->
+    <div class="card">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
+        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">4</span>
+        <h2 style="font-size: 1.35rem; font-weight: 700;">Carga por Voz de Ingresos y Egresos</h2>
+      </div>
+      <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
+        En la pestaña <strong>Jornada</strong>, puedes registrar las ventas en efectivo, compras a proveedores o gastos de transporte tocando el botón de micrófono:
+      </p>
+      <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
+        <li>Di: <code>"Ingreso diez dólares venta de repuestos"</code> → Se registra automáticamente como ingreso en USD.</li>
+        <li>Di: <code>"Gasto quince dólares compra de bolsas"</code> → Se resta de tu balance como egreso del día.</li>
+      </ul>
+    </div>
+
+    <!-- Paso 5 -->
+    <div class="card">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
+        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">5</span>
+        <h2 style="font-size: 1.35rem; font-weight: 700;">Cierre de Jornada y Tasa Oficial BCV</h2>
+      </div>
+      <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
+        Al terminar tu día de trabajo:
+      </p>
+      <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
+        <li>Revisa el total cobrado en Bolívares y su equivalencia en Dólares según la tasa oficial del BCV del momento exacto del cobro.</li>
+        <li>Genera reportes en formato <strong>Excel (.csv)</strong> o <strong>PDF</strong>. El nombre del archivo se guarda con la fecha y hora exacta (ej. <code>reporte_jornada_21-10-26_1630.pdf</code>) e incluye los números de referencia para auditar con el banco.</li>
+      </ul>
+    </div>
+
+    <!-- Paso 6 -->
+    <div class="card">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
+        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">6</span>
+        <h2 style="font-size: 1.35rem; font-weight: 700;">Copia de Seguridad y Cambio de Celular</h2>
+      </div>
+      <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
+        Si cambias de teléfono o quieres asegurar tus datos:
+      </p>
+      <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
+        <li>En <strong>Configuraciones → Copia de Seguridad</strong>, presiona <em>"Exportar Respaldo"</em>.</li>
+        <li>Puedes enviarte el archivo por WhatsApp o guardarlo en Google Drive.</li>
+        <li>En tu nuevo teléfono, instala Zippy y presiona <em>"Restaurar Respaldo"</em> para recuperar todas tus transacciones, configuraciones y códigos QR de inmediato.</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- Pie de ayuda -->
+  <div style="text-align: center; margin-top: 48px;">
+    <p style="color: var(--color-text-muted); margin-bottom: 16px;">¿Tienes alguna duda o necesitas ayuda para configurar tu banco?</p>
+    <a href="https://wa.me/{{ settings.COMPANY_WHATSAPP }}?text=Hola,%20necesito%20ayuda%20con%20la%20app%20Zippy" target="_blank" class="btn btn-primary">
+      💬 Contactar a Soporte por WhatsApp
+    </a>
+  </div>
+
+</div>
+{% endblock %}

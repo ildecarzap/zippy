@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Licencias • CIEM Zippy Hub</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/static/images/zippy-logo.jpg">
+</head>
+<body style="background-color: var(--color-bg);">
+
+  <!-- Navbar Admin -->
+  <nav class="navbar">
+    <div class="container nav-inner">
+      <div class="brand">
+        <img src="/static/images/zippy-logo.jpg" alt="Zippy Logo" class="brand-logo">
+        <span>Zippy Hub <small style="font-weight: 500; font-size: 0.75rem; color: var(--color-text-muted); background: var(--color-surface-soft); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--color-border);">Control CIEM</small></span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <span style="font-size: 0.88rem; color: var(--color-text-muted);">
+          👤 <strong>{{ admin.username }}</strong>
+        </span>
+        <a href="/{{ secret_path }}/logout" class="btn btn-outline btn-sm">Cerrar Sesión</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container" style="padding: 36px 24px;">
+
+    <!-- Métricas Generales -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 32px;">
+      
+      <div class="card" style="padding: 20px;">
+        <span style="font-size: 0.82rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase;">Total Dispositivos</span>
+        <div style="font-size: 1.85rem; font-weight: 800; color: var(--color-text-main); margin-top: 6px;">
+          {{ total_devices }}
+        </div>
+      </div>
+
+      <div class="card" style="padding: 20px; border-left: 4px solid var(--badge-pro-text);">
+        <span style="font-size: 0.82rem; font-weight: 600; color: var(--badge-pro-text); text-transform: uppercase;">Zippy PRO Activos</span>
+        <div style="font-size: 1.85rem; font-weight: 800; color: var(--badge-pro-text); margin-top: 6px;">
+          {{ pro_devices }}
+        </div>
+      </div>
+
+      <div class="card" style="padding: 20px; border-left: 4px solid var(--badge-trial-text);">
+        <span style="font-size: 0.82rem; font-weight: 600; color: var(--badge-trial-text); text-transform: uppercase;">En Prueba (Trial 7d)</span>
+        <div style="font-size: 1.85rem; font-weight: 800; color: var(--badge-trial-text); margin-top: 6px;">
+          {{ trial_devices }}
+        </div>
+      </div>
+
+      <div class="card" style="padding: 20px; border-left: 4px solid var(--badge-basic-text);">
+        <span style="font-size: 0.82rem; font-weight: 600; color: var(--badge-basic-text); text-transform: uppercase;">Plan Básico Gratuito</span>
+        <div style="font-size: 1.85rem; font-weight: 800; color: var(--badge-basic-text); margin-top: 6px;">
+          {{ basic_devices }}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Barra de Filtros y Búsqueda -->
+    <div class="card" style="padding: 18px 24px; margin-bottom: 24px;">
+      <form method="GET" action="/{{ secret_path }}/dashboard" style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+        
+        <div style="display: flex; gap: 12px; flex: 1; min-width: 280px;">
+          <input 
+            type="text" 
+            name="q" 
+            value="{{ q }}" 
+            class="form-control" 
+            placeholder="Buscar por comercio, teléfono, RIF o device_id..." 
+            style="padding: 8px 14px; font-size: 0.9rem;"
+          >
+          
+          <select name="filter_plan" class="form-control" style="width: auto; padding: 8px 14px; font-size: 0.9rem;">
+            <option value="ALL" {% if filter_plan == 'ALL' %}selected{% endif %}>Todos los Planes</option>
+            <option value="PRO" {% if filter_plan == 'PRO' %}selected{% endif %}>Solo PRO</option>
+            <option value="TRIAL" {% if filter_plan == 'TRIAL' %}selected{% endif %}>Solo Pruebas</option>
+            <option value="BASIC" {% if filter_plan == 'BASIC' %}selected{% endif %}>Solo Básicos</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn btn-primary btn-sm">🔍 Filtrar</button>
+          {% if q or filter_plan != 'ALL' %}
+          <a href="/{{ secret_path }}/dashboard" class="btn btn-outline btn-sm">Limpiar</a>
+          {% endif %}
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Tabla de Licencias y Dispositivos -->
+    <div class="card" style="padding: 0; overflow: hidden;">
+      <div style="padding: 16px 20px; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; background-color: var(--color-surface-soft);">
+        <h3 style="font-size: 1rem; font-weight: 700;">Listado de Dispositivos Registrados</h3>
+        <span style="font-size: 0.82rem; color: var(--color-text-muted);">Mostrando {{ devices | length }} dispositivo(s)</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Dispositivo ID</th>
+              <th>Comercio & Documento</th>
+              <th>Teléfono</th>
+              <th>Plan Actual</th>
+              <th>Vencimiento / Días</th>
+              <th>Estado</th>
+              <th style="text-align: right;">Acciones de Gestión</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for device in devices %}
+            <tr>
+              
+              <!-- ID -->
+              <td>
+                <code style="font-size: 0.82rem; background: var(--color-surface-soft); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--color-border);" title="{{ device.device_id }}">
+                  {{ device.device_id }}
+                </code>
+              </td>
+
+              <!-- Comercio & Documento -->
+              <td>
+                <strong style="color: var(--color-text-main); font-size: 0.95rem;">{{ device.merchant_name }}</strong><br>
+                {% if device.doc_id %}
+                <span style="font-size: 0.82rem; color: var(--color-primary); font-weight: 600;">📋 {{ device.doc_id }}</span>
+                {% else %}
+                <span style="font-size: 0.82rem; color: var(--color-text-light);">Sin documento</span>
+                {% endif %}
+                <span style="color: var(--color-text-light); font-size: 0.8rem;">• v{{ device.app_version or '1.0' }}</span>
+              </td>
+
+              <!-- Teléfono -->
+              <td>
+                {% if device.phone %}
+                <a href="https://wa.me/{{ device.phone | replace('+', '') | replace(' ', '') }}" target="_blank" style="color: var(--color-primary); font-weight: 500;">
+                  📲 {{ device.phone }}
+                </a>
+                {% else %}
+                <span style="color: var(--color-text-light); font-size: 0.85rem;">No registrado</span>
+                {% endif %}
+              </td>
+
+              <!-- Plan Badge -->
+              <td>
+                {% if device.plan_type == 'PRO' and device.is_pro_active %}
+                <span class="badge badge-pro">⭐ PRO</span>
+                {% elif device.plan_type == 'TRIAL' and device.is_pro_active %}
+                <span class="badge badge-trial">⏳ Prueba</span>
+                {% else %}
+                <span class="badge badge-basic">⚡ Básico</span>
+                {% endif %}
+              </td>
+
+              <!-- Vencimiento -->
+              <td>
+                {% if device.is_pro_active %}
+                  <strong style="color: var(--badge-pro-text);">{{ device.remaining_days }} día(s)</strong><br>
+                  <small style="color: var(--color-text-muted);">
+                    {% if device.plan_type == 'PRO' and device.pro_expires_at %}
+                      Hasta {{ device.pro_expires_at.strftime('%d/%m/%Y') }}
+                    {% elif device.trial_ends_at %}
+                      Hasta {{ device.trial_ends_at.strftime('%d/%m/%Y') }}
+                    {% endif %}
+                  </small>
+                {% else %}
+                  <span style="color: var(--color-text-muted); font-size: 0.85rem;">Sin expiración</span>
+                {% endif %}
+              </td>
+
+              <!-- Activo / Suspendido -->
+              <td>
+                {% if device.is_active %}
+                <span style="color: #246A48; font-weight: 600; font-size: 0.85rem;">● Activo</span>
+                {% else %}
+                <span style="color: #963842; font-weight: 600; font-size: 0.85rem;">● Suspendido</span>
+                {% endif %}
+              </td>
+
+              <!-- Acciones de 1 Clic -->
+              <td style="text-align: right;">
+                <div style="display: inline-flex; gap: 8px; align-items: center;">
+                  
+                  <!-- Extender PRO 30 días -->
+                  <form method="POST" action="/{{ secret_path }}/licenses/{{ device.id }}/activate-pro" style="display: inline;">
+                    <input type="hidden" name="days" value="30">
+                    <button type="submit" class="btn btn-success-soft btn-sm" title="Extender PRO 30 días">
+                      ⚡ +30d PRO
+                    </button>
+                  </form>
+
+                  <!-- CobrixPay Modal Button -->
+                  <button type="button" class="btn btn-soft btn-sm" onclick="openCobrixModal({{ device.id }})" title="Generar cobro CobrixPay y enviar por WhatsApp">
+                    💳 CobrixPay
+                  </button>
+
+                  <!-- Degradar a Básico si no paga -->
+                  {% if device.plan_type != 'BASIC' %}
+                  <form method="POST" action="/{{ secret_path }}/licenses/{{ device.id }}/downgrade-basic" style="display: inline;" onsubmit="return confirm('¿Seguro que deseas pasar este dispositivo al Plan Básico?');">
+                    <button type="submit" class="btn btn-outline btn-sm" style="color: #963842; border-color: #F8D7DA;" title="Degradar a Plan Básico">
+                      ⬇️ A Básico
+                    </button>
+                  </form>
+                  {% endif %}
+
+                  <!-- Toggle Activo / Pausado -->
+                  <form method="POST" action="/{{ secret_path }}/licenses/{{ device.id }}/toggle-status" style="display: inline;">
+                    <button type="submit" class="btn btn-outline btn-sm" title="{% if device.is_active %}Suspender{% else %}Activar{% endif %}">
+                      {% if device.is_active %}🔒{% else %}🔓{% endif %}
+                    </button>
+                  </form>
+
+                </div>
+              </td>
+
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 48px; color: var(--color-text-muted);">
+                No se encontraron dispositivos registrados que coincidan con la búsqueda.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Nota de Integración CobrixPay Webhook -->
+    <div style="margin-top: 36px; background-color: var(--color-surface); padding: 20px 24px; border-radius: var(--radius-md); border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 4px;">🔗 Endpoint Oficial de Webhooks CobrixPay</h4>
+        <code style="font-size: 0.85rem; color: var(--color-primary); background: var(--color-primary-soft); padding: 4px 8px; border-radius: 6px;">
+          https://tu-dominio.com/webhooks/cobrixpay
+        </code>
+      </div>
+      <span style="font-size: 0.82rem; color: var(--color-text-muted);">
+        Firma HMAC-SHA256 activa • Renovación automática en menos de 10s
+      </span>
+    </div>
+
+  </div>
+
+  <!-- Modal Interactivo CobrixPay -->
+  <div id="cobrixModal" style="display: none; position: fixed; inset: 0; background: rgba(39, 52, 52, 0.45); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card" style="width: 100%; max-width: 580px; box-shadow: var(--shadow-lg); max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--color-border); padding-bottom: 12px;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--color-text-main);">💳 Enlace de Pago CobrixPay & WhatsApp</h3>
+        <button type="button" onclick="closeCobrixModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-text-muted);">&times;</button>
+      </div>
+
+      <form id="cobrixForm" method="POST" action="">
+        <input type="hidden" id="modalLicenseId" name="license_id" value="">
+        <input type="hidden" id="modalPhone" name="phone" value="">
+
+        <div style="background: var(--color-surface-soft); padding: 14px 18px; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: 18px;">
+          <div style="font-size: 0.95rem; font-weight: 700;" id="modalMerchantName">Cargando comercio...</div>
+          <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 4px;" id="modalDetails"></div>
+        </div>
+
+        <div style="display: flex; gap: 14px; margin-bottom: 16px;">
+          <div style="flex: 1;">
+            <label class="form-label">Duración del Plan</label>
+            <select id="modalMonths" class="form-control" onchange="reloadCobrixData()">
+              <option value="1">1 Mes ($2.99 USD)</option>
+              <option value="3">3 Meses ($8.97 USD)</option>
+              <option value="6">6 Meses ($17.94 USD)</option>
+              <option value="12">1 Año ($35.88 USD)</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label class="form-label">Token CobrixPay</label>
+            <input type="text" id="modalToken" class="form-control" readonly style="background: #ffffff; font-family: monospace; font-size: 0.85rem;">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Enlace Oficial de Checkout (/pay/{token})</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="modalPaymentUrl" class="form-control" style="font-family: monospace; font-size: 0.85rem;" readonly>
+            <button type="button" class="btn btn-outline btn-sm" onclick="copyPaymentUrl()" title="Copiar enlace">📋</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="display: flex; justify-content: space-between;">
+            <span>Mensaje para WhatsApp (100% Editable)</span>
+            <small style="color: var(--color-text-light); font-weight: normal;">Puedes personalizar el texto antes de enviar</small>
+          </label>
+          <textarea id="modalMessageText" name="custom_message" class="form-control" rows="8" style="font-size: 0.88rem; line-height: 1.5; font-family: inherit;"></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+          <button type="button" class="btn btn-outline" onclick="closeCobrixModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">
+            📲 Abrir en WhatsApp con este Mensaje
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const secretPath = "{{ secret_path }}";
+    let currentModalLicenseId = null;
+
+    async function openCobrixModal(licenseId) {
+      currentModalLicenseId = licenseId;
+      const modal = document.getElementById('cobrixModal');
+      modal.style.display = 'flex';
+      document.getElementById('modalMerchantName').innerText = 'Conectando con CobrixPay...';
+      document.getElementById('modalDetails').innerText = 'Generando token auténtico de pago...';
+      document.getElementById('modalToken').value = '...';
+      document.getElementById('modalPaymentUrl').value = '...';
+      document.getElementById('modalMessageText').value = 'Cargando mensaje...';
+      
+      await reloadCobrixData();
+    }
+
+    async function reloadCobrixData() {
+      if (!currentModalLicenseId) return;
+      const months = document.getElementById('modalMonths').value;
+      try {
+        const res = await fetch(`/${secretPath}/licenses/${currentModalLicenseId}/cobrix-data?months=${months}`);
+        if (!res.ok) throw new Error("Error en servidor");
+        const data = await res.json();
+        
+        document.getElementById('modalLicenseId').value = currentModalLicenseId;
+        document.getElementById('modalPhone').value = data.phone;
+        document.getElementById('modalMerchantName').innerText = data.merchant_name;
+        document.getElementById('modalDetails').innerText = `ID: ${data.device_id} • Tel: ${data.phone || 'Sin teléfono'} • RIF: ${data.doc_id || 'No registrado'}`;
+        document.getElementById('modalToken').value = data.token;
+        document.getElementById('modalPaymentUrl').value = data.payment_url;
+        document.getElementById('modalMessageText').value = data.message_text;
+
+        document.getElementById('cobrixForm').action = `/${secretPath}/licenses/${currentModalLicenseId}/send-custom-whatsapp`;
+      } catch (e) {
+        alert('No se pudo generar el token de CobrixPay: ' + e);
+      }
+    }
+
+    function closeCobrixModal() {
+      document.getElementById('cobrixModal').style.display = 'none';
+    }
+
+    function copyPaymentUrl() {
+      const url = document.getElementById('modalPaymentUrl').value;
+      navigator.clipboard.writeText(url).then(() => {
+        alert('¡Enlace de CobrixPay copiado al portapapeles!');
+      });
+    }
+
+    // Cerrar al hacer clic fuera
+    window.onclick = function(event) {
+      const modal = document.getElementById('cobrixModal');
+      if (event.target == modal) {
+        closeCobrixModal();
+      }
+    }
+  </script>
+
+</body>
+</html>

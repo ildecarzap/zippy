@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <div class="hero-pill">
+      <span>⚡</span> Cobros rápidos, seguros y sin comisiones extras
+    </div>
+    <h1 class="hero-title">
+      Tu punto de cobro móvil y caja registradora <span>inteligente</span>
+    </h1>
+    <p class="hero-subtitle">
+      Zippy convierte tu teléfono Android en un centro de cobro con código QR para Banesco, Mercantil, BNC y Venezuela, detección automática de Pago Móvil por notificaciones bancarias y libreta de cuadre diario.
+    </p>
+
+    <div class="hero-actions">
+      <a href="/guia" class="btn btn-primary">📖 Instructivo y Manual de Uso</a>
+      <a href="/planes" class="btn btn-soft">⭐ Ver Planes y Precios</a>
+    </div>
+  </div>
+</section>
+
+<!-- Sección de Funcionalidades Principales -->
+<section style="padding: 40px 0;">
+  <div class="container">
+    <div style="text-align: center; margin-bottom: 32px;">
+      <h2 style="font-size: 1.85rem; font-weight: 700;">Diseñado para el comercio venezolano</h2>
+      <p style="color: var(--color-text-muted);">Todo lo que necesitas en una sola app ligera, sin requerir data constante.</p>
+    </div>
+
+    <div class="grid-3">
+      <!-- Tarjeta 1 -->
+      <div class="card">
+        <div class="feature-icon">📲</div>
+        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Cobro con QR por Banco</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.92rem;">
+          Muestra en segundos el código QR oficial de tu banco preferido (Banesco, Mercantil, BNC o Banco de Venezuela) para que tus clientes paguen al instante sin equivocarse en los datos.
+        </p>
+      </div>
+
+      <!-- Tarjeta 2 -->
+      <div class="card">
+        <div class="feature-icon">🔔</div>
+        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Soundbox de Confirmación</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.92rem;">
+          Sonido auténtico de caja registradora en el plan gratuito y locución inteligente de voz en Zippy PRO para cantar el monto recibido en voz alta en el mostrador.
+        </p>
+      </div>
+
+      <!-- Tarjeta 3 -->
+      <div class="card">
+        <div class="feature-icon">⚡</div>
+        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Detección Automática</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.92rem;">
+          Zippy detecta las notificaciones de tu banco de Pago Móvil recibido en tu teléfono, validando la referencia y sumándolo automáticamente a tu total del día.
+        </p>
+      </div>
+
+      <!-- Tarjeta 4 -->
+      <div class="card">
+        <div class="feature-icon">🎙️</div>
+        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Carga por Voz de Caja</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.92rem;">
+          Registra ingresos en efectivo o gastos del negocio diciendo simplemente: <em>"Ingreso 15 dólares por venta"</em> o <em>"Gasto 200 bolívares en transporte"</em>.
+        </p>
+      </div>
+
+      <!-- Tarjeta 5 -->
+      <div class="card">
+        <div class="feature-icon">📊</div>
+        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Cierre de Jornada con BCV</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.92rem;">
+          Filtra por día, rango de fechas o mes. Conoce la tasa oficial del BCV al momento en que se cobró y genera reportes detallados en Excel o PDF listos para WhatsApp.
+        </p>
+      </div>
+
+      <!-- Tarjeta 6 -->
+      <div class="card">
+        <div class="feature-icon">☁️</div>
+        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Copia de Seguridad Total</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.92rem;">
+          Empaqueta tus transacciones, configuraciones y códigos QR en un archivo de respaldo para migrar a un teléfono nuevo en 1 clic sin perder tu historial.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Llamado a la Acción para Usuarios de la App -->
+<section style="padding: 48px 0; background-color: var(--color-surface-soft); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);">
+  <div class="container" style="text-align: center;">
+    <span class="badge badge-trial" style="margin-bottom: 16px;">¿Llegaste desde la app Zippy?</span>
+    <h2 style="font-size: 1.75rem; margin-bottom: 12px;">Descubre paso a paso cómo configurar y usar Zippy</h2>
+    <p style="color: var(--color-text-muted); max-width: 600px; margin: 0 auto 24px;">
+      Nuestro instructivo interactivo te guía en la configuración de bancos, cómo habilitar los permisos de notificación y cómo activar tu prueba gratuita de 7 días.
+    </p>
+    <a href="/guia" class="btn btn-primary">👉 Abrir el Instructivo de Uso</a>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paleta inspirada en el logo Cobrix Pocket (Cyan Eléctrico & Deep Navy) -->
+    <color name="primary">#0A2540</color>
+    <color name="primary_light">#133E87</color>
+    <color name="accent_cyan">#0096C7</color>
+    <color name="accent_cyan_light">#00B4D8</color>
+    <color name="accent_cyan_bg">#E0F2FE</color>
+    <color name="accent_blue">#0052FF</color>
+    <color name="accent_blue_bg">#EFF6FF</color>
+
+    <!-- Éxito / Ingresos (Esmeralda Financiero de Alto Contraste) -->
+    <color name="accent_green">#00875A</color>
+    <color name="accent_green_dark">#006644</color>
+    <color name="accent_green_bg">#E3FCEF</color>
+    <color name="income_green">#00875A</color>
+
+    <!-- Gastos & Alertas -->
+    <color name="expense_red">#DE350B</color>
+    <color name="expense_red_bg">#FFEBE6</color>
+    <color name="warning_orange">#FF8B00</color>
+    <color name="warning_orange_bg">#FFFAE6</color>
+
+    <!-- Superficies Modo Claro (Alto Contraste) -->
+    <color name="background">#F4F8FC</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#EBF2FA</color>
+    <color name="border">#CFE0F5</color>
+    <color name="border_subtle">#CFE0F5</color>
+    <color name="card_background">#FFFFFF</color>
+    <color name="text_primary">#0A192F</color>
+    <color name="text_secondary">#334E68</color>
+    <color name="text_muted">#627D98</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- Teclado Numérico -->
+    <color name="keypad_bg">#E2EBF6</color>
+    <color name="keypad_text">#0A192F</color>
+
+    <!-- Navegación -->
+    <color name="nav_active">#0077B6</color>
+    <color name="nav_inactive">#627D98</color>
+</resources>

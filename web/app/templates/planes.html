@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 56px 24px;">
+
+  <div style="text-align: center; margin-bottom: 48px;">
+    <span class="badge badge-trial" style="margin-bottom: 12px;">Transparente y sin sorpresas</span>
+    <h1 style="font-size: 2.25rem; font-weight: 800; margin-bottom: 12px;">
+      Planes diseñados para crecer con tu negocio
+    </h1>
+    <p style="color: var(--color-text-muted); max-width: 600px; margin: 0 auto;">
+      Comienza gratis hoy mismo o desbloquea toda la potencia de la voz inteligente y multibanco con Zippy PRO.
+    </p>
+  </div>
+
+  <div class="grid-2" style="max-width: 860px; margin: 0 auto; align-items: stretch;">
+
+    <!-- Plan Básico -->
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <span class="badge badge-basic" style="margin-bottom: 14px;">Básico</span>
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 6px;">Plan Gratuito</h2>
+        <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+          Para pequeños comercios que inician y necesitan orden y cobro rápido.
+        </p>
+
+        <div style="font-size: 2.5rem; font-weight: 800; color: var(--color-text-main); margin-bottom: 24px;">
+          $0 <span style="font-size: 1rem; font-weight: 500; color: var(--color-text-muted);">/ siempre</span>
+        </div>
+
+        <ul style="list-style: none; padding: 0; font-size: 0.92rem; color: var(--color-text-main); line-height: 2.2;">
+          <li>✅ Código QR y datos de 1 banco principal</li>
+          <li>✅ Soundbox con campana de caja registradora</li>
+          <li>✅ Detección de Pago Móvil por Notificación Bancaria</li>
+          <li>✅ Libreta de caja y registro manual</li>
+          <li>✅ Exportación de jornada en Excel (.csv)</li>
+          <li>✅ Copia de seguridad y migración manual</li>
+        </ul>
+      </div>
+
+      <div style="margin-top: 32px;">
+        <a href="/guia" class="btn btn-outline" style="width: 100%;">Usar Plan Básico</a>
+      </div>
+    </div>
+
+    <!-- Plan PRO -->
+    <div class="card"
+      style="border: 2px solid var(--color-primary-border); background-color: #FAFCFB; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+      <div style="position: absolute; top: -12px; right: 24px;">
+        <span class="badge badge-pro">Más Recomendado</span>
+      </div>
+
+      <div>
+        <span class="badge badge-pro" style="margin-bottom: 14px;">Zippy PRO</span>
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 6px;">Plan Profesional</h2>
+        <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+          Máxima automatización, voz inteligente y control de múltiples bancos.
+        </p>
+
+        <div style="font-size: 2.5rem; font-weight: 800; color: var(--color-primary); margin-bottom: 24px;">
+          $2.99 <span style="font-size: 1rem; font-weight: 500; color: var(--color-text-muted);">/ mes</span>
+        </div>
+
+        <ul style="list-style: none; padding: 0; font-size: 0.92rem; color: var(--color-text-main); line-height: 2.2;">
+          <li>⭐ <strong>Multibanco:</strong> Banesco, Mercantil, BNC y Venezuela con QR individual</li>
+          <li>⭐ <strong>Soundbox de Voz:</strong> Anuncia monto y banco en voz alta</li>
+          <li>⭐ <strong>Carga por Voz:</strong> Ingresos y egresos dictados por micrófono</li>
+          <li>⭐ <strong>Reportes en PDF Oficial:</strong> Con auditoría de referencias bancarias</li>
+          <li>⭐ <strong>Tasa BCV Automática:</strong> Sincronización en vivo de la tasa oficial</li>
+          <li>⭐ <strong>Soporte Prioritario WhatsApp CIEM</strong></li>
+        </ul>
+      </div>
+
+      <div style="margin-top: 32px;">
+        <a href="https://wa.me/{{ settings.COMPANY_WHATSAPP }}?text=Hola,%20deseo%20activar%20mi%20prueba%20PRO%20de%20Zippy"
+          target="_blank" class="btn btn-primary" style="width: 100%;">
+          ⚡ Probar 7 Días Gratis
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <div
+    style="max-width: 860px; margin: 48px auto 0; text-align: center; background-color: var(--color-surface); padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+    <h3 style="font-size: 1.15rem; margin-bottom: 8px;">💳 Pagos 100% Seguros a través de CobrixPay</h3>
+    <p style="color: var(--color-text-muted); font-size: 0.9rem;">
+      Puedes pagar tu suscripción Zippy PRO en Bolívares por Pago Móvil mediante enlace directo con activación inmediata
+      y sin esperas.
+    </p>
+  </div>
+
+</div>
+{% endblock %}

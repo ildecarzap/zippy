@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Zippy" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Brand Colors -->
+        <item name="colorPrimary">@color/accent_green</item>
+        <item name="colorPrimaryContainer">@color/accent_green_bg</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/accent_blue</item>
+        <item name="colorSecondaryContainer">@color/accent_blue_bg</item>
+
+        <!-- System Bars & Background -->
+        <item name="android:statusBarColor">@color/primary</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:colorBackground">@color/background</item>
+
+        <!-- Default text color -->
+        <item name="android:textColor">@color/text_primary</item>
+
+        <!-- Components -->
+        <item name="bottomNavigationStyle">@style/Widget.Zippy.BottomNavigationView</item>
+    </style>
+
+    <style name="Widget.Zippy.BottomNavigationView" parent="Widget.Material3.BottomNavigationView">
+        <item name="itemRippleColor">@color/accent_green_bg</item>
+        <item name="android:background">@color/surface</item>
+        <item name="itemIconTint">@color/nav_selector</item>
+        <item name="itemTextColor">@color/nav_selector</item>
+    </style>
+
+    <!-- Retrocompatibility alias -->
+    <style name="Theme.CobrixPocket" parent="Theme.Zippy" />
+    <style name="Widget.CobrixPocket.BottomNavigationView" parent="Widget.Zippy.BottomNavigationView" />
+</resources>

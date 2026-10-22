@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page_title | default("Zippy • Ciem Tech Solutions") }}</title>
+  
+  <!-- Tipografía Google Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/static/images/zippy-logo.jpg">
+</head>
+<body>
+
+  <!-- Barra de Navegación -->
+  <nav class="navbar">
+    <div class="container nav-inner">
+      <a href="/" class="brand">
+        <img src="/static/images/zippy-logo.jpg" alt="Zippy Logo" class="brand-logo">
+        <span>Zippy</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link">Inicio</a></li>
+        <li><a href="/guia" class="nav-link">Instructivo</a></li>
+        <li><a href="/planes" class="nav-link">Planes</a></li>
+        <li><a href="https://wa.me/{{ settings.COMPANY_WHATSAPP }}" target="_blank" class="btn btn-soft btn-sm">Soporte WhatsApp</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Contenido Principal -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Pie de Página -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <div class="brand">
+          <img src="/static/images/zippy-logo.jpg" alt="Zippy Logo" class="brand-logo">
+          <span>Zippy</span>
+        </div>
+        <p>Tu caja registradora inteligente y punto de cobro móvil para comercios y emprendedores en Venezuela.</p>
+      </div>
+
+      <div class="footer-meta">
+        <strong>{{ settings.COMPANY_NAME }}</strong><br>
+        RIF: {{ settings.COMPANY_RIF }}<br>
+        Correo: <a href="mailto:{{ settings.COMPANY_EMAIL }}">{{ settings.COMPANY_EMAIL }}</a><br>
+        WhatsApp: <a href="https://wa.me/{{ settings.COMPANY_WHATSAPP }}">{{ settings.COMPANY_PHONE }}</a>
+      </div>
+    </div>
+
+    <div class="container footer-bottom">
+      &copy; 2026 {{ settings.COMPANY_NAME }}. Todos los derechos reservados.
+    </div>
+  </footer>
+
+</body>
+</html>

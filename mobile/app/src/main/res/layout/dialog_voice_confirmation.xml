@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="22dp"
+    android:background="@color/surface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🎙️ Registro por Voz"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipVoiceType"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🟢 Ingreso"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvVoiceRawTranscript"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="&quot;Voz detectada...&quot;"
+        android:textColor="@color/text_secondary"
+        android:textStyle="italic"
+        android:textSize="13sp" />
+
+    <!-- Monto Detectado -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/border"
+        app:strokeWidth="1dp"
+        app:cardBackgroundColor="@color/surface_variant">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Monto Detectado:"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvVoiceParsedAmount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Bs. 0,00"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
+                android:textSize="26sp" />
+
+            <TextView
+                android:id="@+id/tvVoiceParsedCategory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Categoría: General"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Botón Confirmar y Guardar -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnVoiceConfirmSave"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="16dp"
+        android:text="✅ Confirmar y Guardar"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:cornerRadius="12dp"
+        android:backgroundTint="@color/accent_cyan"
+        android:textColor="@color/white" />
+
+    <!-- Botón Editar antes de Guardar -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnVoiceEditManually"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:text="✏️ Ajustar Datos en Formulario"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        app:cornerRadius="12dp" />
+
+    <!-- Cancelar -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnVoiceCancel"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="4dp"
+        android:text="Descartar"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp" />
+
+</LinearLayout>

@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">Zippy</string>
+    <string name="nav_cashier">Cobrar</string>
+    <string name="nav_ledger">Jornada</string>
+    <string name="nav_settings">Ajustes</string>
+
+    <!-- Cashier -->
+    <string name="cashier_title">Caja Rápida</string>
+    <string name="amount_hint">0.00</string>
+    <string name="charge_in_person">Cobrar en Persona</string>
+    <string name="charge_whatsapp">Enviar por WhatsApp</string>
+    <string name="customer_phone_prompt">Teléfono del cliente (WhatsApp)</string>
+
+    <!-- Ledger -->
+    <string name="ledger_title">Cierre de Jornada</string>
+    <string name="income_today">Cobrado Hoy</string>
+    <string name="expenses_today">Gastos Hoy</string>
+    <string name="net_profit">Ganancia Neta</string>
+    <string name="btn_add_expense">+ Registrar Gasto</string>
+    <string name="btn_share_summary">Compartir Resumen</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Mi Cuenta y Cobro</string>
+    <string name="bank_name">Banco</string>
+    <string name="phone_number">Teléfono Pago Móvil</string>
+    <string name="id_card">Cédula / RIF</string>
+    <string name="bcv_rate">Tasa de Cambio (VES/$)</string>
+    <string name="qr_image">Código QR Bancario</string>
+    <string name="btn_upload_qr">Subir Foto de mi QR Bancario</string>
+    <string name="notification_permission">Permiso de Notificaciones Bancarias</string>
+
+    <!-- Paywall / Pro -->
+    <string name="paywall_title">Zippy PRO</string>
+    <string name="paywall_desc">Tu suscripción Zippy PRO ha vencido. Renueva por solo $2.99 para disfrutar de reportes en PDF, carga por voz, multibanco ilimitado y respaldo cloud.</string>
+    <string name="btn_renew">Activar Zippy PRO ($2.99 / mes)</string>
+</resources>
