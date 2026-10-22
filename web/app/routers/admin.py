@@ -188,6 +188,10 @@ async def downgrade_device_to_basic(
     device.plan_type = "BASIC"
     device.pro_expires_at = None
     device.trial_ends_at = None
+    device.pending_debt_id = None
+    device.pending_payment_token = None
+    device.pending_payment_url = None
+    device.pending_link_expires_at = None
     db.commit()
 
     logger.info(f"⬇️ [ADMIN] Licencia #{device.id} ({device.merchant_name}) degradada a Plan Básico por {current_admin.username}")
