@@ -189,7 +189,11 @@ class MainActivity : AppCompatActivity() {
             val updated = ZippySyncManager.syncWithBackend(this@MainActivity)
             if (updated) {
                 runOnUiThread {
+                    loadSettings()
                     updateLicenseBadge()
+                    if (PlanCapabilityManager.getPlanType(this@MainActivity) == PlanType.FREE && PlanCapabilityManager.hasHadPaidPro(this@MainActivity)) {
+                        showSubscriptionExpiredPrompt()
+                    }
                 }
             }
         }
@@ -1628,38 +1632,72 @@ class MainActivity : AppCompatActivity() {
         setupSettingsBankManager()
         setupCashierBankSelector()
 
-        // Estado del Plan Zippy PRO y seguimiento de prueba
+        // Estado del Plan Zippy PRO y seguimiento de prueba / renovación
         val planType = PlanCapabilityManager.getPlanType(this)
         val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
         val hasUsedTrial = PlanCapabilityManager.hasUsedTrial(this)
+        val hasHadPaidPro = PlanCapabilityManager.hasHadPaidPro(this)
 
         binding.tvSettingsPlanBadge.text = when (planType) {
-            PlanType.FREE -> "Plan Básico Gratuito"
+            PlanType.FREE -> if (hasHadPaidPro) "Plan Básico (PRO Vencido)" else "Plan Básico Gratuito"
             PlanType.PRO_TRIAL -> "Prueba PRO ($daysRemaining días)"
             PlanType.PRO_ACTIVE -> "Zippy PRO Activo ⭐"
         }
         binding.tvSettingsPlanDescription.text = when (planType) {
-            PlanType.FREE -> "Cobro básico ilimitado gratuito con 1 banco activo."
+            PlanType.FREE -> if (hasHadPaidPro) "Tu mes de Zippy PRO culminó. Continúas en modo básico gratuito con 1 banco activo." else "Cobro básico ilimitado gratuito con 1 banco activo."
             PlanType.PRO_TRIAL -> "Disfrutas de todas las funciones PRO por cortesía de prueba ($daysRemaining días restantes)."
-            PlanType.PRO_ACTIVE -> "Suscripción activa con acceso ilimitado a todas las funciones."
+            PlanType.PRO_ACTIVE -> "Suscripción activa con acceso ilimitado a todas las funciones ($daysRemaining días restantes)."
         }
 
-        if (planType == PlanType.PRO_TRIAL) {
-            if (daysRemaining <= 2) {
-                binding.cardTrialPaymentAlert.visibility = View.VISIBLE
-                binding.tvTrialPaymentAlertMessage.text = "⚠️ Tu prueba Zippy PRO vence en $daysRemaining días. Solicita tu enlace de pago para no perder la sincronización ni el multibanco."
-            } else {
-                binding.cardTrialPaymentAlert.visibility = View.GONE
+        when (planType) {
+            PlanType.PRO_ACTIVE -> {
+                if (daysRemaining <= 3) {
+                    // Aviso preventivo para renovar antes de que expire el mes
+                    binding.cardTrialPaymentAlert.visibility = View.VISIBLE
+                    binding.tvTrialPaymentAlertMessage.text = "⚠️ Tu suscripción Zippy PRO vence en $daysRemaining día(s). Puedes renovar tu mes con anticipación para continuar sin interrupciones."
+                    binding.btnTrialRequestPaymentLink.text = "💳 Renovar Suscripción Zippy PRO"
+                    binding.btnManagePlanPro.visibility = View.VISIBLE
+                    binding.btnManagePlanPro.text = "💳 Renovar Suscripción PRO"
+                } else {
+                    binding.cardTrialPaymentAlert.visibility = View.GONE
+                    binding.btnManagePlanPro.visibility = View.GONE
+                }
             }
-        } else if (hasUsedTrial && planType == PlanType.FREE) {
-            binding.cardTrialPaymentAlert.visibility = View.VISIBLE
-            binding.tvTrialPaymentAlertMessage.text = "ℹ️ Tu prueba Zippy PRO ha finalizado. Solicita tu enlace de pago para reactivar todas las funciones avanzadas."
-        } else {
-            binding.cardTrialPaymentAlert.visibility = View.GONE
+            PlanType.PRO_TRIAL -> {
+                if (daysRemaining <= 2) {
+                    binding.cardTrialPaymentAlert.visibility = View.VISIBLE
+                    binding.tvTrialPaymentAlertMessage.text = "⚠️ Tu prueba Zippy PRO vence en $daysRemaining días. Solicita tu enlace de pago para no perder la sincronización ni el multibanco."
+                    binding.btnTrialRequestPaymentLink.text = "💳 Solicitar Link de Pago PRO"
+                    binding.btnManagePlanPro.visibility = View.VISIBLE
+                    binding.btnManagePlanPro.text = "✨ Activar Zippy PRO"
+                } else {
+                    binding.cardTrialPaymentAlert.visibility = View.GONE
+                    binding.btnManagePlanPro.visibility = View.VISIBLE
+                    binding.btnManagePlanPro.text = "✨ Ver Beneficios o Activar Zippy PRO"
+                }
+            }
+            PlanType.FREE -> {
+                if (hasHadPaidPro) {
+                    // Cliente cuya suscripción mensual acaba de expirar
+                    binding.cardTrialPaymentAlert.visibility = View.VISIBLE
+                    binding.tvTrialPaymentAlertMessage.text = "⏰ Tu suscripción mensual Zippy PRO ha finalizado. Tu app sigue operando en modo Básico. Solicita tu enlace para reactivar PRO."
+                    binding.btnTrialRequestPaymentLink.text = "💳 Renovar Suscripción Zippy PRO"
+                    binding.btnManagePlanPro.visibility = View.VISIBLE
+                    binding.btnManagePlanPro.text = "💳 Renovar Suscripción Zippy PRO"
+                } else if (hasUsedTrial) {
+                    // Usuario cuya prueba gratis terminó
+                    binding.cardTrialPaymentAlert.visibility = View.VISIBLE
+                    binding.tvTrialPaymentAlertMessage.text = "ℹ️ Tu prueba Zippy PRO ha finalizado. Solicita tu enlace de pago para reactivar todas las funciones avanzadas."
+                    binding.btnTrialRequestPaymentLink.text = "💳 Activar Plan Zippy PRO"
+                    binding.btnManagePlanPro.visibility = View.VISIBLE
+                    binding.btnManagePlanPro.text = "✨ Activar Zippy PRO"
+                } else {
+                    binding.cardTrialPaymentAlert.visibility = View.GONE
+                    binding.btnManagePlanPro.visibility = View.VISIBLE
+                    binding.btnManagePlanPro.text = "✨ Ver Beneficios o Activar Zippy PRO"
+                }
+            }
         }
-
-        // Ocultar botón de gestión/solicitud PRO si ya cuenta con Plan PRO activo
-        binding.btnManagePlanPro.visibility = if (planType == PlanType.PRO_ACTIVE) View.GONE else View.VISIBLE
 
         binding.tvLastSyncStatus.text = "Último respaldo: ${CloudSyncService.getLastSyncFormatted(this)}"
 
@@ -1688,8 +1726,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showProUpgradeDialog(featureName: String) {
-        if (PlanCapabilityManager.getPlanType(this) == PlanType.PRO_ACTIVE) {
-            Toast.makeText(this, "⭐ Tu plan Zippy PRO ya se encuentra activo.", Toast.LENGTH_SHORT).show()
+        val planType = PlanCapabilityManager.getPlanType(this)
+        val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
+        if (planType == PlanType.PRO_ACTIVE && daysRemaining > 3) {
+            Toast.makeText(this, "⭐ Tu plan Zippy PRO está activo ($daysRemaining días restantes). Podrás renovar cuando falten 3 días.", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -1752,18 +1792,32 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun showSubscriptionExpiredPrompt() {
+        AlertDialog.Builder(this)
+            .setTitle("⏰ Tu período Zippy PRO ha finalizado")
+            .setMessage("Tu aplicación continúa funcionando con normalidad en el Plan Básico Gratuito (Pago Móvil, tasa BCV y cuadre de caja).\n\nPara reactivar la detección multibanco simultánea, dictado por voz y respaldo en la nube, renueva tu suscripción.")
+            .setPositiveButton("💳 Renovar Suscripción") { _, _ ->
+                handleRequestPaymentLinkOption()
+            }
+            .setNegativeButton("Continuar en Básico", null)
+            .show()
+    }
+
     private fun handleRequestPaymentLinkOption() {
-        if (PlanCapabilityManager.getPlanType(this) == PlanType.PRO_ACTIVE) {
-            Toast.makeText(this, "⭐ Tu plan Zippy PRO ya se encuentra activo.", Toast.LENGTH_SHORT).show()
+        val planType = PlanCapabilityManager.getPlanType(this)
+        val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
+        if (planType == PlanType.PRO_ACTIVE && daysRemaining > 3) {
+            Toast.makeText(this, "⭐ Tu plan Zippy PRO está activo ($daysRemaining días restantes). Podrás renovar cuando falten 3 días.", Toast.LENGTH_SHORT).show()
             return
         }
 
+        val title = if (planType == PlanType.PRO_ACTIVE || PlanCapabilityManager.hasHadPaidPro(this)) "Renovar Zippy PRO" else "Suscripción Zippy PRO"
         val options = arrayOf(
             "💳 Pagar en Línea con CobrixPay (Inmediato)",
             "💬 Contactar a Soporte por WhatsApp"
         )
         AlertDialog.Builder(this)
-            .setTitle("Suscripción Zippy PRO")
+            .setTitle(title)
             .setItems(options) { dialog, which ->
                 dialog.dismiss()
                 if (which == 0) {

@@ -134,6 +134,7 @@ object PlanCapabilityManager {
         prefs.edit()
             .putLong(KEY_PRO_EXPIRATION, newExpiration)
             .putString(KEY_LICENSE_KEY, key)
+            .putBoolean("had_paid_pro", true)
             .apply()
 
         return true
@@ -146,7 +147,15 @@ object PlanCapabilityManager {
         getPrefs(context).edit()
             .putLong(KEY_PRO_EXPIRATION, expirationTimestampMs)
             .putString(KEY_LICENSE_KEY, "ZIPPY-SERVER-SYNC")
+            .putBoolean("had_paid_pro", true)
             .apply()
+    }
+
+    /**
+     * Indica si el usuario alguna vez tuvo una suscripción PRO paga activa.
+     */
+    fun hasHadPaidPro(context: Context): Boolean {
+        return getPrefs(context).getBoolean("had_paid_pro", false)
     }
 
     /**
