@@ -1658,6 +1658,9 @@ class MainActivity : AppCompatActivity() {
             binding.cardTrialPaymentAlert.visibility = View.GONE
         }
 
+        // Ocultar botón de gestión/solicitud PRO si ya cuenta con Plan PRO activo
+        binding.btnManagePlanPro.visibility = if (planType == PlanType.PRO_ACTIVE) View.GONE else View.VISIBLE
+
         binding.tvLastSyncStatus.text = "Último respaldo: ${CloudSyncService.getLastSyncFormatted(this)}"
 
         updateLicenseBadge()
@@ -1685,6 +1688,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showProUpgradeDialog(featureName: String) {
+        if (PlanCapabilityManager.getPlanType(this) == PlanType.PRO_ACTIVE) {
+            Toast.makeText(this, "⭐ Tu plan Zippy PRO ya se encuentra activo.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val dialogBinding = DialogProUpgradeBinding.inflate(layoutInflater)
         val dialog = AlertDialog.Builder(this)
             .setView(dialogBinding.root)
@@ -1745,6 +1753,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleRequestPaymentLinkOption() {
+        if (PlanCapabilityManager.getPlanType(this) == PlanType.PRO_ACTIVE) {
+            Toast.makeText(this, "⭐ Tu plan Zippy PRO ya se encuentra activo.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val options = arrayOf(
             "💳 Pagar en Línea con CobrixPay (Inmediato)",
             "💬 Contactar a Soporte por WhatsApp"
