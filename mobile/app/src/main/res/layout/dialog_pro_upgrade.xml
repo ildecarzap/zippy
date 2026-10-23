@@ -154,7 +154,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Reportes PDF Formales con Membrete"
+                            android:text="Reportes Formales en PDF y Excel (.csv)"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp" />
@@ -162,7 +162,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Genera documentos contables con RIF, firmas de conformidad y desglose por rubro."
+                            android:text="Genera documentos contables con RIF, firmas y exporta en Excel para cuadre y auditoría."
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
                     </LinearLayout>
