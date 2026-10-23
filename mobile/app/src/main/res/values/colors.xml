@@ -37,7 +37,22 @@
     <color name="keypad_bg">#E2EBF6</color>
     <color name="keypad_text">#0A192F</color>
 
+    <!-- Colores Minimalistas Fintech (Inspirados en Ubii App & Cobros Rápidos) -->
+    <color name="ubii_cyan">#00B2FE</color>
+    <color name="ubii_cyan_dark">#0096C7</color>
+    <color name="ubii_cyan_bg">#E0F7FE</color>
+    <color name="whatsapp_green">#25D366</color>
+    <color name="whatsapp_green_dark">#128C7E</color>
+    <color name="whatsapp_bg">#F0FDF4</color>
+    <color name="card_border_light">#E2E8F0</color>
+    <color name="slate_50">#F8FAFC</color>
+    <color name="slate_100">#F1F5F9</color>
+    <color name="slate_200">#E2E8F0</color>
+    <color name="slate_500">#64748B</color>
+    <color name="slate_700">#334155</color>
+    <color name="slate_900">#0F172A</color>
+
     <!-- Navegación -->
-    <color name="nav_active">#0077B6</color>
+    <color name="nav_active">#00B2FE</color>
     <color name="nav_inactive">#627D98</color>
 </resources>

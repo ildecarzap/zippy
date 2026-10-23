@@ -112,7 +112,8 @@
                 android:id="@+id/viewCashier"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:fillViewport="true">
+                android:fillViewport="true"
+                android:background="@color/slate_50">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -120,209 +121,386 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Selector Rápido de Banco para Cobro y QR -->
+                    <!-- Contenedor Dinámico de Tarjetas de Bancos con QR -->
                     <LinearLayout
-                        android:id="@+id/layoutCashierBankSelector"
+                        android:id="@+id/layoutCashierBankCardsContainer"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginBottom="10dp">
+                        android:orientation="vertical" />
 
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="🏦 Banco para Mostrar QR y Cobro:"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/tvCashierBankQrIndicator"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="QR Listo ✅"
-                                android:textColor="@color/income_green"
-                                android:textSize="11sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <HorizontalScrollView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:scrollbars="none"
-                            android:layout_marginTop="4dp">
-
-                            <com.google.android.material.chip.ChipGroup
-                                android:id="@+id/chipGroupCashierBanks"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                app:singleSelection="true"
-                                app:selectionRequired="true" />
-                        </HorizontalScrollView>
-                    </LinearLayout>
-
-                    <!-- Selector de Moneda Exclusivo con MaterialButtonToggleGroup -->
-                    <com.google.android.material.button.MaterialButtonToggleGroup
-                        android:id="@+id/toggleGroupCurrency"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:singleSelection="true"
-                        app:selectionRequired="true"
-                        app:checkedButton="@id/btnCurrencyVes"
-                        android:layout_marginBottom="12dp">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnCurrencyVes"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="50dp"
-                            android:layout_weight="1"
-                            android:text="Bs. Bolívares"
-                            android:textSize="15sp"
-                            android:textStyle="bold" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnCurrencyUsd"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="50dp"
-                            android:layout_weight="1"
-                            android:text="$ Dólares"
-                            android:textSize="15sp"
-                            android:textStyle="bold" />
-                    </com.google.android.material.button.MaterialButtonToggleGroup>
-
-                    <!-- Tarjeta Pantalla del Monto -->
+                    <!-- TARJETA PARA AGREGAR NUEVO QR (Redirige a Ajustes) -->
                     <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardCashierAddBank"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:cardCornerRadius="16dp"
-                        app:cardElevation="0dp"
-                        app:strokeColor="@color/border"
-                        app:strokeWidth="2dp"
-                        app:cardBackgroundColor="@color/surface">
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="12dp"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="@color/card_border_light"
+                        app:strokeWidth="1.5dp"
+                        app:cardBackgroundColor="@color/surface"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="16dp"
-                            android:gravity="center">
-
-                            <TextView
-                                android:id="@+id/tvDisplayLabel"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="MONTO EN BOLÍVARES"
-                                android:textColor="@color/text_secondary"
-                                android:textStyle="bold"
-                                android:textSize="13sp" />
+                            android:padding="16dp">
 
                             <LinearLayout
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal"
-                                android:gravity="center_vertical"
-                                android:layout_marginTop="4dp">
+                                android:gravity="center_vertical">
 
                                 <TextView
-                                    android:id="@+id/tvCurrencySymbol"
-                                    android:layout_width="wrap_content"
+                                    android:layout_width="44dp"
+                                    android:layout_height="44dp"
+                                    android:gravity="center"
+                                    android:text="➕"
+                                    android:textSize="22sp"
+                                    android:background="@drawable/bg_badge_rounded"
+                                    android:backgroundTint="@color/ubii_cyan_bg" />
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
                                     android:layout_height="wrap_content"
-                                    android:text="Bs."
-                                    android:textColor="@color/accent_cyan"
-                                    android:textSize="32sp"
-                                    android:textStyle="bold" />
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="12dp"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Agregar nuevo QR"
+                                        android:textColor="@color/slate_900"
+                                        android:textStyle="bold"
+                                        android:textSize="17sp" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="Toca para ir a Ajustes y configurar tu banco y QR"
+                                        android:textColor="@color/slate_500"
+                                        android:textSize="12sp" />
+                                </LinearLayout>
 
                                 <TextView
-                                    android:id="@+id/tvDisplayAmount"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginStart="8dp"
-                                    android:text="0.00"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="44sp"
-                                    android:textStyle="bold" />
+                                    android:text="Ajustes ➔"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/ubii_cyan" />
                             </LinearLayout>
-
-                            <TextView
-                                android:id="@+id/tvConvertedAmount"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="≈ $0.00 USD (Tasa 45.00)"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="15sp"
-                                android:textStyle="bold" />
 
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Teclado Numérico con Números Grandes y Alto Contraste -->
-                    <GridLayout
+                    <!-- TARJETA DESTACADA PARA COBRAR POR WHATSAPP -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardCashierWhatsApp"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:columnCount="3"
-                        android:rowCount="4"
-                        android:layout_marginTop="12dp"
-                        android:alignmentMode="alignMargins">
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="16dp"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="#A7F3D0"
+                        app:strokeWidth="1.5dp"
+                        app:cardBackgroundColor="@color/surface"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
-                        <Button android:id="@+id/btnKey1" style="@style/Widget.Material3.Button.TonalButton" android:text="1" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
-                        <Button android:id="@+id/btnKey2" style="@style/Widget.Material3.Button.TonalButton" android:text="2" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
-                        <Button android:id="@+id/btnKey3" style="@style/Widget.Material3.Button.TonalButton" android:text="3" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
 
-                        <Button android:id="@+id/btnKey4" style="@style/Widget.Material3.Button.TonalButton" android:text="4" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
-                        <Button android:id="@+id/btnKey5" style="@style/Widget.Material3.Button.TonalButton" android:text="5" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
-                        <Button android:id="@+id/btnKey6" style="@style/Widget.Material3.Button.TonalButton" android:text="6" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
 
-                        <Button android:id="@+id/btnKey7" style="@style/Widget.Material3.Button.TonalButton" android:text="7" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
-                        <Button android:id="@+id/btnKey8" style="@style/Widget.Material3.Button.TonalButton" android:text="8" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
-                        <Button android:id="@+id/btnKey9" style="@style/Widget.Material3.Button.TonalButton" android:text="9" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+                                <TextView
+                                    android:layout_width="44dp"
+                                    android:layout_height="44dp"
+                                    android:gravity="center"
+                                    android:text="💬"
+                                    android:textSize="24sp"
+                                    android:background="@drawable/bg_badge_rounded"
+                                    android:backgroundTint="@color/whatsapp_bg" />
 
-                        <Button android:id="@+id/btnKeyDot" style="@style/Widget.Material3.Button.TonalButton" android:text="." android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
-                        <Button android:id="@+id/btnKey0" style="@style/Widget.Material3.Button.TonalButton" android:text="0" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
-                        <Button android:id="@+id/btnKeyClear" style="@style/Widget.Material3.Button.TonalButton" android:text="⌫" android:textSize="24sp" android:textStyle="bold" android:textColor="@color/expense_red" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
-                    </GridLayout>
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="12dp"
+                                    android:orientation="vertical">
 
-                    <!-- Botones de Acción de Cobro -->
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Cobrar por WhatsApp"
+                                        android:textColor="@color/slate_900"
+                                        android:textStyle="bold"
+                                        android:textSize="17sp" />
+
+                                    <TextView
+                                        android:id="@+id/tvCashierWhatsAppSubtitle"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="Toca para digitar monto y enviar datos con QR"
+                                        android:textColor="@color/slate_500"
+                                        android:textSize="12sp" />
+                                </LinearLayout>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Enviar ➔"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/whatsapp_green_dark" />
+                            </LinearLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnCashierOpenWhatsAppDialog"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="12dp"
+                                android:text="💬 Digitar Monto y Enviar por WhatsApp"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/white"
+                                android:backgroundTint="@color/whatsapp_green"
+                                app:cornerRadius="12dp" />
+
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- SECCIÓN COLAPSABLE: TECLADO Y SELECTORES TRADICIONALES -->
                     <LinearLayout
+                        android:id="@+id/layoutCollapsibleKeypad"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="14dp">
+                        android:orientation="vertical"
+                        android:visibility="gone">
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnChargeInPerson"
-                            android:layout_width="0dp"
-                            android:layout_height="58dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            android:text="📸 QR Pantalla"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            app:cornerRadius="14dp"
-                            android:backgroundTint="@color/accent_cyan"
-                            android:textColor="@color/white" />
+                        <!-- Selector Rápido de Banco para Cobro y QR -->
+                        <LinearLayout
+                            android:id="@+id/layoutCashierBankSelector"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginTop="8dp"
+                            android:layout_marginBottom="10dp">
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnChargeWhatsApp"
-                            android:layout_width="0dp"
-                            android:layout_height="58dp"
-                            android:layout_weight="1"
-                            android:layout_marginStart="6dp"
-                            android:text="💬 WhatsApp"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            app:cornerRadius="14dp"
-                            android:backgroundTint="@color/primary"
-                            android:textColor="@color/white" />
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="🏦 Banco para Mostrar QR y Cobro:"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvCashierBankQrIndicator"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="QR Listo ✅"
+                                    android:textColor="@color/income_green"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <HorizontalScrollView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:scrollbars="none"
+                                android:layout_marginTop="4dp">
+
+                                <com.google.android.material.chip.ChipGroup
+                                    android:id="@+id/chipGroupCashierBanks"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    app:singleSelection="true"
+                                    app:selectionRequired="true" />
+                            </HorizontalScrollView>
+                        </LinearLayout>
+
+                        <!-- Selector de Moneda Exclusivo con MaterialButtonToggleGroup -->
+                        <com.google.android.material.button.MaterialButtonToggleGroup
+                            android:id="@+id/toggleGroupCurrency"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:singleSelection="true"
+                            app:selectionRequired="true"
+                            app:checkedButton="@id/btnCurrencyVes"
+                            android:layout_marginBottom="12dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnCurrencyVes"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="0dp"
+                                android:layout_height="50dp"
+                                android:layout_weight="1"
+                                android:text="Bs. Bolívares"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnCurrencyUsd"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="0dp"
+                                android:layout_height="50dp"
+                                android:layout_weight="1"
+                                android:text="$ Dólares"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+                        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                        <!-- Tarjeta Pantalla del Monto -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="0dp"
+                            app:strokeColor="@color/border"
+                            app:strokeWidth="2dp"
+                            app:cardBackgroundColor="@color/surface">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="16dp"
+                                android:gravity="center">
+
+                                <TextView
+                                    android:id="@+id/tvDisplayLabel"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="MONTO EN BOLÍVARES"
+                                    android:textColor="@color/text_secondary"
+                                    android:textStyle="bold"
+                                    android:textSize="13sp" />
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical"
+                                    android:layout_marginTop="4dp">
+
+                                    <TextView
+                                        android:id="@+id/tvCurrencySymbol"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Bs."
+                                        android:textColor="@color/accent_cyan"
+                                        android:textSize="32sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvDisplayAmount"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:text="0.00"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="44sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <TextView
+                                    android:id="@+id/tvConvertedAmount"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:text="≈ $0.00 USD (Tasa 45.00)"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold" />
+
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <!-- Teclado Numérico con Números Grandes y Alto Contraste -->
+                        <GridLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:columnCount="3"
+                            android:rowCount="4"
+                            android:layout_marginTop="12dp"
+                            android:alignmentMode="alignMargins">
+
+                            <Button android:id="@+id/btnKey1" style="@style/Widget.Material3.Button.TonalButton" android:text="1" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+                            <Button android:id="@+id/btnKey2" style="@style/Widget.Material3.Button.TonalButton" android:text="2" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+                            <Button android:id="@+id/btnKey3" style="@style/Widget.Material3.Button.TonalButton" android:text="3" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+
+                            <Button android:id="@+id/btnKey4" style="@style/Widget.Material3.Button.TonalButton" android:text="4" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+                            <Button android:id="@+id/btnKey5" style="@style/Widget.Material3.Button.TonalButton" android:text="5" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+                            <Button android:id="@+id/btnKey6" style="@style/Widget.Material3.Button.TonalButton" android:text="6" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+
+                            <Button android:id="@+id/btnKey7" style="@style/Widget.Material3.Button.TonalButton" android:text="7" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+                            <Button android:id="@+id/btnKey8" style="@style/Widget.Material3.Button.TonalButton" android:text="8" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+                            <Button android:id="@+id/btnKey9" style="@style/Widget.Material3.Button.TonalButton" android:text="9" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+
+                            <Button android:id="@+id/btnKeyDot" style="@style/Widget.Material3.Button.TonalButton" android:text="." android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+                            <Button android:id="@+id/btnKey0" style="@style/Widget.Material3.Button.TonalButton" android:text="0" android:textSize="26sp" android:textStyle="bold" android:textColor="@color/keypad_text" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+                            <Button android:id="@+id/btnKeyClear" style="@style/Widget.Material3.Button.TonalButton" android:text="⌫" android:textSize="24sp" android:textStyle="bold" android:textColor="@color/expense_red" android:backgroundTint="@color/keypad_bg" android:layout_width="0dp" android:layout_columnWeight="1" android:layout_margin="3dp" android:layout_height="58dp"/>
+                        </GridLayout>
+
+                        <!-- Botones de Acción de Cobro del Teclado -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="14dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnChargeInPerson"
+                                android:layout_width="0dp"
+                                android:layout_height="58dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="6dp"
+                                android:text="📸 QR Pantalla"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                app:cornerRadius="14dp"
+                                android:backgroundTint="@color/accent_cyan"
+                                android:textColor="@color/white" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnChargeWhatsApp"
+                                android:layout_width="0dp"
+                                android:layout_height="58dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="6dp"
+                                android:text="💬 WhatsApp"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                app:cornerRadius="14dp"
+                                android:backgroundTint="@color/primary"
+                                android:textColor="@color/white" />
+                        </LinearLayout>
+
                     </LinearLayout>
 
                 </LinearLayout>
@@ -342,13 +520,16 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Tarjeta Principal de Ganancia Neta -->
+                    <!-- Tarjeta Principal de Ganancia Neta (Estilo Fintech Minimalista) -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:cardCornerRadius="16dp"
-                        app:cardElevation="2dp"
-                        app:cardBackgroundColor="@color/primary">
+                        android:layout_marginBottom="16dp"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="@color/card_border_light"
+                        app:strokeWidth="1.5dp"
+                        app:cardBackgroundColor="@color/surface">
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -360,7 +541,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="GANANCIA NETA DE HOY"
-                                android:textColor="@color/text_muted"
+                                android:textColor="@color/slate_500"
                                 android:textStyle="bold"
                                 android:textSize="13sp" />
 
@@ -370,24 +551,25 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
                                 android:text="Bs. 0,00"
-                                android:textColor="@color/white"
-                                android:textSize="34sp"
+                                android:textColor="@color/slate_900"
+                                android:textSize="32sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:id="@+id/tvNetProfitUsd"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
                                 android:text="≈ $0.00 USD"
-                                android:textColor="@color/accent_cyan_light"
-                                android:textSize="17sp"
+                                android:textColor="@color/ubii_cyan"
+                                android:textSize="15sp"
                                 android:textStyle="bold" />
 
                             <View
                                 android:layout_width="match_parent"
                                 android:layout_height="1dp"
                                 android:layout_marginVertical="16dp"
-                                android:background="#2E394D" />
+                                android:background="@color/slate_100" />
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -405,7 +587,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:text="🟢 Cobrado (0)"
-                                        android:textColor="@color/text_muted"
+                                        android:textColor="@color/slate_500"
                                         android:textStyle="bold"
                                         android:textSize="13sp" />
 
@@ -413,10 +595,11 @@
                                         android:id="@+id/tvTotalIncomeVes"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
                                         android:text="Bs. 0,00"
-                                        android:textColor="@color/accent_green"
+                                        android:textColor="@color/income_green"
                                         android:textStyle="bold"
-                                        android:textSize="17sp" />
+                                        android:textSize="18sp" />
                                 </LinearLayout>
 
                                 <LinearLayout
@@ -429,7 +612,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:text="🔴 Gastos"
-                                        android:textColor="@color/text_muted"
+                                        android:textColor="@color/slate_500"
                                         android:textStyle="bold"
                                         android:textSize="13sp" />
 
@@ -437,10 +620,11 @@
                                         android:id="@+id/tvTotalExpenseVes"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
                                         android:text="Bs. 0,00"
                                         android:textColor="@color/expense_red"
                                         android:textStyle="bold"
-                                        android:textSize="17sp" />
+                                        android:textSize="18sp" />
                                 </LinearLayout>
                             </LinearLayout>
 
@@ -957,9 +1141,9 @@
                                             android:layout_width="0dp"
                                             android:layout_height="44dp"
                                             android:layout_weight="1"
-                                            android:layout_marginEnd="4dp"
+                                            android:layout_marginEnd="3dp"
                                             android:text="✂️ Subir QR"
-                                            android:textSize="12sp"
+                                            android:textSize="11sp"
                                             android:textStyle="bold"
                                             app:cornerRadius="8dp" />
 
@@ -969,11 +1153,21 @@
                                             android:layout_width="0dp"
                                             android:layout_height="44dp"
                                             android:layout_weight="1"
-                                            android:layout_marginStart="4dp"
+                                            android:layout_marginHorizontal="3dp"
                                             android:text="👁️ Ver QR"
-                                            android:textSize="12sp"
+                                            android:textSize="11sp"
                                             android:textStyle="bold"
                                             app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btnDeleteSelectedBankQr"
+                                            style="@style/Widget.Material3.Button.TextButton"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="44dp"
+                                            android:layout_marginStart="3dp"
+                                            android:text="🗑️ Quitar"
+                                            android:textSize="11sp"
+                                            android:textColor="@color/expense_red" />
                                     </LinearLayout>
 
                                     <View

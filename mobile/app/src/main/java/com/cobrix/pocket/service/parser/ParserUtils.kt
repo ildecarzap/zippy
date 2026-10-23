@@ -48,7 +48,9 @@ object ParserUtils {
         "exterior" to "Banco Exterior",
         "100% banco" to "100% Banco",
         "activo" to "Banco Activo",
-        "sofitasa" to "Banco Sofitasa"
+        "sofitasa" to "Banco Sofitasa",
+        "ubii" to "Ubii App",
+        "ubiipagos" to "Ubii App"
     )
 
     fun extractAmount(text: String): Pair<Double, String>? {

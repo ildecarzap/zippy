@@ -172,8 +172,8 @@ object BackupManager {
                 val profile = UserProfile(
                     merchantName = merchant,
                     businessCategory = p.optString("businessCategory", "Transporte / Taxi"),
-                    bankCode = p.optString("bankCode", "0134"),
-                    bankName = p.optString("bankName", "Banesco"),
+                    bankCode = p.optString("bankCode", "0178"),
+                    bankName = p.optString("bankName", "Ubii App"),
                     phoneNumber = p.optString("phoneNumber", ""),
                     idCard = p.optString("idCard", ""),
                     email = p.optString("email", ""),

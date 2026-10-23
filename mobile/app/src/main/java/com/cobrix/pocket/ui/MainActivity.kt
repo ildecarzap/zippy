@@ -58,7 +58,14 @@ import com.cobrix.pocket.utils.ZippySyncManager
 import kotlinx.coroutines.launch
 import android.os.Handler
 import android.os.Looper
+import android.content.res.ColorStateList
+import android.text.InputType
+import com.cobrix.pocket.data.model.BankCatalogEntry
 import com.cobrix.pocket.databinding.DialogPaymentCelebrationBinding
+import com.cobrix.pocket.databinding.DialogWhatsappChargeBinding
+import com.cobrix.pocket.databinding.DialogSelectBankBinding
+import com.cobrix.pocket.databinding.ItemBankSelectBinding
+import com.cobrix.pocket.databinding.ItemCashierBankCardBinding
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -77,9 +84,9 @@ class MainActivity : AppCompatActivity() {
         private var isAuthenticatedThisSession = false
     }
 
-    // Banco activo para cobro en pantalla de Caja (seleccionable con botones/chips)
-    private var activeCashierBankCode = "0134"
-    private var activeCashierBankName = "Banesco"
+    // Banco activo para cobro en pantalla de Caja (seleccionable con tarjetas o picker)
+    private var activeCashierBankCode = "0178"
+    private var activeCashierBankName = "Ubii App"
 
     private val restoreBackupLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
@@ -96,20 +103,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     // Banco seleccionado para configurar en la pestaña de Ajustes
-    private var selectedBankConfigCode = "0134"
-    private var selectedBankConfigName = "Banesco"
+    private var selectedBankConfigCode = "0178"
+    private var selectedBankConfigName = "Ubii App"
+    private var targetCropBankCode: String? = null
 
     // Launcher para recortar la imagen del QR tras seleccionarla de galería con soporte multibanco
     private val cropLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val croppedUriString = result.data?.getStringExtra(QrCropActivity.EXTRA_RESULT_URI)
-            val bankCode = result.data?.getStringExtra(QrCropActivity.EXTRA_BANK_CODE) ?: selectedBankConfigCode
+            val bankCode = result.data?.getStringExtra(QrCropActivity.EXTRA_BANK_CODE) ?: targetCropBankCode ?: selectedBankConfigCode
             if (croppedUriString != null) {
                 PreferencesHelper.setBankQrUri(this, bankCode, croppedUriString)
                 val bankEntry = BankCatalog.findByCode(bankCode)
                 val bankDisplayName = bankEntry?.name ?: bankCode
-                updateSelectedBankConfigCard()
+                if (!PlanCapabilityManager.canUseMultibank(this)) {
+                    PreferencesHelper.replaceBasicPlanBank(this, bankCode, bankDisplayName)
+                    activeCashierBankCode = bankCode
+                    activeCashierBankName = bankDisplayName
+                }
+                syncSelectedBank(bankCode, bankDisplayName)
                 setupCashierBankSelector()
+                renderCashierBankCards()
                 Toast.makeText(this, "✅ QR para $bankDisplayName guardado con éxito", Toast.LENGTH_SHORT).show()
             }
         }
@@ -118,11 +132,44 @@ class MainActivity : AppCompatActivity() {
     // Selector de imágenes de galería que pasa a la pantalla de recorte con código de banco
     private val pickImageForCropLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
+            val bankCode = targetCropBankCode ?: selectedBankConfigCode
             val intent = Intent(this, QrCropActivity::class.java).apply {
                 putExtra(QrCropActivity.EXTRA_SOURCE_URI, uri.toString())
-                putExtra(QrCropActivity.EXTRA_BANK_CODE, selectedBankConfigCode)
+                putExtra(QrCropActivity.EXTRA_BANK_CODE, bankCode)
             }
             cropLauncher.launch(intent)
+        }
+    }
+
+    private fun launchCropForBank(bankCode: String) {
+        targetCropBankCode = bankCode
+        pickImageForCropLauncher.launch("image/*")
+    }
+
+    private fun handleUploadQrClick(bankCode: String, bankName: String) {
+        if (PreferencesHelper.canUploadQrForBank(this, bankCode)) {
+            launchCropForBank(bankCode)
+        } else {
+            val banksWithQr = PreferencesHelper.getBanksWithQr(this)
+            val currentBankCode = banksWithQr.firstOrNull() ?: ""
+            val currentBankName = BankCatalog.findByCode(currentBankCode)?.name ?: currentBankCode
+
+            AlertDialog.Builder(this)
+                .setTitle("⚠️ Reemplazar Banco y QR")
+                .setMessage("Actualmente tienes cargado el código QR de $currentBankName.\n\nEn el Plan Básico puedes tener 1 solo banco activo con QR.\n\n¿Deseas reemplazar $currentBankName por $bankName y cargar su nuevo código QR?\n\n(Para tener múltiples bancos y QRs simultáneos, activa Zippy PRO).")
+                .setPositiveButton("Reemplazar y Cargar QR") { _, _ ->
+                    PreferencesHelper.replaceBasicPlanBank(this, bankCode, bankName)
+                    activeCashierBankCode = bankCode
+                    activeCashierBankName = bankName
+                    syncSelectedBank(bankCode, bankName)
+                    renderCashierBankCards()
+                    launchCropForBank(bankCode)
+                }
+                .setNegativeButton("Cancelar", null)
+                .setNeutralButton("Ver Zippy PRO") { _, _ ->
+                    showProUpgradeDialog("Multibanco Simultáneo (Varios bancos a la vez)")
+                }
+                .show()
         }
     }
 
@@ -170,6 +217,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
+        PreferencesHelper.sanitizeBasicPlanBank(this)
+        val initialProfile = PreferencesHelper.getUserProfile(this)
+        activeCashierBankCode = initialProfile.bankCode
+        activeCashierBankName = initialProfile.bankName
+        selectedBankConfigCode = initialProfile.bankCode
+        selectedBankConfigName = initialProfile.bankName
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -206,6 +260,8 @@ class MainActivity : AppCompatActivity() {
         updateShiftUI()
         loadTodayLedger()
         setupCashierBankSelector()
+        renderCashierBankCards()
+        updateCashierHeaderSummary()
         updateLicenseBadge()
 
         // Sincronización reactiva inmediata al volver a la app (detecta pago de CobrixPay o activación de soporte)
@@ -334,6 +390,8 @@ class MainActivity : AppCompatActivity() {
                     binding.viewLedger.visibility = View.GONE
                     binding.viewSettings.visibility = View.GONE
                     setupCashierBankSelector()
+                    renderCashierBankCards()
+                    updateCashierHeaderSummary()
                     true
                 }
                 R.id.nav_ledger -> {
@@ -429,9 +487,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // --- ACCIONES DE COBRO ---
+    // --- ACCIONES DE COBRO Y CAJERO FINTECH ---
     private fun setupCashierActions() {
-        // Mostrar QR en Pantalla: Permite mostrarlo CON o SIN monto ingresado (disponible en Básico y PRO)
+        // Tarjeta para agregar nuevo QR: navega directamente a Ajustes
+        binding.cardCashierAddBank.setOnClickListener {
+            binding.bottomNavigation.selectedItemId = R.id.nav_settings
+        }
+
+        // Tarjeta destacada de WhatsApp: Toca para abrir teclado numérico y enviar datos con QR
+        binding.cardCashierWhatsApp.setOnClickListener {
+            showWhatsAppChargeDialog()
+        }
+
+        binding.btnCashierOpenWhatsAppDialog.setOnClickListener {
+            showWhatsAppChargeDialog()
+        }
+
+        // Teclado Tradicional en Pantalla (compatibilidad)
         binding.btnChargeInPerson.setOnClickListener {
             val amount = currentInput.toDoubleOrNull() ?: 0.0
             val profile = PreferencesHelper.getUserProfile(this)
@@ -451,7 +523,6 @@ class MainActivity : AppCompatActivity() {
                 amountUsd = 0.0
             }
 
-            // Abre pantalla inmersiva a brillo 100% con QR gigante del banco activo seleccionado
             val intent = Intent(this, FullScreenQrActivity::class.java).apply {
                 putExtra(FullScreenQrActivity.EXTRA_AMOUNT_VES, amountVes)
                 putExtra(FullScreenQrActivity.EXTRA_AMOUNT_USD, amountUsd)
@@ -461,11 +532,10 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // WhatsApp: Exige monto obligatorio antes de enviar los datos
         binding.btnChargeWhatsApp.setOnClickListener {
             val amount = currentInput.toDoubleOrNull() ?: 0.0
             if (amount <= 0.0) {
-                Toast.makeText(this, "Ingresa un monto en el teclado para cobrar por WhatsApp", Toast.LENGTH_SHORT).show()
+                showWhatsAppChargeDialog()
                 return@setOnClickListener
             }
 
@@ -481,7 +551,6 @@ class MainActivity : AppCompatActivity() {
                 amountVes = amount * profile.bcvRate
             }
 
-            // Inmediatamente compartir por WhatsApp / selector nativo con QR sin diálogo intermediario redundante
             val message = WhatsAppHelper.generatePaymentMessage(
                 profile = profile,
                 amountVes = amountVes,
@@ -500,11 +569,398 @@ class MainActivity : AppCompatActivity() {
                 val amountVes = if (isVesMode) amount else amount * profile.bcvRate
                 val amountUsd = if (isVesMode) (if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0) else amount
                 showWhatsAppPromptDialog(amountVes, amountUsd)
+            } else {
+                showWhatsAppChargeDialog()
             }
             true
         }
 
         setupCashierBankSelector()
+        renderCashierBankCards()
+        updateCashierHeaderSummary()
+    }
+
+    /**
+     * Renderiza las tarjetas de bancos configurados en la pantalla de cobro.
+     * Solo muestra los bancos que tengan código QR cargado.
+     * Al presionar "Quitar", se elimina el QR y la tarjeta desaparece de la pantalla principal,
+     * quedando la tarjeta de "Agregar nuevo QR" y la de "WhatsApp".
+     */
+    private fun renderCashierBankCards() {
+        binding.layoutCashierBankCardsContainer.removeAllViews()
+        val isMultibank = PlanCapabilityManager.canUseMultibank(this)
+        val profile = PreferencesHelper.getUserProfile(this)
+
+        val bankCodesToShow = if (isMultibank) {
+            val configured = PreferencesHelper.getConfiguredBankCodes(this)
+            configured.filter { PreferencesHelper.getBankQrUri(this, it) != null }
+        } else {
+            if (PreferencesHelper.getBankQrUri(this, profile.bankCode) != null) {
+                listOf(profile.bankCode)
+            } else {
+                emptyList()
+            }
+        }
+
+        bankCodesToShow.forEach { code ->
+            val cardBinding = ItemCashierBankCardBinding.inflate(layoutInflater, binding.layoutCashierBankCardsContainer, false)
+            val bank = BankCatalog.findByCode(code)
+            val bankName = bank?.name ?: code
+            val brandColor = bank?.getBrandColor() ?: Color.parseColor("#00B2FE")
+            val shortName = bank?.getShortName() ?: code.takeLast(2)
+
+            cardBinding.tvCashierBankBadge.text = shortName
+            cardBinding.tvCashierBankBadge.backgroundTintList = ColorStateList.valueOf(brandColor)
+            cardBinding.tvCashierBankName.text = bankName
+            cardBinding.tvCashierBankSubtitle.text = "Toca para mostrar QR a brillo 100%"
+            cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
+
+            // Abrir pantalla completa de QR al tocar la tarjeta o el botón principal
+            val openQrAction = View.OnClickListener {
+                activeCashierBankCode = code
+                activeCashierBankName = bankName
+                val intent = Intent(this, FullScreenQrActivity::class.java).apply {
+                    putExtra(FullScreenQrActivity.EXTRA_AMOUNT_VES, 0.0)
+                    putExtra(FullScreenQrActivity.EXTRA_AMOUNT_USD, 0.0)
+                    putExtra(FullScreenQrActivity.EXTRA_BANK_CODE, code)
+                    putExtra(FullScreenQrActivity.EXTRA_BANK_NAME, bankName)
+                }
+                startActivity(intent)
+            }
+            cardBinding.cardCashierBank.setOnClickListener(openQrAction)
+            cardBinding.btnCardShowQr.setOnClickListener(openQrAction)
+
+            // Botón Quitar: elimina el QR y remueve la tarjeta de la pantalla principal
+            cardBinding.btnCardDeleteQr.setOnClickListener {
+                AlertDialog.Builder(this)
+                    .setTitle("Quitar Tarjeta de Banco")
+                    .setMessage("¿Deseas quitar la tarjeta y el código QR de $bankName de la pantalla principal?")
+                    .setPositiveButton("Quitar") { _, _ ->
+                        PreferencesHelper.clearBankQr(this, code)
+                        renderCashierBankCards()
+                        setupCashierBankSelector()
+                        updateSelectedBankConfigCard()
+                        Toast.makeText(this, "Tarjeta de $bankName eliminada", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
+            }
+
+            binding.layoutCashierBankCardsContainer.addView(cardBinding.root)
+        }
+    }
+
+    /**
+     * Actualiza el texto descriptivo de cobro por WhatsApp.
+     */
+    private fun updateCashierHeaderSummary() {
+        binding.tvCashierWhatsAppSubtitle.text = "Toca para digitar monto y enviar datos de $activeCashierBankName con QR"
+    }
+
+    /**
+     * Muestra el modal de cobro por WhatsApp con teclado numérico integrado.
+     */
+    private fun showWhatsAppChargeDialog() {
+        val dialog = Dialog(this)
+        val dialogBinding = DialogWhatsappChargeBinding.inflate(layoutInflater)
+        dialog.setContentView(dialogBinding.root)
+        dialog.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val profile = PreferencesHelper.getUserProfile(this)
+        var wsBankCode = activeCashierBankCode
+        var wsBankName = activeCashierBankName
+        var isWsVesMode = true
+        var wsInput = if (currentInput != "0") currentInput else "0"
+
+        fun updateWsDisplay() {
+            dialogBinding.tvWsDisplayAmount.text = wsInput
+            dialogBinding.tvWsCurrencySymbol.text = if (isWsVesMode) "Bs." else "$"
+
+            val amount = wsInput.toDoubleOrNull() ?: 0.0
+            if (isWsVesMode) {
+                val usd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
+                dialogBinding.tvWsConvertedAmount.text = String.format(Locale.US, "≈ $%.2f USD (Tasa BCV: %.2f)", usd, profile.bcvRate)
+            } else {
+                val ves = amount * profile.bcvRate
+                dialogBinding.tvWsConvertedAmount.text = String.format(Locale.US, "≈ Bs. %.2f VES (Tasa BCV: %.2f)", ves, profile.bcvRate)
+            }
+            dialogBinding.tvWsSelectedBankSubtitle.text = "Datos de: $wsBankName ($wsBankCode)"
+        }
+
+        updateWsDisplay()
+
+        val isMultibank = PlanCapabilityManager.canUseMultibank(this)
+        val configuredCodes = PreferencesHelper.getConfiguredBankCodes(this)
+        if (isMultibank && configuredCodes.size > 1) {
+            dialogBinding.scrollWsBanks.visibility = View.VISIBLE
+            dialogBinding.chipGroupWsBanks.removeAllViews()
+            configuredCodes.forEach { code ->
+                val bank = BankCatalog.findByCode(code)
+                val displayName = bank?.name ?: code
+                val chip = Chip(this).apply {
+                    text = displayName
+                    isCheckable = true
+                    id = View.generateViewId()
+                    isChecked = (code == wsBankCode)
+                    setOnClickListener {
+                        wsBankCode = code
+                        wsBankName = displayName
+                        updateWsDisplay()
+                    }
+                }
+                dialogBinding.chipGroupWsBanks.addView(chip)
+                if (code == wsBankCode) chip.isChecked = true
+            }
+        } else {
+            dialogBinding.scrollWsBanks.visibility = View.GONE
+        }
+
+        dialogBinding.toggleGroupWsCurrency.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                isWsVesMode = (checkedId == R.id.btnWsCurrencyVes)
+                updateWsDisplay()
+            }
+        }
+
+        val numButtons = listOf(
+            dialogBinding.btnWsKey0 to "0",
+            dialogBinding.btnWsKey1 to "1",
+            dialogBinding.btnWsKey2 to "2",
+            dialogBinding.btnWsKey3 to "3",
+            dialogBinding.btnWsKey4 to "4",
+            dialogBinding.btnWsKey5 to "5",
+            dialogBinding.btnWsKey6 to "6",
+            dialogBinding.btnWsKey7 to "7",
+            dialogBinding.btnWsKey8 to "8",
+            dialogBinding.btnWsKey9 to "9"
+        )
+        numButtons.forEach { (btn, digit) ->
+            btn.setOnClickListener {
+                if (wsInput == "0") {
+                    wsInput = digit
+                } else if (wsInput.length < 8) {
+                    wsInput += digit
+                }
+                updateWsDisplay()
+            }
+        }
+
+        dialogBinding.btnWsKeyDot.setOnClickListener {
+            if (!wsInput.contains(".")) {
+                wsInput += "."
+                updateWsDisplay()
+            }
+        }
+
+        dialogBinding.btnWsKeyClear.setOnClickListener {
+            if (wsInput.length > 1) {
+                wsInput = wsInput.substring(0, wsInput.length - 1)
+            } else {
+                wsInput = "0"
+            }
+            updateWsDisplay()
+        }
+
+        dialogBinding.btnWsKeyClear.setOnLongClickListener {
+            wsInput = "0"
+            updateWsDisplay()
+            true
+        }
+
+        dialogBinding.btnWsCloseDialog.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialogBinding.btnWsSubmitSend.setOnClickListener {
+            val amount = wsInput.toDoubleOrNull() ?: 0.0
+            if (amount <= 0.0) {
+                Toast.makeText(this, "Por favor ingresa un monto mayor a 0", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val amountVes: Double
+            val amountUsd: Double
+            if (isWsVesMode) {
+                amountVes = amount
+                amountUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
+            } else {
+                amountUsd = amount
+                amountVes = amount * profile.bcvRate
+            }
+
+            val clientPhone = dialogBinding.etWsClientPhone.text.toString().trim()
+            val message = WhatsAppHelper.generatePaymentMessage(
+                profile = profile,
+                amountVes = amountVes,
+                amountUsd = amountUsd,
+                bankName = wsBankName,
+                bankCode = wsBankCode
+            )
+            val qrUri = PreferencesHelper.getBankQrUri(this, wsBankCode)?.let { Uri.parse(it) }
+            WhatsAppHelper.sendViaWhatsApp(this, clientPhone, message, qrUri)
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    /**
+     * Diálogo para seleccionar cualquier banco venezolano (incluyendo Ubii App)
+     * En Plan Básico: permite elegir 1 banco y si ya tenía QR en otro, reemplazarlo.
+     * En Plan PRO: activa el banco directamente.
+     */
+    private fun showSelectBankDialog(onBankSelected: ((BankCatalogEntry) -> Unit)? = null) {
+        val dialog = Dialog(this)
+        val dialogBinding = DialogSelectBankBinding.inflate(layoutInflater)
+        dialog.setContentView(dialogBinding.root)
+        dialog.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val isMultibank = PlanCapabilityManager.canUseMultibank(this)
+        val profile = PreferencesHelper.getUserProfile(this)
+
+        dialogBinding.tvSelectBankSubtitle.text = if (isMultibank) {
+            "Elige un banco para activar y recibir pagos móviles con QR:"
+        } else {
+            "Elige tu banco para el Plan Básico (1 banco activo a la vez):"
+        }
+
+        dialogBinding.btnSelectBankClose.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        BankCatalog.ALL_BANKS.forEach { bank ->
+            val itemBinding = ItemBankSelectBinding.inflate(layoutInflater, dialogBinding.layoutBankListContainer, false)
+            val brandColor = bank.getBrandColor()
+            val shortName = bank.getShortName()
+
+            itemBinding.tvBankItemBadge.text = shortName
+            itemBinding.tvBankItemBadge.backgroundTintList = ColorStateList.valueOf(brandColor)
+            itemBinding.tvBankItemName.text = bank.name
+            itemBinding.tvBankItemCode.text = "Código Sudeban: ${bank.code}"
+
+            val isPrimary = (bank.code == profile.bankCode)
+            val hasQr = PreferencesHelper.getBankQrUri(this, bank.code) != null
+
+            if (isPrimary) {
+                itemBinding.tvBankItemStatus.visibility = View.VISIBLE
+                itemBinding.tvBankItemStatus.text = "⭐ Principal"
+            } else if (hasQr) {
+                itemBinding.tvBankItemStatus.visibility = View.VISIBLE
+                itemBinding.tvBankItemStatus.text = "✅ Con QR"
+                itemBinding.tvBankItemStatus.setTextColor(ContextCompat.getColor(this, R.color.income_green))
+                itemBinding.tvBankItemStatus.backgroundTintList = ContextCompat.getColorStateList(this, R.color.accent_green_bg)
+            } else {
+                itemBinding.tvBankItemStatus.visibility = View.GONE
+            }
+
+            itemBinding.root.setOnClickListener {
+                dialog.dismiss()
+                if (onBankSelected != null) {
+                    onBankSelected(bank)
+                    return@setOnClickListener
+                }
+
+                if (!isMultibank) {
+                    if (bank.code != profile.bankCode) {
+                        val banksWithQr = PreferencesHelper.getBanksWithQr(this@MainActivity)
+                        if (banksWithQr.isNotEmpty() && !banksWithQr.contains(bank.code)) {
+                            AlertDialog.Builder(this@MainActivity)
+                                .setTitle("Cambiar Banco Principal")
+                                .setMessage("Actualmente tu banco configurado es ${profile.bankName}.\n\n¿Deseas cambiar tu banco a ${bank.name} y configurar su código QR?")
+                                .setPositiveButton("Cambiar y Cargar QR") { _, _ ->
+                                    PreferencesHelper.replaceBasicPlanBank(this@MainActivity, bank.code, bank.name)
+                                    activeCashierBankCode = bank.code
+                                    activeCashierBankName = bank.name
+                                    syncSelectedBank(bank.code, bank.name)
+                                    renderCashierBankCards()
+                                    setupCashierBankSelector()
+                                    launchCropForBank(bank.code)
+                                }
+                                .setNegativeButton("Solo Cambiar Banco") { _, _ ->
+                                    PreferencesHelper.replaceBasicPlanBank(this@MainActivity, bank.code, bank.name)
+                                    activeCashierBankCode = bank.code
+                                    activeCashierBankName = bank.name
+                                    syncSelectedBank(bank.code, bank.name)
+                                    renderCashierBankCards()
+                                    setupCashierBankSelector()
+                                    Toast.makeText(this@MainActivity, "Banco cambiado a ${bank.name}", Toast.LENGTH_SHORT).show()
+                                }
+                                .setNeutralButton("Cancelar", null)
+                                .show()
+                        } else {
+                            PreferencesHelper.replaceBasicPlanBank(this@MainActivity, bank.code, bank.name)
+                            activeCashierBankCode = bank.code
+                            activeCashierBankName = bank.name
+                            syncSelectedBank(bank.code, bank.name)
+                            renderCashierBankCards()
+                            setupCashierBankSelector()
+                            Toast.makeText(this@MainActivity, "Banco activo: ${bank.name}", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        activeCashierBankCode = bank.code
+                        activeCashierBankName = bank.name
+                        syncSelectedBank(bank.code, bank.name)
+                        renderCashierBankCards()
+                    }
+                } else {
+                    PreferencesHelper.setBankDetectionEnabled(this@MainActivity, bank.code, true)
+                    activeCashierBankCode = bank.code
+                    activeCashierBankName = bank.name
+                    syncSelectedBank(bank.code, bank.name)
+                    renderCashierBankCards()
+                    setupCashierBankSelector()
+                    if (PreferencesHelper.getBankQrUri(this@MainActivity, bank.code) == null) {
+                        handleUploadQrClick(bank.code, bank.name)
+                    } else {
+                        Toast.makeText(this@MainActivity, "Banco seleccionado: ${bank.name}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+            dialogBinding.layoutBankListContainer.addView(itemBinding.root)
+        }
+
+        dialog.show()
+    }
+
+    /**
+     * Permite colocar un monto específico antes de mostrar el QR en pantalla grande.
+     */
+    private fun showAmountForQrDialog(bankCode: String, bankName: String) {
+        val input = EditText(this).apply {
+            hint = "Monto en Bolívares (ej. 150.00)"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setPadding(40, 30, 40, 30)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Mostrar QR con Monto")
+            .setMessage("Ingresa el monto a cobrar con $bankName para mostrarlo sobre el código QR:")
+            .setView(input)
+            .setPositiveButton("Mostrar QR") { _, _ ->
+                val amountStr = input.text.toString().replace(',', '.').trim()
+                val amount = amountStr.toDoubleOrNull() ?: 0.0
+                val profile = PreferencesHelper.getUserProfile(this)
+                val amountUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
+
+                val intent = Intent(this, FullScreenQrActivity::class.java).apply {
+                    putExtra(FullScreenQrActivity.EXTRA_AMOUNT_VES, amount)
+                    putExtra(FullScreenQrActivity.EXTRA_AMOUNT_USD, amountUsd)
+                    putExtra(FullScreenQrActivity.EXTRA_BANK_CODE, bankCode)
+                    putExtra(FullScreenQrActivity.EXTRA_BANK_NAME, bankName)
+                }
+                startActivity(intent)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
     private fun setupCashierBankSelector() {
@@ -530,6 +986,8 @@ class MainActivity : AppCompatActivity() {
                     activeCashierBankCode = code
                     activeCashierBankName = displayName
                     updateCashierBankQrIndicator()
+                    renderCashierBankCards()
+                    updateCashierHeaderSummary()
                 }
             }
             binding.chipGroupCashierBanks.addView(chip)
@@ -639,6 +1097,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvTotalExpenseVes.text = String.format(Locale.US, "Bs. %.2f", expense)
         binding.tvNetProfitVes.text = String.format(Locale.US, "Bs. %.2f", net)
         binding.tvNetProfitUsd.text = String.format(Locale.US, "≈ $%.2f USD", netUsd)
+        updateCashierHeaderSummary()
 
         val transactions = dbHelper.getTransactionsBetween(startTime, endTime)
         binding.layoutTransactionsContainer.removeAllViews()
@@ -1279,6 +1738,32 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
+    /**
+     * Sincroniza de forma unificada el banco seleccionado en toda la pestaña de Ajustes
+     * (dropdown, chips de banco, tarjeta interactiva y predeterminado).
+     */
+    private fun syncSelectedBank(bankCode: String, bankName: String) {
+        val entry = BankCatalog.findByCode(bankCode) ?: BankCatalog.findByNameOrCode(bankName)
+        val finalCode = entry?.code ?: bankCode
+        val finalName = entry?.name ?: bankName
+
+        selectedBankConfigCode = finalCode
+        selectedBankConfigName = finalName
+
+        val displayName = entry?.toString() ?: "$finalCode - $finalName"
+        binding.actvSettingsBank.setText(displayName, false)
+
+        for (i in 0 until binding.chipGroupSettingsBanks.childCount) {
+            val chip = binding.chipGroupSettingsBanks.getChildAt(i) as? Chip
+            if (chip != null) {
+                val chipCode = chip.tag as? String
+                chip.isChecked = (chipCode == finalCode || chip.text == finalName)
+            }
+        }
+
+        updateSelectedBankConfigCard()
+    }
+
     // --- TAB AJUSTES: GESTOR MULTIBANCO Y CÓDIGOS QR ---
     private fun setupSettingsBankManager() {
         binding.chipGroupSettingsBanks.removeAllViews()
@@ -1287,13 +1772,12 @@ class MainActivity : AppCompatActivity() {
         allBanks.forEach { bank ->
             val chip = Chip(this).apply {
                 text = bank.name
+                tag = bank.code
                 isCheckable = true
                 id = View.generateViewId()
                 isChecked = (bank.code == selectedBankConfigCode)
                 setOnClickListener {
-                    selectedBankConfigCode = bank.code
-                    selectedBankConfigName = bank.name
-                    updateSelectedBankConfigCard()
+                    syncSelectedBank(bank.code, bank.name)
                 }
             }
             binding.chipGroupSettingsBanks.addView(chip)
@@ -1303,7 +1787,27 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnUploadSelectedBankQr.setOnClickListener {
-            pickImageForCropLauncher.launch("image/*")
+            handleUploadQrClick(selectedBankConfigCode, selectedBankConfigName)
+        }
+
+        binding.btnDeleteSelectedBankQr.setOnClickListener {
+            val qrUri = PreferencesHelper.getBankQrUri(this, selectedBankConfigCode)
+            if (qrUri.isNullOrEmpty()) {
+                Toast.makeText(this, "No hay código QR cargado para $selectedBankConfigName", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            AlertDialog.Builder(this)
+                .setTitle("Eliminar Código QR")
+                .setMessage("¿Deseas quitar el código QR de $selectedBankConfigName?")
+                .setPositiveButton("Eliminar") { _, _ ->
+                    PreferencesHelper.clearBankQr(this, selectedBankConfigCode)
+                    updateSelectedBankConfigCard()
+                    setupCashierBankSelector()
+                    renderCashierBankCards()
+                    Toast.makeText(this, "Código QR eliminado", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
         }
 
         binding.btnViewSelectedBankQr.setOnClickListener {
@@ -1332,19 +1836,28 @@ class MainActivity : AppCompatActivity() {
             }
             PreferencesHelper.setBankDetectionEnabled(this, selectedBankConfigCode, isChecked)
             setupCashierBankSelector()
+            renderCashierBankCards()
         }
 
         binding.btnMakeSelectedBankPrimary.setOnClickListener {
-            val cur = PreferencesHelper.getUserProfile(this)
-            val updated = cur.copy(bankCode = selectedBankConfigCode, bankName = selectedBankConfigName)
-            PreferencesHelper.saveUserProfile(this, updated)
-            activeCashierBankCode = selectedBankConfigCode
-            activeCashierBankName = selectedBankConfigName
             val bankEntry = BankCatalog.findByCode(selectedBankConfigCode)
-            binding.actvSettingsBank.setText(bankEntry?.toString() ?: "$selectedBankConfigCode - $selectedBankConfigName", false)
-            updateSelectedBankConfigCard()
+            val finalCode = bankEntry?.code ?: selectedBankConfigCode
+            val finalName = bankEntry?.name ?: selectedBankConfigName
+            if (!PlanCapabilityManager.canUseMultibank(this)) {
+                PreferencesHelper.replaceBasicPlanBank(this, finalCode, finalName)
+            } else {
+                val cur = PreferencesHelper.getUserProfile(this)
+                val updated = cur.copy(bankCode = finalCode, bankName = finalName)
+                PreferencesHelper.saveUserProfile(this, updated)
+                PreferencesHelper.setPrimaryBank(this, finalCode, finalName)
+            }
+            activeCashierBankCode = finalCode
+            activeCashierBankName = finalName
+            syncSelectedBank(finalCode, finalName)
             setupCashierBankSelector()
-            Toast.makeText(this, "⭐ $selectedBankConfigName establecido como banco principal", Toast.LENGTH_SHORT).show()
+            renderCashierBankCards()
+            updateCashierHeaderSummary()
+            Toast.makeText(this, "⭐ $finalName establecido como banco principal", Toast.LENGTH_SHORT).show()
         }
 
         binding.switchDetectSms.setOnCheckedChangeListener { _, isChecked ->
@@ -1371,10 +1884,12 @@ class MainActivity : AppCompatActivity() {
             binding.tvSettingsSelectedBankQrStatus.text = "✅ Código QR guardado y listo para cobrar"
             binding.tvSettingsSelectedBankQrStatus.setTextColor(ContextCompat.getColor(this, R.color.income_green))
             binding.btnViewSelectedBankQr.isEnabled = true
+            binding.btnDeleteSelectedBankQr.visibility = View.VISIBLE
         } else {
             binding.tvSettingsSelectedBankQrStatus.text = "⚠️ Sin código QR cargado para este banco"
             binding.tvSettingsSelectedBankQrStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
             binding.btnViewSelectedBankQr.isEnabled = false
+            binding.btnDeleteSelectedBankQr.visibility = View.GONE
         }
 
         binding.btnUploadSelectedBankQr.text = "✂️ Subir QR de $selectedBankConfigName"
@@ -1416,20 +1931,16 @@ class MainActivity : AppCompatActivity() {
         val bankEntries = BankCatalog.ALL_BANKS
         val bankAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, bankEntries.map { it.toString() })
         binding.actvSettingsBank.setAdapter(bankAdapter)
+        binding.actvSettingsBank.setOnClickListener {
+            binding.actvSettingsBank.showDropDown()
+        }
 
-        binding.actvSettingsBank.setOnItemClickListener { _, _, position, _ ->
-            val selected = bankEntries[position]
-            selectedBankConfigCode = selected.code
-            selectedBankConfigName = selected.name
-            updateSelectedBankConfigCard()
-
-            for (i in 0 until binding.chipGroupSettingsBanks.childCount) {
-                val chip = binding.chipGroupSettingsBanks.getChildAt(i) as? Chip
-                if (chip?.text == selected.name) {
-                    chip.isChecked = true
-                    break
-                }
-            }
+        binding.actvSettingsBank.setOnItemClickListener { parent, _, position, _ ->
+            val itemText = parent.getItemAtPosition(position).toString()
+            val selected = BankCatalog.findByNameOrCode(itemText)
+                ?: bankEntries.getOrNull(position)
+                ?: bankEntries.first()
+            syncSelectedBank(selected.code, selected.name)
         }
 
         // Gestor Multibanco y Códigos QR
@@ -1475,16 +1986,20 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Guardar Ajustes (con preservación estricta de tasa BCV para evitar reset a 45)
+        // Guardar Ajustes (con preservación estricta de tasa BCV y sincronización unificada de banco)
         binding.btnSaveSettings.setOnClickListener {
             val current = PreferencesHelper.getUserProfile(this)
 
-            val bankNameInput = binding.actvSettingsBank.text.toString().trim()
-            val cleanBankName = if (bankNameInput.contains(" - ")) {
-                bankNameInput.substringAfter(" - ")
-            } else {
-                bankNameInput.ifEmpty { selectedBankConfigName }
-            }
+            val bankInput = binding.actvSettingsBank.text.toString().trim()
+            val bankEntry = BankCatalog.findByNameOrCode(bankInput)
+                ?: BankCatalog.findByCode(selectedBankConfigCode)
+                ?: BankCatalog.findByCode("0178")
+                ?: BankCatalog.ALL_BANKS.first()
+
+            val finalBankCode = bankEntry.code
+            val finalBankName = bankEntry.name
+
+            syncSelectedBank(finalBankCode, finalBankName)
 
             // Tasa BCV: aceptar tanto punto como coma, y si está vacío o inválido, conservar tasa actual (¡NO 45.0!)
             val bcvRateInput = binding.etSettingsBcvRate.text.toString().replace(',', '.').trim()
@@ -1500,8 +2015,8 @@ class MainActivity : AppCompatActivity() {
             val updated = current.copy(
                 merchantName = binding.etSettingsMerchantName.text.toString().trim(),
                 businessCategory = binding.actvSettingsBusinessCategory.text.toString().trim().ifEmpty { "General" },
-                bankCode = selectedBankConfigCode,
-                bankName = cleanBankName,
+                bankCode = finalBankCode,
+                bankName = finalBankName,
                 phoneNumber = binding.etSettingsPhone.text.toString().trim(),
                 idCard = binding.etSettingsId.text.toString().trim(),
                 email = binding.etSettingsEmail.text.toString().trim(),
@@ -1511,10 +2026,19 @@ class MainActivity : AppCompatActivity() {
                 soundNotificationEnabled = soundboxMode != "MUTED",
                 biometricSecurityEnabled = binding.switchBiometric.isChecked
             )
+
+            if (!PlanCapabilityManager.canUseMultibank(this)) {
+                PreferencesHelper.replaceBasicPlanBank(this, finalBankCode, finalBankName)
+            } else {
+                PreferencesHelper.setPrimaryBank(this, finalBankCode, finalBankName)
+            }
             PreferencesHelper.saveUserProfile(this, updated)
-            activeCashierBankCode = updated.bankCode
-            activeCashierBankName = updated.bankName
+
+            activeCashierBankCode = finalBankCode
+            activeCashierBankName = finalBankName
             setupCashierBankSelector()
+            renderCashierBankCards()
+            updateCashierHeaderSummary()
             updateSelectedBankConfigCard()
             updateDisplayAmount()
 
@@ -1606,16 +2130,7 @@ class MainActivity : AppCompatActivity() {
         binding.etSettingsMerchantName.setText(profile.merchantName)
         binding.actvSettingsBusinessCategory.setText(profile.businessCategory, false)
 
-        selectedBankConfigCode = profile.bankCode
-        selectedBankConfigName = profile.bankName
-
-        val bankEntry = BankCatalog.findByCode(profile.bankCode)
-        if (bankEntry != null) {
-            selectedBankConfigName = bankEntry.name
-            binding.actvSettingsBank.setText(bankEntry.toString(), false)
-        } else {
-            binding.actvSettingsBank.setText("${profile.bankCode} - ${profile.bankName}", false)
-        }
+        syncSelectedBank(profile.bankCode, profile.bankName)
 
         binding.etSettingsPhone.setText(profile.phoneNumber)
         binding.etSettingsId.setText(profile.idCard)

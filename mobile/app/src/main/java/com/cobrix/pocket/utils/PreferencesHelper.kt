@@ -26,7 +26,7 @@ object PreferencesHelper {
     private const val KEY_THEME_MODE = "theme_mode" // "SYSTEM", "LIGHT", "DARK"
     private const val KEY_CELEBRATION_SCREEN_ENABLED = "celebration_screen_enabled"
 
-    val DEFAULT_ENABLED_BANKS = setOf("0134", "0102", "0105", "0108", "0191", "0172")
+    val DEFAULT_ENABLED_BANKS = setOf("0178", "0134", "0102", "0105", "0108", "0191", "0172")
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -48,11 +48,39 @@ object PreferencesHelper {
         getPrefs(context).edit().putBoolean(KEY_SHIFT_ACTIVE, active).apply()
     }
 
+    fun getPrimaryBankCode(context: Context): String {
+        return getPrefs(context).getString(KEY_BANK_CODE, "0178") ?: "0178"
+    }
+
+    fun setPrimaryBank(context: Context, bankCode: String, bankName: String) {
+        val prefs = getPrefs(context)
+        val editor = prefs.edit()
+            .putString(KEY_BANK_CODE, bankCode)
+            .putString(KEY_BANK_NAME, bankName)
+
+        val qr = prefs.getString("qr_image_uri_$bankCode", null)
+        if (qr != null) {
+            editor.putString(KEY_QR_URI, qr)
+        } else {
+            editor.remove(KEY_QR_URI)
+        }
+
+        // En Plan Básico, mantener sólo este banco activo
+        if (!PlanCapabilityManager.canUseMultibank(context)) {
+            editor.putStringSet(KEY_ENABLED_BANKS, setOf(bankCode))
+        } else {
+            val current = getEnabledBankCodes(context).toMutableSet()
+            current.add(bankCode)
+            editor.putStringSet(KEY_ENABLED_BANKS, current)
+        }
+        editor.apply()
+    }
+
     fun getEnabledBankCodes(context: Context): Set<String> {
         val prefs = getPrefs(context)
-        val primary = prefs.getString(KEY_BANK_CODE, "0134") ?: "0134"
+        val primary = prefs.getString(KEY_BANK_CODE, "0178") ?: "0178"
 
-        // Si el usuario está en el Plan Básico (gratis), solo tiene acceso a 1 banco activo (su banco principal)
+        // Si el usuario está en el Plan Básico (gratis), solo tiene acceso a 1 banco activo (el que elija libremente)
         if (!PlanCapabilityManager.canUseMultibank(context)) {
             return setOf(primary)
         }
@@ -88,9 +116,8 @@ object PreferencesHelper {
     }
 
     /**
-     * Obtiene la lista de códigos de bancos actualmente activos y tildados por el usuario.
+     * Obtiene la lista de códigos de bancos actualmente activos y configurados por el usuario.
      * Solo retorna bancos habilitados en getEnabledBankCodes() y que existan en BankCatalog.ALL_BANKS.
-     * Si el usuario destilda un banco, ya NO aparece como opción de QR en la primera página.
      */
     fun getConfiguredBankCodes(context: Context): List<String> {
         val validCatalogCodes = BankCatalog.ALL_BANKS.map { it.code }.toSet()
@@ -100,9 +127,9 @@ object PreferencesHelper {
             return enabled
         }
 
-        // Fallback de emergencia si destildó absolutamente todos los bancos: solo mostrar el principal
+        // Fallback de emergencia: banco principal configurado
         val prefs = getPrefs(context)
-        val primary = prefs.getString(KEY_BANK_CODE, "0134") ?: "0134"
+        val primary = prefs.getString(KEY_BANK_CODE, "0178") ?: "0178"
         return listOf(primary)
     }
 
@@ -113,8 +140,7 @@ object PreferencesHelper {
         val prefs = getPrefs(context)
         val specific = prefs.getString("qr_image_uri_$bankCode", null)
         if (!specific.isNullOrEmpty()) return specific
-        // Retrocompatibilidad con la clave general previa si coincide con el banco activo
-        val activeBank = prefs.getString(KEY_BANK_CODE, "0134")
+        val activeBank = prefs.getString(KEY_BANK_CODE, "0178")
         if (bankCode == activeBank) {
             return prefs.getString(KEY_QR_URI, null)
         }
@@ -129,18 +155,100 @@ object PreferencesHelper {
         val editor = prefs.edit()
         if (uri != null) {
             editor.putString("qr_image_uri_$bankCode", uri)
-            // Habilitar detección para este banco si no lo estaba
             val currentEnabled = getEnabledBankCodes(context).toMutableSet()
             currentEnabled.add(bankCode)
             editor.putStringSet(KEY_ENABLED_BANKS, currentEnabled)
         } else {
             editor.remove("qr_image_uri_$bankCode")
         }
-        val activeBank = prefs.getString(KEY_BANK_CODE, "0134")
+        val activeBank = prefs.getString(KEY_BANK_CODE, "0178")
         if (bankCode == activeBank) {
-            editor.putString(KEY_QR_URI, uri)
+            if (uri != null) {
+                editor.putString(KEY_QR_URI, uri)
+            } else {
+                editor.remove(KEY_QR_URI)
+            }
         }
         editor.apply()
+    }
+
+    /**
+     * Devuelve los códigos de todos los bancos que tienen un QR cargado actualmente.
+     */
+    fun getBanksWithQr(context: Context): List<String> {
+        return BankCatalog.ALL_BANKS.map { it.code }.filter { code ->
+            !getBankQrUri(context, code).isNullOrEmpty()
+        }
+    }
+
+    /**
+     * En Plan Básico solo se permite 1 banco activo con QR.
+     * Retorna true si puede subir QR para este banco directamente, o false si ya tiene otro banco con QR.
+     */
+    fun canUploadQrForBank(context: Context, bankCode: String): Boolean {
+        if (PlanCapabilityManager.canUseMultibank(context)) return true
+        val banksWithQr = getBanksWithQr(context)
+        if (banksWithQr.isEmpty()) return true
+        if (banksWithQr.size == 1 && banksWithQr.contains(bankCode)) return true
+        return false
+    }
+
+    /**
+     * Reemplaza el banco del Plan Básico eliminando el QR previo y configurando el nuevo banco.
+     */
+    fun replaceBasicPlanBank(context: Context, newBankCode: String, newBankName: String) {
+        val prefs = getPrefs(context)
+        val editor = prefs.edit()
+
+        // Si el nuevo banco no tiene QR propio aún, verificar si existía un QR cargado (por ejemplo, el subido previamente)
+        var existingQr = prefs.getString("qr_image_uri_$newBankCode", null)
+        if (existingQr == null) {
+            existingQr = prefs.getString(KEY_QR_URI, null)
+                ?: BankCatalog.ALL_BANKS.firstNotNullOfOrNull { b ->
+                    prefs.getString("qr_image_uri_${b.code}", null)
+                }
+        }
+
+        // Limpiar QRs de otros bancos para garantizar que solo exista 1 en Plan Básico
+        BankCatalog.ALL_BANKS.forEach { bank ->
+            if (bank.code != newBankCode) {
+                editor.remove("qr_image_uri_${bank.code}")
+            }
+        }
+
+        if (existingQr != null) {
+            editor.putString("qr_image_uri_$newBankCode", existingQr)
+            editor.putString(KEY_QR_URI, existingQr)
+        } else {
+            editor.remove(KEY_QR_URI)
+        }
+
+        editor.putString(KEY_BANK_CODE, newBankCode)
+        editor.putString(KEY_BANK_NAME, newBankName)
+        editor.putStringSet(KEY_ENABLED_BANKS, setOf(newBankCode))
+        editor.apply()
+    }
+
+    /**
+     * Sanitiza el estado del banco principal en el Plan Básico para corregir automáticamente
+     * desincronizaciones previas (ej. Banesco activo pero con el código QR de Ubii App).
+     */
+    fun sanitizeBasicPlanBank(context: Context) {
+        if (PlanCapabilityManager.canUseMultibank(context)) return
+
+        val prefs = getPrefs(context)
+        val ubiiQr = prefs.getString("qr_image_uri_0178", null)
+        val banescoQr = prefs.getString("qr_image_uri_0134", null)
+        val activeBank = prefs.getString(KEY_BANK_CODE, null)
+
+        // Si se subió el QR de Ubii App pero el banco activo quedó como Banesco (o Banesco tiene el QR de Ubii)
+        if (!ubiiQr.isNullOrEmpty() && (activeBank == "0134" || banescoQr == ubiiQr)) {
+            replaceBasicPlanBank(context, "0178", "Ubii App")
+        }
+    }
+
+    fun clearBankQr(context: Context, bankCode: String) {
+        setBankQrUri(context, bankCode, null)
     }
 
     fun getUserProfile(context: Context): UserProfile {
@@ -152,14 +260,17 @@ object PreferencesHelper {
         } else {
             rawSoundboxMode
         }
-        val bankCode = prefs.getString(KEY_BANK_CODE, "0134") ?: "0134"
+        val bankCode = prefs.getString(KEY_BANK_CODE, "0178") ?: "0178"
+        val bankEntry = BankCatalog.findByCode(bankCode)
+        val defaultBankName = bankEntry?.name ?: "Ubii App"
+        val bankName = prefs.getString(KEY_BANK_NAME, defaultBankName) ?: defaultBankName
         val bankQr = getBankQrUri(context, bankCode)
 
         return UserProfile(
             merchantName = prefs.getString(KEY_MERCHANT_NAME, "Mi Negocio / Taxi") ?: "",
             businessCategory = prefs.getString(KEY_BUSINESS_CATEGORY, "Transporte / Taxi") ?: "Transporte / Taxi",
             bankCode = bankCode,
-            bankName = prefs.getString(KEY_BANK_NAME, "Banesco") ?: "Banesco",
+            bankName = bankName,
             phoneNumber = prefs.getString(KEY_PHONE, "04141234567") ?: "",
             idCard = prefs.getString(KEY_ID_CARD, "V-18456789") ?: "",
             email = prefs.getString(KEY_EMAIL, "") ?: "",
@@ -182,7 +293,6 @@ object PreferencesHelper {
             .putString(KEY_PHONE, profile.phoneNumber)
             .putString(KEY_ID_CARD, profile.idCard)
             .putString(KEY_EMAIL, profile.email)
-            .putString(KEY_QR_URI, profile.qrImageUri)
             .putFloat(KEY_BCV_RATE, profile.bcvRate.toFloat())
             .putBoolean(KEY_SOUND_ENABLED, profile.soundboxMode != "MUTED")
             .putBoolean(KEY_VOICE_ENABLED, profile.soundboxMode == "VOICE")
@@ -190,8 +300,12 @@ object PreferencesHelper {
             .putStringSet(KEY_ENABLED_BANKS, profile.enabledBankCodes)
             .putBoolean(KEY_BIOMETRIC_ENABLED, profile.biometricSecurityEnabled)
 
-        if (profile.qrImageUri != null) {
-            editor.putString("qr_image_uri_${profile.bankCode}", profile.qrImageUri)
+        // Sincronizar el QR activo únicamente con el QR que le pertenezca a este banco específico
+        val bankQr = getBankQrUri(context, profile.bankCode)
+        if (bankQr != null) {
+            editor.putString(KEY_QR_URI, bankQr)
+        } else {
+            editor.remove(KEY_QR_URI)
         }
         editor.apply()
     }

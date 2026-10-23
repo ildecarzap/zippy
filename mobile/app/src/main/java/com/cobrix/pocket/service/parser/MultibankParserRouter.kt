@@ -15,6 +15,7 @@ class MultibankParserRouter {
     }
 
     private val allParsers: List<BankParser> = listOf(
+        UbiiParser(),
         MercantilParser(),
         BanescoParser(),
         BdvParser(),
