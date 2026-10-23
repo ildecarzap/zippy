@@ -2,8 +2,10 @@ package com.cobrix.pocket.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.provider.Settings
 import com.cobrix.pocket.data.model.PlanFeatures
 import com.cobrix.pocket.data.model.PlanType
+import java.security.MessageDigest
 import java.util.Locale
 import java.util.UUID
 
@@ -37,9 +39,20 @@ object PlanCapabilityManager {
         val prefs = getPrefs(context)
         var id = prefs.getString(KEY_DEVICE_ID, null)
         if (id == null) {
-            // Generar identificador de hardware corto y legible (ej. ZIP-9F4A)
-            val randomPart = UUID.randomUUID().toString().take(4).uppercase(Locale.US)
-            id = "ZIP-$randomPart"
+            val androidId = try {
+                Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+            } catch (_: Exception) {
+                null
+            }
+            val seed = if (!androidId.isNullOrBlank()) androidId else UUID.randomUUID().toString()
+            val md5 = try {
+                val digest = MessageDigest.getInstance("MD5").digest(seed.toByteArray())
+                digest.joinToString("") { "%02X".format(it) }
+            } catch (_: Exception) {
+                seed.replace("-", "").uppercase(Locale.US)
+            }
+            val code = md5.take(4).uppercase(Locale.US)
+            id = "ZIP-$code"
             prefs.edit().putString(KEY_DEVICE_ID, id).apply()
         }
         return id
@@ -74,7 +87,32 @@ object PlanCapabilityManager {
     }
 
     fun hasUsedTrial(context: Context): Boolean {
-        return getPrefs(context).getBoolean(KEY_TRIAL_USED, false)
+        val prefs = getPrefs(context)
+        val isUsed = prefs.getBoolean(KEY_TRIAL_USED, false)
+        val trialExp = prefs.getLong(KEY_TRIAL_EXPIRATION, 0L)
+        val now = System.currentTimeMillis()
+        // Si la prueba está corriendo actualmente, no mostrar botón para volver a activarla
+        if (trialExp > now) return true
+        // Si fue usada legítimamente en el pasado y ya expiró
+        if (isUsed && trialExp > 0L && trialExp <= now) return true
+        // Si fue confirmada remotamente por el servidor como ya consumida
+        if (isUsed && prefs.getBoolean("trial_consumed_remotely", false)) return true
+        // Si fue marcada como usada pero no tiene fecha de expiración válida ni confirmación remota,
+        // permitir recuperarla/reactivarla
+        return false
+    }
+
+    /**
+     * Marca la prueba como consumida permanentemente (reportado por el backend de Zippy Hub).
+     */
+    fun markTrialUsed(context: Context, trialEndsAtMs: Long = 0L) {
+        val editor = getPrefs(context).edit()
+        editor.putBoolean(KEY_TRIAL_USED, true)
+        editor.putBoolean("trial_consumed_remotely", true)
+        if (trialEndsAtMs > 0L) {
+            editor.putLong(KEY_TRIAL_EXPIRATION, trialEndsAtMs)
+        }
+        editor.apply()
     }
 
     fun getDaysRemaining(context: Context): Int {
@@ -93,18 +131,31 @@ object PlanCapabilityManager {
     /**
      * Activa la prueba de 7 días gratis si aún no ha sido utilizada.
      */
-    fun activateTrial(context: Context): Boolean {
+    fun activateTrial(context: Context, days: Int = 7): Boolean {
         val prefs = getPrefs(context)
-        if (prefs.getBoolean(KEY_TRIAL_USED, false)) {
-            return false // Ya fue usada previamente
+        val now = System.currentTimeMillis()
+        val currentExp = prefs.getLong(KEY_TRIAL_EXPIRATION, 0L)
+        if (currentExp > now) {
+            return false // Ya tiene prueba activa corriendo
         }
 
-        val expiration = System.currentTimeMillis() + TRIAL_DURATION_MS
+        val expiration = now + (days.toLong() * 24 * 60 * 60 * 1000)
         prefs.edit()
             .putBoolean(KEY_TRIAL_USED, true)
             .putLong(KEY_TRIAL_EXPIRATION, expiration)
             .apply()
         return true
+    }
+
+    /**
+     * Sincroniza la expiración de la prueba TRIAL recibida desde el backend de Zippy Hub.
+     */
+    fun setServerTrialExpiration(context: Context, expirationTimestampMs: Long) {
+        getPrefs(context).edit()
+            .putLong(KEY_TRIAL_EXPIRATION, expirationTimestampMs)
+            .putBoolean(KEY_TRIAL_USED, true)
+            .putBoolean("trial_consumed_remotely", true)
+            .apply()
     }
 
     /**

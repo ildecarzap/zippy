@@ -1,6 +1,8 @@
 package com.cobrix.pocket.ui
 
 import android.app.Activity
+import java.io.File
+import java.io.FileOutputStream
 import android.app.DatePickerDialog
 import android.app.Dialog
 import android.content.BroadcastReceiver
@@ -110,9 +112,11 @@ class MainActivity : AppCompatActivity() {
 
     // Launcher para recortar la imagen del QR tras seleccionarla de galería con soporte multibanco
     private val cropLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val targetBank = targetCropBankCode ?: selectedBankConfigCode
+        targetCropBankCode = null
         if (result.resultCode == Activity.RESULT_OK) {
             val croppedUriString = result.data?.getStringExtra(QrCropActivity.EXTRA_RESULT_URI)
-            val bankCode = result.data?.getStringExtra(QrCropActivity.EXTRA_BANK_CODE) ?: targetCropBankCode ?: selectedBankConfigCode
+            val bankCode = result.data?.getStringExtra(QrCropActivity.EXTRA_BANK_CODE) ?: targetBank
             if (croppedUriString != null) {
                 val croppedUri = Uri.parse(croppedUriString)
                 val validation = QrValidator.validateForTarget(this, croppedUri, bankCode)
@@ -128,27 +132,81 @@ class MainActivity : AppCompatActivity() {
                     return@registerForActivityResult
                 }
 
-                if (bankCode == "BINANCE") {
-                    PreferencesHelper.setBinanceQrUri(this, croppedUriString)
-                    PreferencesHelper.setBinanceEnabled(this, true)
-                    updateBinanceSettingsCard()
-                    renderCashierBankCards()
-                    Toast.makeText(this, "✅ QR de Binance Pay guardado con éxito", Toast.LENGTH_SHORT).show()
+                val qrContent = QrValidator.decodeQrContent(this, croppedUri)
+                val isCrypto = qrContent != null && QrValidator.isCryptoWalletPayload(qrContent)
+
+                if (bankCode == "BINANCE" || (isCrypto && PlanCapabilityManager.canUseWallets(this) && bankCode != "BINANCE")) {
+                    if (bankCode != "BINANCE") {
+                        AlertDialog.Builder(this)
+                            .setTitle("⚡ QR de Binance Pay Detectado")
+                            .setMessage("Detectamos que este código QR corresponde a Binance Pay (cripto) y no a los datos de Pago Móvil del banco seleccionado.\n\n¿Deseas configurarlo directamente como tu billetera Binance Pay?")
+                            .setPositiveButton("Sí, guardar en Binance") { _, _ ->
+                                saveCroppedQrPermanently(croppedUri, "BINANCE")
+                            }
+                            .setNegativeButton("Cancelar", null)
+                            .show()
+                        return@registerForActivityResult
+                    } else {
+                        saveCroppedQrPermanently(croppedUri, "BINANCE")
+                        return@registerForActivityResult
+                    }
+                }
+
+                if (isCrypto && !PlanCapabilityManager.canUseWallets(this)) {
+                    AlertDialog.Builder(this)
+                        .setTitle("⚠️ Código QR Incompatible")
+                        .setMessage("El código QR seleccionado pertenece a una Billetera Digital (Binance Pay) y no corresponde a los datos de Pago Móvil de este banco.\n\nPara aceptar cobros en USDT y Binance Pay, activa la opción exclusiva en Zippy PRO desde Ajustes > Billeteras Digitales.")
+                        .setPositiveButton("Entendido", null)
+                        .setNeutralButton("Ver Zippy PRO") { _: android.content.DialogInterface, _: Int ->
+                            showProUpgradeDialog("Billeteras Digitales y Cobros en Cripto (Binance Pay)")
+                        }
+                        .show()
                     return@registerForActivityResult
                 }
-                PreferencesHelper.setBankQrUri(this, bankCode, croppedUriString)
-                val bankEntry = BankCatalog.findByCode(bankCode)
-                val bankDisplayName = bankEntry?.name ?: bankCode
-                if (!PlanCapabilityManager.canUseMultibank(this)) {
-                    PreferencesHelper.replaceBasicPlanBank(this, bankCode, bankDisplayName)
-                    activeCashierBankCode = bankCode
-                    activeCashierBankName = bankDisplayName
-                }
-                syncSelectedBank(bankCode, bankDisplayName)
-                setupCashierBankSelector()
-                renderCashierBankCards()
-                Toast.makeText(this, "✅ QR para $bankDisplayName guardado con éxito", Toast.LENGTH_SHORT).show()
+
+                saveCroppedQrPermanently(croppedUri, bankCode)
             }
+        }
+    }
+
+    private fun saveCroppedQrPermanently(sourceUri: Uri, bankCode: String) {
+        try {
+            val destFile = if (bankCode == "BINANCE") {
+                File(filesDir, "wallet_binance.png")
+            } else {
+                File(filesDir, "bank_qr_${bankCode}.png")
+            }
+            contentResolver.openInputStream(sourceUri)?.use { input ->
+                FileOutputStream(destFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            val permanentUri = Uri.fromFile(destFile).toString()
+
+            if (bankCode == "BINANCE") {
+                PreferencesHelper.setBinanceQrUri(this, permanentUri)
+                PreferencesHelper.setBinanceEnabled(this, true)
+                updateBinanceSettingsCard()
+                renderCashierBankCards()
+                Toast.makeText(this, "✅ QR de Binance Pay guardado con éxito", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            PreferencesHelper.setBankQrUri(this, bankCode, permanentUri)
+            val bankEntry = BankCatalog.findByCode(bankCode)
+            val bankDisplayName = bankEntry?.name ?: bankCode
+            if (!PlanCapabilityManager.canUseMultibank(this)) {
+                PreferencesHelper.replaceBasicPlanBank(this, bankCode, bankDisplayName)
+                activeCashierBankCode = bankCode
+                activeCashierBankName = bankDisplayName
+            }
+            syncSelectedBank(bankCode, bankDisplayName)
+            setupCashierBankSelector()
+            renderCashierBankCards()
+            updateSelectedBankConfigCard()
+            Toast.makeText(this, "✅ QR para $bankDisplayName guardado con éxito", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Error al guardar imagen de QR: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -279,6 +337,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        PreferencesHelper.sanitizeBasicPlanBank(this)
         checkNotificationPermission()
         updateShiftUI()
         loadTodayLedger()
@@ -2258,9 +2317,9 @@ class MainActivity : AppCompatActivity() {
                 val updatedPro = ZippySyncManager.syncWithBackend(this@MainActivity)
                 runOnUiThread {
                     Toast.makeText(this@MainActivity, "✅ Configuración guardada y vinculada a Zippy Hub", Toast.LENGTH_SHORT).show()
-                    if (updatedPro) {
-                        updateLicenseBadge()
-                    }
+                    updateLicenseBadge()
+                    updateBinanceSettingsCard()
+                    renderCashierBankCards()
                 }
             }
         }
@@ -2532,8 +2591,21 @@ class MainActivity : AppCompatActivity() {
                 dialog.dismiss()
                 val activated = PlanCapabilityManager.activateTrial(this)
                 if (activated) {
+                    lifecycleScope.launch {
+                        val synced = ZippySyncManager.activateTrialOnServer(this@MainActivity)
+                        if (synced) {
+                            runOnUiThread {
+                                updateLicenseBadge()
+                                updateBinanceSettingsCard()
+                                renderCashierBankCards()
+                            }
+                        }
+                    }
                     loadSettings()
                     loadTodayLedger()
+                    updateLicenseBadge()
+                    updateBinanceSettingsCard()
+                    renderCashierBankCards()
                     showTrialRegisteredPrompt()
                 }
             }

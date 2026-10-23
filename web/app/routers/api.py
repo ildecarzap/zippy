@@ -99,10 +99,18 @@ def check_license(
             balance_due = float(debt_status.get("balance_due", 1.0))
             if status_val in ("paid", "completed") or balance_due <= 0:
                 now = datetime.utcnow()
-                if license_obj.plan_type == "PRO" and license_obj.pro_expires_at and license_obj.pro_expires_at > now:
-                    new_expiry = license_obj.pro_expires_at + timedelta(days=30)
+                debt_amount = float(debt_status.get("amount", pricing["1m"]))
+                if debt_amount >= 20.0:
+                    days_to_add = 365
+                elif 6.0 <= debt_amount < 20.0:
+                    days_to_add = 90
                 else:
-                    new_expiry = now + timedelta(days=30)
+                    days_to_add = 30
+
+                if license_obj.plan_type == "PRO" and license_obj.pro_expires_at and license_obj.pro_expires_at > now:
+                    new_expiry = license_obj.pro_expires_at + timedelta(days=days_to_add)
+                else:
+                    new_expiry = now + timedelta(days=days_to_add)
 
                 license_obj.plan_type = "PRO"
                 license_obj.pro_expires_at = new_expiry
@@ -111,7 +119,7 @@ def check_license(
                 tx = PaymentTransaction(
                     device_id=license_obj.device_id,
                     cobrix_debt_id=license_obj.pending_debt_id,
-                    amount_usd=float(debt_status.get("amount", pricing["1m"])),
+                    amount_usd=debt_amount,
                     currency=str(debt_status.get("currency_code", "USD")),
                     status="completed",
                     transaction_reference=f"COBRIX-{license_obj.pending_debt_id}",
@@ -124,10 +132,12 @@ def check_license(
                 license_obj.pending_payment_token = None
                 license_obj.pending_payment_url = None
                 license_obj.pending_link_expires_at = None
-                logger.info(f"🎉 [ZIPPY PRO AUTO-ACTIVADO] Deuda #{tx.cobrix_debt_id} pagada para dispositivo {license_obj.device_id}!")
+                logger.info(f"🎉 [ZIPPY PRO AUTO-ACTIVADO] Deuda #{tx.cobrix_debt_id} ({days_to_add} días) pagada para dispositivo {license_obj.device_id}!")
 
     license_obj.last_sync_at = datetime.utcnow()
     db.commit()
+
+    effective_plan = "PRO" if license_obj.is_pro_active and license_obj.plan_type == "PRO" else ("TRIAL" if license_obj.is_pro_active else "BASIC")
 
     return {
         "device_id": license_obj.device_id,
@@ -137,10 +147,11 @@ def check_license(
         "email": license_obj.email,
         "registered": True,
         "is_pro": license_obj.is_pro_active,
-        "plan_type": license_obj.plan_type,
+        "plan_type": effective_plan,
         "remaining_days": license_obj.remaining_days,
         "trial_ends_at": license_obj.trial_ends_at.isoformat() if license_obj.trial_ends_at else None,
         "pro_expires_at": license_obj.pro_expires_at.isoformat() if license_obj.pro_expires_at else None,
+        "trial_used": bool(license_obj.trial_ends_at is not None),
         "activation_code": license_obj.activation_code,
         "is_active": license_obj.is_active,
         "server_time": datetime.utcnow().isoformat(),
@@ -188,13 +199,113 @@ def register_device(
         license_obj.last_sync_at = datetime.utcnow()
         db.commit()
 
+    effective_plan = "PRO" if license_obj.is_pro_active and license_obj.plan_type == "PRO" else ("TRIAL" if license_obj.is_pro_active else "BASIC")
+
     return {
         "status": "success",
         "device_id": license_obj.device_id,
-        "plan_type": license_obj.plan_type,
+        "plan_type": effective_plan,
         "is_pro": license_obj.is_pro_active,
         "remaining_days": license_obj.remaining_days,
+        "trial_ends_at": license_obj.trial_ends_at.isoformat() if license_obj.trial_ends_at else None,
+        "pro_expires_at": license_obj.pro_expires_at.isoformat() if license_obj.pro_expires_at else None,
+        "trial_used": bool(license_obj.trial_ends_at is not None),
         "activation_code": license_obj.activation_code
+    }
+
+class ActivateTrialRequest(BaseModel):
+    device_id: str
+    merchant_name: str = "Comercio Zippy"
+    phone: str = ""
+    doc_id: str = ""
+    email: str = ""
+
+@router.post("/license/activate-trial")
+def activate_trial(
+    payload: ActivateTrialRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Activa o sincroniza de forma remota la prueba gratuita de 7 días (Plan TRIAL).
+    Consumido por la app Zippy al pulsar 'Probar 7 días gratis'.
+    """
+    from app.routers.admin import get_system_setting
+    trial_days_str = get_system_setting(db, "trial_days", "7")
+    try:
+        trial_days = int(trial_days_str)
+    except Exception:
+        trial_days = 7
+
+    now = datetime.utcnow()
+    license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == payload.device_id).first()
+
+    if not license_obj:
+        trial_ends = now + timedelta(days=trial_days)
+        license_obj = DeviceLicense(
+            device_id=payload.device_id,
+            merchant_name=payload.merchant_name or "Comercio Zippy",
+            phone=payload.phone or "",
+            doc_id=payload.doc_id or "",
+            email=payload.email or "",
+            plan_type="TRIAL",
+            trial_ends_at=trial_ends,
+            is_active=True,
+            app_version="1.2.0",
+            activation_code=generate_activation_code(payload.device_id),
+            last_sync_at=now
+        )
+        db.add(license_obj)
+        db.commit()
+        db.refresh(license_obj)
+        logger.info(f"⏳ [TRIAL] Nuevo dispositivo registrado con prueba de {trial_days} días: {license_obj.device_id}")
+    else:
+        # Si ya cuenta con PRO activo de pago, mantener PRO
+        if license_obj.plan_type == "PRO" and license_obj.pro_expires_at and license_obj.pro_expires_at > now:
+            return {
+                "status": "already_pro",
+                "message": "El dispositivo ya cuenta con suscripción PRO activa",
+                "is_pro": True,
+                "plan_type": "PRO",
+                "remaining_days": license_obj.remaining_days,
+                "pro_expires_at": license_obj.pro_expires_at.isoformat()
+            }
+
+        # Si ya usó la prueba en el pasado y ya expiró (más de 1 hora de diferencia para evitar carreras)
+        if license_obj.trial_ends_at and license_obj.trial_ends_at < (now - timedelta(hours=1)):
+            return {
+                "status": "trial_expired",
+                "message": "La prueba gratuita ya fue utilizada previamente en este dispositivo",
+                "is_pro": False,
+                "plan_type": "BASIC",
+                "remaining_days": 0
+            }
+
+        # Activar o refrescar período de prueba de 7 días
+        trial_ends = now + timedelta(days=trial_days)
+        license_obj.plan_type = "TRIAL"
+        license_obj.trial_ends_at = trial_ends
+        license_obj.is_active = True
+        license_obj.last_sync_at = now
+        if payload.merchant_name and payload.merchant_name != "Comercio Zippy":
+            license_obj.merchant_name = payload.merchant_name
+        if payload.phone:
+            license_obj.phone = payload.phone
+        if payload.doc_id:
+            license_obj.doc_id = payload.doc_id
+        if payload.email:
+            license_obj.email = payload.email
+        db.commit()
+        db.refresh(license_obj)
+        logger.info(f"⏳ [TRIAL] Prueba de {trial_days} días activada para {license_obj.device_id}")
+
+    return {
+        "status": "success",
+        "device_id": license_obj.device_id,
+        "is_pro": True,
+        "plan_type": "TRIAL",
+        "remaining_days": license_obj.remaining_days,
+        "trial_ends_at": license_obj.trial_ends_at.isoformat() if license_obj.trial_ends_at else None,
+        "message": f"Prueba de {trial_days} días activada con éxito"
     }
 
 class RedeemCodeRequest(BaseModel):

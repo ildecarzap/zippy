@@ -3,10 +3,15 @@ package com.cobrix.pocket.utils
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.net.Uri
+import com.google.zxing.BarcodeFormat
 import com.google.zxing.BinaryBitmap
+import com.google.zxing.DecodeHintType
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.RGBLuminanceSource
+import com.google.zxing.common.GlobalHistogramBinarizer
 import com.google.zxing.common.HybridBinarizer
 
 object QrValidator {
@@ -32,21 +37,56 @@ object QrValidator {
     }
 
     /**
-     * Decodifica el contenido de un Bitmap de imagen usando ZXing.
+     * Decodifica el contenido de un Bitmap de imagen usando ZXing con múltiples intentos,
+     * binarizadores alternativos y margen de zona de silencio (Quiet Zone).
      */
     fun decodeQrFromBitmap(bitmap: Bitmap): String? {
-        return try {
-            val width = bitmap.width
-            val height = bitmap.height
-            val pixels = IntArray(width * height)
-            bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        val hints = mapOf(
+            DecodeHintType.TRY_HARDER to true,
+            DecodeHintType.POSSIBLE_FORMATS to listOf(BarcodeFormat.QR_CODE)
+        )
+        val reader = MultiFormatReader()
 
-            val source = RGBLuminanceSource(width, height, pixels)
-            val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
-            val reader = MultiFormatReader()
-            val result = reader.decode(binaryBitmap)
-            result.text?.trim()
-        } catch (e: Exception) {
+        fun tryDecode(bmp: Bitmap): String? {
+            val width = bmp.width
+            val height = bmp.height
+            val pixels = IntArray(width * height)
+            bmp.getPixels(pixels, 0, width, 0, 0, width, height)
+
+            // Intento 1: HybridBinarizer (típico para fotos con gradientes de luz)
+            try {
+                val source = RGBLuminanceSource(width, height, pixels)
+                val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
+                val result = reader.decode(binaryBitmap, hints)
+                val text = result.text?.trim()
+                if (!text.isNullOrEmpty()) return text
+            } catch (_: Exception) {}
+
+            // Intento 2: GlobalHistogramBinarizer (óptimo para capturas de pantalla y contrastes nítidos)
+            try {
+                val source = RGBLuminanceSource(width, height, pixels)
+                val binaryBitmap = BinaryBitmap(GlobalHistogramBinarizer(source))
+                val result = reader.decode(binaryBitmap, hints)
+                val text = result.text?.trim()
+                if (!text.isNullOrEmpty()) return text
+            } catch (_: Exception) {}
+
+            return null
+        }
+
+        // Primer intento: imagen directa
+        val directResult = tryDecode(bitmap)
+        if (directResult != null) return directResult
+
+        // Segundo intento: agregar borde blanco de Quiet Zone (las especificaciones ISO de QR requieren 4 módulos de margen)
+        return try {
+            val margin = (minOf(bitmap.width, bitmap.height) * 0.12f).toInt().coerceIn(20, 60)
+            val paddedBitmap = Bitmap.createBitmap(bitmap.width + margin * 2, bitmap.height + margin * 2, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(paddedBitmap)
+            canvas.drawColor(Color.WHITE)
+            canvas.drawBitmap(bitmap, margin.toFloat(), margin.toFloat(), null)
+            tryDecode(paddedBitmap)
+        } catch (_: Exception) {
             null
         }
     }
@@ -60,6 +100,7 @@ object QrValidator {
                 lower.contains("binance.me") ||
                 lower.contains("binance://") ||
                 lower.contains("pay.binance") ||
+                lower.contains("bpay") ||
                 lower.contains("zinli.me") ||
                 lower.contains("zinli://") ||
                 lower.contains("tether") ||

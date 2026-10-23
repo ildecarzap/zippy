@@ -376,11 +376,23 @@
         <div style="background: var(--color-surface-soft); padding: 14px; border-radius: 8px; border: 1px solid var(--color-border); margin-bottom: 18px;">
           <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; color: var(--color-text-muted);">⚡ Acciones Rápidas</h4>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <form id="udFormActivateTrial" method="POST" action="" style="display: inline;">
+              <input type="hidden" name="days" value="7">
+              <button type="submit" class="btn btn-sm" style="color: #4147A3; background: #EAEBFB; border: 1px solid #CBD0FA;" title="Activar o renovar prueba de 7 días">⏳ Prueba (7d)</button>
+            </form>
             <form id="udFormActivate30" method="POST" action="" style="display: inline;">
               <input type="hidden" name="days" value="30">
-              <button type="submit" class="btn btn-success-soft btn-sm">⚡ +30d PRO</button>
+              <button type="submit" class="btn btn-success-soft btn-sm" title="Activar o renovar 1 mes (30 días)">⚡ +1 Mes (30d)</button>
             </form>
-            <button type="button" class="btn btn-soft btn-sm" onclick="openCobrixFromDetails()">💳 CobrixPay</button>
+            <form id="udFormActivate90" method="POST" action="" style="display: inline;">
+              <input type="hidden" name="days" value="90">
+              <button type="submit" class="btn btn-success-soft btn-sm" style="background: #E8F5E9; color: #1B5E20; border: 1px solid #C8E6C9;" title="Activar o renovar 3 meses (90 días)">🌟 +3 Meses (90d)</button>
+            </form>
+            <form id="udFormActivate365" method="POST" action="" style="display: inline;">
+              <input type="hidden" name="days" value="365">
+              <button type="submit" class="btn btn-success-soft btn-sm" style="background: #FFF8E1; color: #B78103; border: 1px solid #FFE082;" title="Activar o renovar 1 año completo (365 días)">👑 +1 Año (365d)</button>
+            </form>
+            <button type="button" class="btn btn-soft btn-sm" onclick="openCobrixFromDetails()" title="Generar enlace de cobro CobrixPay">💳 CobrixPay</button>
             <form id="udFormDowngrade" method="POST" action="" style="display: inline;" onsubmit="return confirm('¿Seguro que deseas pasar este dispositivo al Plan Básico?');">
               <button type="submit" class="btn btn-outline btn-sm" style="color: #963842; border-color: #F8D7DA;">⬇️ A Básico</button>
             </form>
@@ -600,7 +612,10 @@
         document.getElementById('udDeviceId').innerText = d.device_id;
         document.getElementById('udAppSync').innerText = `v${d.app_version} • Última sinc: ${d.last_sync_at}`;
 
+        document.getElementById('udFormActivateTrial').action = `/${secretPath}/licenses/${d.id}/activate-trial`;
         document.getElementById('udFormActivate30').action = `/${secretPath}/licenses/${d.id}/activate-pro`;
+        document.getElementById('udFormActivate90').action = `/${secretPath}/licenses/${d.id}/activate-pro`;
+        document.getElementById('udFormActivate365').action = `/${secretPath}/licenses/${d.id}/activate-pro`;
         document.getElementById('udFormDowngrade').action = `/${secretPath}/licenses/${d.id}/downgrade-basic`;
         document.getElementById('udFormToggle').action = `/${secretPath}/licenses/${d.id}/toggle-status`;
         document.getElementById('udBtnToggleStatus').innerText = d.is_active ? '🔒 Suspender' : '🔓 Activar';

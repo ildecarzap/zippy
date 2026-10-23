@@ -193,17 +193,17 @@ class QrCropActivity : AppCompatActivity() {
         try {
             val croppedBitmap = Bitmap.createBitmap(src, cropX, cropY, cropW, cropH)
             val bankCode = intent.getStringExtra(EXTRA_BANK_CODE)?.takeIf { it.isNotEmpty() } ?: "clean"
-            val file = File(filesDir, "bank_qr_${bankCode}.png")
-            FileOutputStream(file).use { out ->
+            val tempFile = File(cacheDir, "crop_${bankCode}_${System.currentTimeMillis()}.png")
+            FileOutputStream(tempFile).use { out ->
                 croppedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             }
-            val resultUri = Uri.fromFile(file)
+            val resultUri = Uri.fromFile(tempFile)
             val resultIntent = Intent().apply {
                 putExtra(EXTRA_RESULT_URI, resultUri.toString())
                 putExtra(EXTRA_BANK_CODE, bankCode)
             }
             setResult(Activity.RESULT_OK, resultIntent)
-            Toast.makeText(this, "✅ QR recortado y guardado en alta resolución", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "✅ QR encuadrado en alta resolución", Toast.LENGTH_SHORT).show()
             finish()
         } catch (e: Exception) {
             Toast.makeText(this, "Error al guardar recorte: ${e.message}", Toast.LENGTH_SHORT).show()

@@ -2,6 +2,7 @@ package com.cobrix.pocket.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
 import com.cobrix.pocket.data.model.BankCatalog
 import com.cobrix.pocket.data.model.UserProfile
 
@@ -231,13 +232,19 @@ object PreferencesHelper {
         val prefs = getPrefs(context)
         val editor = prefs.edit()
 
-        // Si el nuevo banco no tiene QR propio aún, verificar si existía un QR cargado (por ejemplo, el subido previamente)
+        // Si el nuevo banco no tiene QR propio aún, verificar si existía un QR cargado en otro banco nacional
+        val binanceQr = prefs.getString(KEY_BINANCE_QR_URI, null)
         var existingQr = prefs.getString("qr_image_uri_$newBankCode", null)
         if (existingQr == null) {
-            existingQr = prefs.getString(KEY_QR_URI, null)
-                ?: BankCatalog.ALL_BANKS.firstNotNullOfOrNull { b ->
-                    prefs.getString("qr_image_uri_${b.code}", null)
+            val candidate = prefs.getString(KEY_QR_URI, null)
+            if (candidate != null && candidate != binanceQr) {
+                existingQr = candidate
+            } else {
+                existingQr = BankCatalog.ALL_BANKS.firstNotNullOfOrNull { b ->
+                    val q = prefs.getString("qr_image_uri_${b.code}", null)
+                    if (q != null && q != binanceQr) q else null
                 }
+            }
         }
 
         // Limpiar QRs de otros bancos para garantizar que solo exista 1 en Plan Básico
@@ -261,19 +268,71 @@ object PreferencesHelper {
     }
 
     /**
-     * Sanitiza el estado del banco principal en el Plan Básico para corregir automáticamente
-     * desincronizaciones previas (ej. Banesco activo pero con el código QR de Ubii App).
+     * Sanitiza el estado del banco principal y billeteras para corregir automáticamente
+     * desincronizaciones previas (ej. código QR de Binance Pay asignado erróneamente a Ubii App u otro banco).
      */
     fun sanitizeBasicPlanBank(context: Context) {
+        val prefs = getPrefs(context)
+        var binanceQr = prefs.getString(KEY_BINANCE_QR_URI, null)
+
+        // 1. Revisar si el QR genérico legacy (KEY_QR_URI) contiene un QR de cripto
+        val legacyQr = prefs.getString(KEY_QR_URI, null)
+        if (!legacyQr.isNullOrEmpty()) {
+            val isCrypto = try {
+                val uri = Uri.parse(legacyQr)
+                val content = QrValidator.decodeQrContent(context, uri)
+                content != null && QrValidator.isCryptoWalletPayload(content)
+            } catch (_: Exception) {
+                false
+            }
+            if (isCrypto || legacyQr == binanceQr) {
+                if (binanceQr.isNullOrEmpty()) {
+                    setBinanceQrUri(context, legacyQr)
+                    setBinanceEnabled(context, true)
+                    binanceQr = legacyQr
+                }
+                prefs.edit().remove(KEY_QR_URI).apply()
+            }
+        }
+
+        // 2. Revisar si alguna ranura de banco tradicional (incluyendo Ubii 0178) contiene un QR de Binance
+        BankCatalog.ALL_BANKS.forEach { bank ->
+            val bQr = prefs.getString("qr_image_uri_${bank.code}", null)
+            if (!bQr.isNullOrEmpty()) {
+                val isCrypto = try {
+                    val uri = Uri.parse(bQr)
+                    val content = QrValidator.decodeQrContent(context, uri)
+                    content != null && QrValidator.isCryptoWalletPayload(content)
+                } catch (_: Exception) {
+                    false
+                }
+
+                if (isCrypto || (!binanceQr.isNullOrEmpty() && bQr == binanceQr)) {
+                    // Mover el QR a la ranura de Binance Pay si aún no está asignado
+                    if (binanceQr.isNullOrEmpty()) {
+                        setBinanceQrUri(context, bQr)
+                        setBinanceEnabled(context, true)
+                        binanceQr = bQr
+                    }
+                    // Eliminarlo de la ranura bancaria
+                    val editor = prefs.edit()
+                    editor.remove("qr_image_uri_${bank.code}")
+                    if (prefs.getString(KEY_QR_URI, null) == bQr) {
+                        editor.remove(KEY_QR_URI)
+                    }
+                    editor.apply()
+                }
+            }
+        }
+
         if (PlanCapabilityManager.canUseMultibank(context)) return
 
-        val prefs = getPrefs(context)
-        val ubiiQr = prefs.getString("qr_image_uri_0178", null)
         val banescoQr = prefs.getString("qr_image_uri_0134", null)
         val activeBank = prefs.getString(KEY_BANK_CODE, null)
 
         // Si se subió el QR de Ubii App pero el banco activo quedó como Banesco (o Banesco tiene el QR de Ubii)
-        if (!ubiiQr.isNullOrEmpty() && (activeBank == "0134" || banescoQr == ubiiQr)) {
+        val refreshedUbii = prefs.getString("qr_image_uri_0178", null)
+        if (!refreshedUbii.isNullOrEmpty() && (activeBank == "0134" || banescoQr == refreshedUbii)) {
             replaceBasicPlanBank(context, "0178", "Ubii App")
         }
     }

@@ -77,11 +77,19 @@ async def receive_cobrixpay_webhook(
 
         if license_obj:
             now = datetime.utcnow()
-            # Si el plan PRO ya está vigente, sumar 30 días a la fecha de vencimiento actual
-            if license_obj.plan_type == "PRO" and license_obj.pro_expires_at and license_obj.pro_expires_at > now:
-                new_expiry = license_obj.pro_expires_at + timedelta(days=30)
+            desc_lower = description.lower()
+            if "12 meses" in desc_lower or "1 año" in desc_lower or amount >= 20.0:
+                days_to_add = 365
+            elif "3 meses" in desc_lower or (6.0 <= amount < 20.0):
+                days_to_add = 90
             else:
-                new_expiry = now + timedelta(days=30)
+                days_to_add = 30
+
+            # Si el plan PRO ya está vigente, sumar los días adquiridos a la fecha de vencimiento actual
+            if license_obj.plan_type == "PRO" and license_obj.pro_expires_at and license_obj.pro_expires_at > now:
+                new_expiry = license_obj.pro_expires_at + timedelta(days=days_to_add)
+            else:
+                new_expiry = now + timedelta(days=days_to_add)
 
             license_obj.plan_type = "PRO"
             license_obj.pro_expires_at = new_expiry

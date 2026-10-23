@@ -196,13 +196,17 @@ async def admin_dashboard(
 async def activate_pro_license(
     license_id: int,
     days: int = Form(30),
+    months: Optional[int] = Form(None),
     current_admin: AdminUser = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """Extiende manualmente el plan PRO de un comercio en 1 clic."""
+    """Extiende manualmente el plan PRO de un comercio en 1 clic (1m=30d, 3m=90d, 12m=365d)."""
     device = db.query(DeviceLicense).filter(DeviceLicense.id == license_id).first()
     if not device:
         raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
+
+    if months:
+        days = 365 if months == 12 else (90 if months == 3 else months * 30)
 
     now = datetime.utcnow()
     if device.plan_type == "PRO" and device.pro_expires_at and device.pro_expires_at > now:
@@ -214,9 +218,33 @@ async def activate_pro_license(
     device.is_active = True
     db.commit()
 
-    logger.info(f"⚡ [ADMIN] Licencia #{device.id} ({device.merchant_name}) extendida por {days} días por {current_admin.username}")
+    logger.info(f"⭐ [ADMIN] Plan PRO extendido por {days} días para #{device.id} ({device.merchant_name}) por {current_admin.username}")
     return RedirectResponse(
         url=f"/{settings.ADMIN_SECRET_PATH}/dashboard?success=pro_activated",
+        status_code=status.HTTP_303_SEE_OTHER
+    )
+
+@router.post("/licenses/{license_id}/activate-trial")
+async def activate_trial_license(
+    license_id: int,
+    days: int = Form(7),
+    current_admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Activa o reactiva manualmente el período de prueba (Trial) de un comercio desde el panel."""
+    device = db.query(DeviceLicense).filter(DeviceLicense.id == license_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
+
+    now = datetime.utcnow()
+    device.trial_ends_at = now + timedelta(days=days)
+    device.plan_type = "TRIAL"
+    device.is_active = True
+    db.commit()
+
+    logger.info(f"⏳ [ADMIN] Prueba (Trial) de {days} días activada para #{device.id} ({device.merchant_name}) por {current_admin.username}")
+    return RedirectResponse(
+        url=f"/{settings.ADMIN_SECRET_PATH}/dashboard?success=trial_activated",
         status_code=status.HTTP_303_SEE_OTHER
     )
 

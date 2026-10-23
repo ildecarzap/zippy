@@ -98,9 +98,6 @@ object ZippySyncManager {
                 checkConn.disconnect()
 
                 val json = JSONObject(sb.toString())
-                val isPro = json.optBoolean("is_pro", false)
-                val remainingDays = json.optInt("remaining_days", 0)
-                val proExpiresAt = json.optString("pro_expires_at", "")
 
                 // Sincronizar precios y paquetes remotos de Zippy PRO configurados en el panel admin
                 val pricingJson = json.optJSONObject("pricing")
@@ -112,21 +109,44 @@ object ZippySyncManager {
                     Log.d(TAG, "💰 Precios remotos Zippy actualizados: 1m=\$$p1, 3m=\$$p3, 12m=\$$p12")
                 }
 
-                val wasPro = PlanCapabilityManager.isPro(context)
+                val isPro = json.optBoolean("is_pro", false)
+                val remainingDays = json.optInt("remaining_days", 0)
+                val proExpiresAt = json.optString("pro_expires_at", "")
+                val trialEndsAt = json.optString("trial_ends_at", "")
                 val planType = json.optString("plan_type", "BASIC")
+                val trialUsed = json.optBoolean("trial_used", false) || trialEndsAt.isNotEmpty()
+
+                if (trialUsed && !isPro) {
+                    val expirationMs = parseIsoDateOrAddDays(trialEndsAt, 0)
+                    PlanCapabilityManager.markTrialUsed(context, expirationMs)
+                }
+
+                val wasPro = PlanCapabilityManager.isPro(context)
 
                 if (isPro && remainingDays > 0) {
-                    val expirationMs = parseIsoDateOrAddDays(proExpiresAt, remainingDays)
-                    PlanCapabilityManager.setServerProExpiration(context, expirationMs)
-                    Log.i(TAG, "⭐ Zippy PRO verificado en el servidor: $remainingDays días restantes")
+                    if (planType.equals("TRIAL", ignoreCase = true)) {
+                        val expirationMs = parseIsoDateOrAddDays(trialEndsAt, remainingDays)
+                        PlanCapabilityManager.setServerTrialExpiration(context, expirationMs)
+                        Log.i(TAG, "⏳ Zippy TRIAL verificado en el servidor: $remainingDays días restantes")
+                    } else {
+                        val expirationMs = parseIsoDateOrAddDays(proExpiresAt, remainingDays)
+                        PlanCapabilityManager.setServerProExpiration(context, expirationMs)
+                        Log.i(TAG, "⭐ Zippy PRO verificado en el servidor: $remainingDays días restantes")
+                    }
                     return@withContext !wasPro
                 } else if (!isPro) {
-                    // Si el panel de administración degradó el dispositivo a Básico o la suscripción no fue pagada
-                    if (planType.equals("BASIC", ignoreCase = true) && wasPro) {
+                    // Si el dispositivo tiene una prueba local activa no sincronizada aún con el backend, intentamos reportarla
+                    if (PlanCapabilityManager.isTrial(context)) {
+                        val trialSynced = activateTrialOnServer(context)
+                        if (trialSynced) {
+                            Log.i(TAG, "⏳ Prueba local de 7 días sincronizada exitosamente con Zippy Hub")
+                            return@withContext true
+                        }
+                    } else if (planType.equals("BASIC", ignoreCase = true) && wasPro) {
                         PlanCapabilityManager.resetToFree(context)
                         Log.i(TAG, "⬇️ Dispositivo degradado a Plan Básico por el servidor de Zippy Hub")
                         return@withContext true
-                    } else if (wasPro && !PlanCapabilityManager.isTrial(context)) {
+                    } else if (wasPro) {
                         PlanCapabilityManager.clearProExpiration(context)
                         return@withContext true
                     }
@@ -299,6 +319,75 @@ object ZippySyncManager {
                 message = "No se pudo validar el código: ${e.localizedMessage}"
             )
         }
+    }
+
+    /**
+     * Activa o sincroniza la prueba gratuita de 7 días (Plan TRIAL) en Zippy Hub.
+     */
+    suspend fun activateTrialOnServer(context: Context): Boolean = withContext(Dispatchers.IO) {
+        val deviceId = PlanCapabilityManager.getDeviceId(context)
+        val profile = PreferencesHelper.getUserProfile(context)
+        val baseUrl = getServerUrl(context)
+
+        try {
+            val url = URL("$baseUrl/api/v1/license/activate-trial")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("Accept", "application/json")
+            conn.connectTimeout = 4000
+            conn.readTimeout = 4000
+            conn.doOutput = true
+
+            val payload = JSONObject().apply {
+                put("device_id", deviceId)
+                put("merchant_name", profile.merchantName.ifEmpty { "Comercio Zippy" })
+                put("phone", profile.phoneNumber)
+                put("doc_id", profile.idCard)
+                put("email", profile.email)
+            }
+
+            val writer = OutputStreamWriter(conn.outputStream)
+            writer.write(payload.toString())
+            writer.flush()
+            writer.close()
+
+            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
+                val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                val sb = StringBuilder()
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    sb.append(line)
+                }
+                reader.close()
+                conn.disconnect()
+
+                val json = JSONObject(sb.toString())
+                val isPro = json.optBoolean("is_pro", false)
+                val remainingDays = json.optInt("remaining_days", 7)
+                val trialEndsAt = json.optString("trial_ends_at", "")
+                val status = json.optString("status")
+
+                if (status == "trial_expired" || (!isPro && remainingDays <= 0)) {
+                    PlanCapabilityManager.markTrialUsed(context)
+                    PlanCapabilityManager.resetToFree(context)
+                    Log.w(TAG, "⛔ Prueba de 7 días ya expiró o fue utilizada previamente en este dispositivo")
+                    return@withContext false
+                }
+
+                if (isPro && remainingDays > 0) {
+                    val expirationMs = parseIsoDateOrAddDays(trialEndsAt, remainingDays)
+                    PlanCapabilityManager.setServerTrialExpiration(context, expirationMs)
+                    Log.i(TAG, "🎉 Prueba de 7 días sincronizada en Zippy Hub: $remainingDays días restantes")
+                    return@withContext true
+                }
+            } else {
+                conn.disconnect()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "No se pudo sincronizar activación de prueba con Zippy Hub (${e.localizedMessage})")
+        }
+        return@withContext false
     }
 
     private fun parseIsoDateOrAddDays(isoString: String, remainingDays: Int): Long {
