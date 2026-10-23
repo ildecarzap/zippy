@@ -2364,6 +2364,16 @@ class MainActivity : AppCompatActivity() {
         setupCashierBankSelector()
         setupSettingsWallets()
 
+        binding.tvSettingsLegalLink.setOnClickListener {
+            val serverUrl = ZippySyncManager.getServerUrl(this)
+            val legalUrl = if (serverUrl.isNotEmpty()) "$serverUrl/legal" else "https://zippy.ciemtech.com/legal"
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(legalUrl)))
+            } catch (e: Exception) {
+                Toast.makeText(this, "No se pudo abrir el navegador", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         // Estado del Plan Zippy PRO y seguimiento de prueba / renovación
         val planType = PlanCapabilityManager.getPlanType(this)
         val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
@@ -2472,6 +2482,48 @@ class MainActivity : AppCompatActivity() {
 
         dialogBinding.tvProReasonSubtitle.text = "Desbloquea $featureName con Zippy PRO ⚡"
 
+        // Precios dinámicos sincronizados remotamente desde el panel admin
+        val p1 = PreferencesHelper.getPrice1m(this)
+        val p3 = PreferencesHelper.getPrice3m(this)
+        val p12 = PreferencesHelper.getPrice12m(this)
+
+        dialogBinding.tvPrice1m.text = String.format(java.util.Locale.US, "$%.2f", p1)
+        dialogBinding.tvPrice3m.text = String.format(java.util.Locale.US, "$%.2f", p3)
+        dialogBinding.tvPrice12m.text = String.format(java.util.Locale.US, "$%.2f", p12)
+
+        var selectedMonths = 12
+
+        val density = resources.displayMetrics.density
+        val strokeActive = (2 * density).toInt()
+        val strokeInactive = (1 * density).toInt()
+        val colorActiveGreen = androidx.core.content.ContextCompat.getColor(this, R.color.accent_green)
+        val colorActiveBlue = androidx.core.content.ContextCompat.getColor(this, R.color.accent_blue)
+        val colorBorderSubtle = androidx.core.content.ContextCompat.getColor(this, R.color.border_subtle)
+        val colorCardDefault = androidx.core.content.ContextCompat.getColor(this, R.color.card_background)
+
+        fun updatePackageSelection(months: Int) {
+            selectedMonths = months
+            // 1m
+            dialogBinding.cardPackage1m.strokeWidth = if (months == 1) strokeActive else strokeInactive
+            dialogBinding.cardPackage1m.strokeColor = if (months == 1) colorActiveBlue else colorBorderSubtle
+            dialogBinding.cardPackage1m.setCardBackgroundColor(if (months == 1) android.graphics.Color.parseColor("#EBF0F7") else colorCardDefault)
+
+            // 3m
+            dialogBinding.cardPackage3m.strokeWidth = if (months == 3) strokeActive else strokeInactive
+            dialogBinding.cardPackage3m.strokeColor = if (months == 3) colorActiveBlue else colorBorderSubtle
+            dialogBinding.cardPackage3m.setCardBackgroundColor(if (months == 3) android.graphics.Color.parseColor("#EBF0F7") else colorCardDefault)
+
+            // 12m
+            dialogBinding.cardPackage12m.strokeWidth = if (months == 12) strokeActive else strokeInactive
+            dialogBinding.cardPackage12m.strokeColor = if (months == 12) colorActiveGreen else colorBorderSubtle
+            dialogBinding.cardPackage12m.setCardBackgroundColor(if (months == 12) android.graphics.Color.parseColor("#F0FDF4") else colorCardDefault)
+        }
+
+        dialogBinding.cardPackage1m.setOnClickListener { updatePackageSelection(1) }
+        dialogBinding.cardPackage3m.setOnClickListener { updatePackageSelection(3) }
+        dialogBinding.cardPackage12m.setOnClickListener { updatePackageSelection(12) }
+        updatePackageSelection(12)
+
         val hasUsedTrial = PlanCapabilityManager.hasUsedTrial(this)
         if (hasUsedTrial) {
             dialogBinding.btnProTrial.visibility = View.GONE
@@ -2489,7 +2541,7 @@ class MainActivity : AppCompatActivity() {
 
         dialogBinding.btnProWhatsapp.setOnClickListener {
             dialog.dismiss()
-            handleRequestPaymentLinkOption()
+            handleRequestPaymentLinkOption(selectedMonths)
         }
 
         dialogBinding.btnProRedeemCode.setOnClickListener {
@@ -2535,7 +2587,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun handleRequestPaymentLinkOption() {
+    private fun handleRequestPaymentLinkOption(months: Int = 1) {
         val planType = PlanCapabilityManager.getPlanType(this)
         val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
         if (planType == PlanType.PRO_ACTIVE && daysRemaining > 3) {
@@ -2544,15 +2596,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Abre directamente el contacto de WhatsApp con CIEM Tech para solicitar el enlace oficial de CobrixPay
-        openSupportWhatsAppForPro()
+        openSupportWhatsAppForPro(months)
     }
 
-    private fun openSupportWhatsAppForPro() {
+    private fun openSupportWhatsAppForPro(months: Int = 1) {
         val profile = PreferencesHelper.getUserProfile(this)
         val deviceId = PlanCapabilityManager.getDeviceId(this)
         val businessName = profile.merchantName.ifEmpty { "Mi Negocio" }
         val rif = if (profile.idCard.isNotEmpty()) " (${profile.idCard})" else ""
-        val text = Uri.encode("Hola Ciem tech solutions C.A, deseo activar o renovar el Plan Zippy PRO (\$2.99) para mi negocio '$businessName'$rif (ID Dispositivo: $deviceId). Por favor envíenme el link de pago oficial de CobrixPay.")
+
+        val (monthsText, priceVal) = when (months) {
+            12 -> "1 Año (Anual con 2 meses gratis)" to PreferencesHelper.getPrice12m(this)
+            3 -> "3 Meses (Trimestral con ahorro)" to PreferencesHelper.getPrice3m(this)
+            else -> "1 Mes" to PreferencesHelper.getPrice1m(this)
+        }
+        val priceStr = String.format(java.util.Locale.US, "$%.2f", priceVal)
+
+        val text = Uri.encode("Hola Ciem tech solutions C.A, deseo activar o renovar el Plan Zippy PRO por $monthsText ($priceStr USD) para mi negocio '$businessName'$rif (ID Dispositivo: $deviceId). Por favor envíenme el link de pago oficial de CobrixPay.")
         val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
         startActivity(Intent(Intent.ACTION_VIEW, uri))
     }

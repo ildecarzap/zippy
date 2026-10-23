@@ -206,6 +206,42 @@ def cleanup_expired_pending_debts(db: Any) -> int:
         logger.info(f"🧹 Se anularon y limpiaron {cancelled_count} deudas expiradas en CobrixPay.")
     return cancelled_count
 
+def get_plan_prices(db: Optional[Any] = None) -> Dict[str, float]:
+    """
+    Retorna los precios dinámicos configurados en zippy_system_settings.
+    Valores por defecto si no están en BD: 1m=$2.99, 3m=$7.99 (ahorro 11%), 12m=$29.99 (2 meses gratis).
+    """
+    from app.models import SystemSetting
+    p_1m = float(settings.COBRIXPAY_PLAN_PRICE_USD)
+    p_3m = 7.99
+    p_12m = 29.99
+
+    if db:
+        try:
+            r1 = db.query(SystemSetting).filter(SystemSetting.key == "pro_plan_price_usd").first()
+            if r1 and r1.value:
+                p_1m = float(r1.value)
+
+            r3 = db.query(SystemSetting).filter(SystemSetting.key == "pro_price_3m").first()
+            if r3 and r3.value:
+                p_3m = float(r3.value)
+            else:
+                p_3m = round(p_1m * 3 * 0.89, 2)
+
+            r12 = db.query(SystemSetting).filter(SystemSetting.key == "pro_price_12m").first()
+            if r12 and r12.value:
+                p_12m = float(r12.value)
+            else:
+                p_12m = round(p_1m * 10, 2)
+        except Exception as e:
+            logger.warning(f"Error consultando precios en zippy_system_settings: {e}")
+
+    return {
+        "1m": p_1m,
+        "3m": p_3m,
+        "12m": p_12m
+    }
+
 def create_or_get_cobrixpay_payment_url(
     device: Any,
     months: int = 1,
@@ -214,6 +250,7 @@ def create_or_get_cobrixpay_payment_url(
 ) -> Tuple[str, str, bool, Optional[datetime], Optional[int]]:
     """
     Gestiona la creación o reutilización de enlaces de pago oficiales de CobrixPay.
+    Aplica paquetes con descuento: 1 mes ($2.99), 3 meses ($7.99), 1 año ($29.99).
     
     Reglas Anti-Spam y Expiración:
     1. Si ya existe un enlace activo no vencido y not force_new:
@@ -253,9 +290,18 @@ def create_or_get_cobrixpay_payment_url(
         device.pending_payment_url = None
         device.pending_link_expires_at = None
 
-    # 3. Preparar parámetros para la nueva deuda
-    amount = round(settings.COBRIXPAY_PLAN_PRICE_USD * months, 2)
-    meses_txt = f"{months} mes{'es' if months > 1 else ''}"
+    # 3. Preparar parámetros para la nueva deuda con escala de paquetes
+    plan_prices = get_plan_prices(db)
+    if months == 12:
+        amount = plan_prices["12m"]
+        meses_txt = "1 Año (12 meses)"
+    elif months == 3:
+        amount = plan_prices["3m"]
+        meses_txt = "3 Meses (Trimestral)"
+    else:
+        amount = round(plan_prices["1m"] * months, 2)
+        meses_txt = f"{months} mes{'es' if months > 1 else ''}"
+
     description = f"Suscripción Zippy PRO ({meses_txt}) - Dispositivo {device.device_id}"
 
     clean_phone = (getattr(device, "phone", "") or "").strip()
@@ -324,12 +370,20 @@ def create_or_get_cobrixpay_payment_url(
         logger.error(f"Error al crear deuda en CobrixPay API: {api_err}")
         raise api_err
 
-def build_whatsapp_message_text(merchant_name: str, payment_url: str, months: int = 1, expire_hours: int = 24) -> str:
+def build_whatsapp_message_text(merchant_name: str, payment_url: str, months: int = 1, expire_hours: int = 24, db: Optional[Any] = None) -> str:
     """
     Construye el texto plano del mensaje de WhatsApp para que el administrador pueda revisarlo y editarlo.
     """
-    amount = round(settings.COBRIXPAY_PLAN_PRICE_USD * months, 2)
-    meses_txt = f"{months} mes{'es' if months > 1 else ''}"
+    plan_prices = get_plan_prices(db)
+    if months == 12:
+        amount = plan_prices["12m"]
+        meses_txt = "1 Año (12 meses con 2 meses gratis)"
+    elif months == 3:
+        amount = plan_prices["3m"]
+        meses_txt = "3 Meses (Trimestral con ahorro)"
+    else:
+        amount = round(plan_prices["1m"] * months, 2)
+        meses_txt = f"{months} mes{'es' if months > 1 else ''}"
 
     return (
         f"¡Hola {merchant_name}! 👋\n\n"

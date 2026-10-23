@@ -291,7 +291,8 @@ async def get_cobrix_payment_data(
         merchant_name=device.merchant_name,
         payment_url=payment_url,
         months=months,
-        expire_hours=settings.COBRIXPAY_LINK_EXPIRE_HOURS
+        expire_hours=settings.COBRIXPAY_LINK_EXPIRE_HOURS,
+        db=db
     )
     wa_url = build_whatsapp_direct_url(device.phone, message_text)
 
@@ -348,7 +349,8 @@ async def get_whatsapp_payment_redirect(
         merchant_name=device.merchant_name,
         payment_url=payment_url,
         months=months,
-        expire_hours=settings.COBRIXPAY_LINK_EXPIRE_HOURS
+        expire_hours=settings.COBRIXPAY_LINK_EXPIRE_HOURS,
+        db=db
     )
     wa_url = build_whatsapp_direct_url(device.phone, message_text)
     
@@ -462,6 +464,8 @@ async def admin_settings_page(
 ):
     """Vista de Ajustes de Perfil, Contraseña, Precios y Parámetros del Sistema."""
     pro_price = get_system_setting(db, "pro_plan_price_usd", str(settings.COBRIXPAY_PLAN_PRICE_USD))
+    pro_price_3m = get_system_setting(db, "pro_price_3m", "7.99")
+    pro_price_12m = get_system_setting(db, "pro_price_12m", "29.99")
     trial_days = get_system_setting(db, "trial_days", "7")
     expire_hours = get_system_setting(db, "cobrix_link_expire_hours", str(settings.COBRIXPAY_LINK_EXPIRE_HOURS))
     company_name = get_system_setting(db, "company_name", settings.COMPANY_NAME)
@@ -477,6 +481,8 @@ async def admin_settings_page(
             "admin": current_admin,
             "secret_path": settings.ADMIN_SECRET_PATH,
             "pro_price": pro_price,
+            "pro_price_3m": pro_price_3m,
+            "pro_price_12m": pro_price_12m,
             "trial_days": trial_days,
             "expire_hours": expire_hours,
             "company_name": company_name,
@@ -492,6 +498,8 @@ async def admin_settings_page(
 @router.post("/settings/system")
 async def update_system_settings(
     pro_price: float = Form(...),
+    pro_price_3m: float = Form(7.99),
+    pro_price_12m: float = Form(29.99),
     trial_days: int = Form(...),
     expire_hours: int = Form(...),
     company_name: str = Form(...),
@@ -501,8 +509,10 @@ async def update_system_settings(
     current_admin: AdminUser = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """Guarda los parámetros de precios, días de prueba y datos corporativos."""
+    """Guarda los parámetros de precios, paquetes de suscripción, días de prueba y datos corporativos."""
     set_system_setting(db, "pro_plan_price_usd", str(pro_price), "Precio mensual del Plan PRO en USD")
+    set_system_setting(db, "pro_price_3m", str(pro_price_3m), "Precio paquete 3 meses en USD")
+    set_system_setting(db, "pro_price_12m", str(pro_price_12m), "Precio paquete 12 meses en USD")
     set_system_setting(db, "trial_days", str(trial_days), "Días de prueba gratuita")
     set_system_setting(db, "cobrix_link_expire_hours", str(expire_hours), "Horas de expiración para enlaces CobrixPay")
     set_system_setting(db, "company_name", company_name.strip(), "Razón social")
@@ -510,7 +520,7 @@ async def update_system_settings(
     set_system_setting(db, "company_phone", company_phone.strip(), "Teléfono oficial de contacto")
     set_system_setting(db, "company_email", company_email.strip(), "Correo oficial de soporte")
 
-    logger.info(f"⚙️ [ADMIN] Parámetros del sistema actualizados por {current_admin.username}")
+    logger.info(f"⚙️ [ADMIN] Parámetros del sistema y paquetes de precios actualizados por {current_admin.username}")
     return RedirectResponse(
         url=f"/{settings.ADMIN_SECRET_PATH}/settings?success=system_saved",
         status_code=status.HTTP_303_SEE_OTHER

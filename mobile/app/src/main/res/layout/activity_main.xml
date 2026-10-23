@@ -802,6 +802,52 @@
                             android:textSize="13sp" />
                     </LinearLayout>
 
+                    <!-- BANNER DE SEGURIDAD Y PREVENCIÓN DE FRAUDE -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#B7E4C7"
+                        app:strokeWidth="1dp"
+                        app:cardBackgroundColor="#F0FDF4">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🛡️ Seguridad CIEM • Alerta Anti-Estafas"
+                                android:textStyle="bold"
+                                android:textColor="#166534"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="Zippy NUNCA te solicitará contraseñas bancarias, coordenadas, claves de cajero, códigos SMS ni acceso a tus cuentas. Todo tu dinero e información permanecen 100% seguros y privados en tu teléfono."
+                                android:textColor="#15803D"
+                                android:textSize="12sp"
+                                android:lineSpacingExtra="2dp" />
+
+                            <TextView
+                                android:id="@+id/tvSettingsLegalLink"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="🔒 Ver Manifiesto de Seguridad y Privacidad ➔"
+                                android:textColor="#166534"
+                                android:textStyle="bold"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
                     <!-- TARJETA 1: DATOS DEL COMERCIO Y TASA BCV -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"

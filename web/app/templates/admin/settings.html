@@ -136,13 +136,27 @@
 
         <form method="POST" action="/{{ secret_path }}/settings/system">
           
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
             <div class="form-group">
-              <label class="form-label">Precio Mensual Plan PRO ($ USD)</label>
+              <label class="form-label">Plan 1 Mes ($ USD)</label>
               <input type="number" step="0.01" min="0.5" name="pro_price" class="form-control" value="{{ pro_price }}" required>
-              <small style="color: var(--color-text-muted); font-size: 0.78rem;">Monto base mensual de suscripción.</small>
+              <small style="color: var(--color-text-muted); font-size: 0.78rem;">Base mensual.</small>
             </div>
 
+            <div class="form-group">
+              <label class="form-label">Paquete 3 Meses ($ USD)</label>
+              <input type="number" step="0.01" min="1.0" name="pro_price_3m" class="form-control" value="{{ pro_price_3m }}" required>
+              <small style="color: var(--color-text-muted); font-size: 0.78rem;">Sugerido: $7.99 (Ahorro 11%).</small>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Paquete 1 Año ($ USD)</label>
+              <input type="number" step="0.01" min="5.0" name="pro_price_12m" class="form-control" value="{{ pro_price_12m }}" required>
+              <small style="color: var(--color-text-muted); font-size: 0.78rem;">Sugerido: $29.99 (2 meses gratis).</small>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
             <div class="form-group">
               <label class="form-label">Días de Prueba Gratuita (Trial)</label>
               <input type="number" step="1" min="1" max="90" name="trial_days" class="form-control" value="{{ trial_days }}" required>

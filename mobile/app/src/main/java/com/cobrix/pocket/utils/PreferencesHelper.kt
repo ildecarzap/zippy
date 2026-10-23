@@ -34,10 +34,27 @@ object PreferencesHelper {
     private const val KEY_ZINLI_QR_URI = "wallet_zinli_qr_uri"
     private const val KEY_ZINLI_ENABLED = "wallet_zinli_enabled"
 
+    // Paquetes y Precios Dinámicos de Zippy PRO
+    private const val KEY_PRICE_1M = "pricing_pro_1m"
+    private const val KEY_PRICE_3M = "pricing_pro_3m"
+    private const val KEY_PRICE_12M = "pricing_pro_12m"
+
     val DEFAULT_ENABLED_BANKS = setOf("0178", "0134", "0102", "0105", "0108", "0191", "0172")
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    fun getPrice1m(context: Context): Double = getPrefs(context).getFloat(KEY_PRICE_1M, 2.99f).toDouble()
+    fun getPrice3m(context: Context): Double = getPrefs(context).getFloat(KEY_PRICE_3M, 7.99f).toDouble()
+    fun getPrice12m(context: Context): Double = getPrefs(context).getFloat(KEY_PRICE_12M, 29.99f).toDouble()
+
+    fun savePricing(context: Context, price1m: Double, price3m: Double, price12m: Double) {
+        getPrefs(context).edit()
+            .putFloat(KEY_PRICE_1M, price1m.toFloat())
+            .putFloat(KEY_PRICE_3M, price3m.toFloat())
+            .putFloat(KEY_PRICE_12M, price12m.toFloat())
+            .apply()
     }
 
     fun isCelebrationScreenEnabled(context: Context): Boolean {

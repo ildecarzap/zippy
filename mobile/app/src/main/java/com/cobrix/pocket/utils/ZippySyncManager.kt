@@ -102,6 +102,16 @@ object ZippySyncManager {
                 val remainingDays = json.optInt("remaining_days", 0)
                 val proExpiresAt = json.optString("pro_expires_at", "")
 
+                // Sincronizar precios y paquetes remotos de Zippy PRO configurados en el panel admin
+                val pricingJson = json.optJSONObject("pricing")
+                if (pricingJson != null) {
+                    val p1 = pricingJson.optDouble("price_1m", 2.99)
+                    val p3 = pricingJson.optDouble("price_3m", 7.99)
+                    val p12 = pricingJson.optDouble("price_12m", 29.99)
+                    PreferencesHelper.savePricing(context, p1, p3, p12)
+                    Log.d(TAG, "💰 Precios remotos Zippy actualizados: 1m=\$$p1, 3m=\$$p3, 12m=\$$p12")
+                }
+
                 val wasPro = PlanCapabilityManager.isPro(context)
                 val planType = json.optString("plan_type", "BASIC")
 

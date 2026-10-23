@@ -39,6 +39,41 @@ def check_license(
     """
     license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == device_id).first()
     
+    from app.services.cobrixpay import get_plan_prices
+    pricing = get_plan_prices(db)
+    pricing_payload = {
+        "currency": "USD",
+        "price_1m": pricing["1m"],
+        "price_3m": pricing["3m"],
+        "price_12m": pricing["12m"],
+        "plans": [
+            {
+                "id": "1m",
+                "months": 1,
+                "title": "1 Mes",
+                "price_usd": pricing["1m"],
+                "badge": None,
+                "description": "Facturación mensual"
+            },
+            {
+                "id": "3m",
+                "months": 3,
+                "title": "3 Meses",
+                "price_usd": pricing["3m"],
+                "badge": "Ahorra 11%",
+                "description": f"${round(pricing['3m'] / 3, 2)} / mes"
+            },
+            {
+                "id": "12m",
+                "months": 12,
+                "title": "1 Año (Anual)",
+                "price_usd": pricing["12m"],
+                "badge": "⭐ 2 Meses Gratis",
+                "description": f"Equivale a ${round(pricing['12m'] / 12, 2)} / mes"
+            }
+        ]
+    }
+
     if not license_obj:
         return {
             "device_id": device_id,
@@ -48,7 +83,8 @@ def check_license(
             "remaining_days": 0,
             "is_active": True,
             "activation_code": None,
-            "message": "Dispositivo en Plan Básico gratuito"
+            "message": "Dispositivo en Plan Básico gratuito",
+            "pricing": pricing_payload
         }
 
     # Asegurar que tenga código de activación
@@ -75,7 +111,7 @@ def check_license(
                 tx = PaymentTransaction(
                     device_id=license_obj.device_id,
                     cobrix_debt_id=license_obj.pending_debt_id,
-                    amount_usd=float(debt_status.get("amount", 2.99)),
+                    amount_usd=float(debt_status.get("amount", pricing["1m"])),
                     currency=str(debt_status.get("currency_code", "USD")),
                     status="completed",
                     transaction_reference=f"COBRIX-{license_obj.pending_debt_id}",
@@ -107,7 +143,8 @@ def check_license(
         "pro_expires_at": license_obj.pro_expires_at.isoformat() if license_obj.pro_expires_at else None,
         "activation_code": license_obj.activation_code,
         "is_active": license_obj.is_active,
-        "server_time": datetime.utcnow().isoformat()
+        "server_time": datetime.utcnow().isoformat(),
+        "pricing": pricing_payload
     }
 
 @router.post("/license/register")
