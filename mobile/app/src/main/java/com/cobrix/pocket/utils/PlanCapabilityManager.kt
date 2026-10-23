@@ -193,7 +193,8 @@ object PlanCapabilityManager {
                 canUseVoiceInput = false,
                 canUseVoiceSoundbox = false,
                 canUseCloudBackup = false,
-                historyDaysRetention = 7
+                historyDaysRetention = 7,
+                canUseWallets = false
             )
             PlanType.PRO_TRIAL -> PlanFeatures(
                 planType = PlanType.PRO_TRIAL,
@@ -202,7 +203,8 @@ object PlanCapabilityManager {
                 canUseVoiceInput = true,
                 canUseVoiceSoundbox = true,
                 canUseCloudBackup = true,
-                historyDaysRetention = 365
+                historyDaysRetention = 365,
+                canUseWallets = true
             )
             PlanType.PRO_ACTIVE -> PlanFeatures(
                 planType = PlanType.PRO_ACTIVE,
@@ -211,7 +213,8 @@ object PlanCapabilityManager {
                 canUseVoiceInput = true,
                 canUseVoiceSoundbox = true,
                 canUseCloudBackup = true,
-                historyDaysRetention = 365
+                historyDaysRetention = 365,
+                canUseWallets = true
             )
         }
     }
@@ -221,5 +224,6 @@ object PlanCapabilityManager {
     fun canUseVoiceInput(context: Context): Boolean = getPlanFeatures(context).canUseVoiceInput
     fun canUseVoiceSoundbox(context: Context): Boolean = getPlanFeatures(context).canUseVoiceSoundbox
     fun canUseCloudBackup(context: Context): Boolean = getPlanFeatures(context).canUseCloudBackup
+    fun canUseWallets(context: Context): Boolean = getPlanFeatures(context).canUseWallets
     fun getMaxActiveBanks(context: Context): Int = getPlanFeatures(context).maxBanks
 }

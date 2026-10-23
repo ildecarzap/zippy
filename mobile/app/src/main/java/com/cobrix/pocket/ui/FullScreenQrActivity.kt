@@ -74,11 +74,19 @@ class FullScreenQrActivity : AppCompatActivity() {
         val targetBankName = intent.getStringExtra(EXTRA_BANK_NAME) ?: profile.bankName
         val targetQrUri = PreferencesHelper.getBankQrUri(this, targetBankCode) ?: profile.qrImageUri
 
-        if (amountVes > 0.0) {
+        val isBinance = targetBankCode.equals("BINANCE", ignoreCase = true)
+        val isZinli = targetBankCode.equals("ZINLI", ignoreCase = true)
+
+        if (amountVes > 0.0 || amountUsd > 0.0) {
             binding.tvFullScreenVes.visibility = View.VISIBLE
             binding.tvFullScreenUsd.visibility = View.VISIBLE
-            binding.tvFullScreenVes.text = String.format(Locale.US, "Bs. %.2f", amountVes)
-            binding.tvFullScreenUsd.text = String.format(Locale.US, "($%.2f USD)", amountUsd)
+            if (isBinance) {
+                binding.tvFullScreenVes.text = String.format(Locale.US, "$%.2f USDT", amountUsd)
+                binding.tvFullScreenUsd.text = if (amountVes > 0) String.format(Locale.US, "(Equiv. Bs. %.2f)", amountVes) else ""
+            } else {
+                binding.tvFullScreenVes.text = String.format(Locale.US, "Bs. %.2f", amountVes)
+                binding.tvFullScreenUsd.text = String.format(Locale.US, "($%.2f USD)", amountUsd)
+            }
         } else {
             binding.tvFullScreenVes.visibility = View.GONE
             binding.tvFullScreenUsd.visibility = View.GONE
@@ -86,9 +94,23 @@ class FullScreenQrActivity : AppCompatActivity() {
 
         val merchant = if (profile.merchantName.isNotBlank()) profile.merchantName else "Mi Negocio"
         binding.tvFullScreenMerchant.text = "👤 $merchant • ${profile.businessCategory}"
-        binding.tvFullScreenBank.text = "🏦 Banco: $targetBankName ($targetBankCode)"
-        binding.tvFullScreenPhone.text = "📱 Teléfono: ${profile.phoneNumber}"
-        binding.tvFullScreenId.text = "🪪 Cédula/RIF: ${profile.idCard}"
+
+        if (isBinance) {
+            val payId = PreferencesHelper.getBinancePayId(this)
+            binding.tvFullScreenBank.text = "🟡 Método: Binance Pay (USDT)"
+            binding.tvFullScreenPhone.text = if (payId.isNotBlank()) "🆔 Pay ID / Correo: $payId" else "📱 Escanear con App Binance"
+            binding.tvFullScreenId.visibility = View.GONE
+        } else if (isZinli) {
+            val zinliEmail = PreferencesHelper.getZinliEmail(this)
+            binding.tvFullScreenBank.text = "🟣 Método: Zinli (USD)"
+            binding.tvFullScreenPhone.text = if (zinliEmail.isNotBlank()) "✉️ Correo: $zinliEmail" else "📱 Escanear con Zinli"
+            binding.tvFullScreenId.visibility = View.GONE
+        } else {
+            binding.tvFullScreenBank.text = "🏦 Banco: $targetBankName ($targetBankCode)"
+            binding.tvFullScreenPhone.text = "📱 Teléfono: ${profile.phoneNumber}"
+            binding.tvFullScreenId.visibility = View.VISIBLE
+            binding.tvFullScreenId.text = "🪪 Cédula/RIF: ${profile.idCard}"
+        }
 
         if (!targetQrUri.isNullOrEmpty()) {
             try {

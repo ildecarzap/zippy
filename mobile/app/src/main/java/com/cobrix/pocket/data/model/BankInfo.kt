@@ -60,6 +60,12 @@ enum class BankCode(
             "com.samsung.android.messaging",
             "com.android.mms"
         )
+    ),
+    BINANCE(
+        sudebanCode = "BINANCE",
+        displayName = "Binance Pay",
+        defaultKeywords = listOf("binance", "binance pay", "usdt", "you have received", "has recibido", "order"),
+        knownPackageNames = listOf("com.binance.dev")
     );
 
     companion object {

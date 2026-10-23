@@ -83,7 +83,12 @@ class PocketNotificationListenerService : NotificationListenerService() {
         val enabledBankEnums = allowedBankCodes.mapNotNull { code ->
             com.cobrix.pocket.data.model.BankCode.fromSudeban(code)
                 ?: com.cobrix.pocket.data.model.BankCode.fromCode(code)
-        }.toSet()
+        }.toMutableSet()
+
+        // Si el usuario tiene Plan PRO y tiene Binance Pay habilitado, incluirlo en la detección
+        if (isPro && PreferencesHelper.isBinanceEnabled(this)) {
+            enabledBankEnums.add(com.cobrix.pocket.data.model.BankCode.BINANCE)
+        }
 
         // 3. Parseo mediante router bancario filtrando bancos permitidos
         val parsedPayment = parserRouter.routeAndParse(
@@ -103,17 +108,19 @@ class PocketNotificationListenerService : NotificationListenerService() {
         Log.i(TAG, "¡Pago válido detectado! Banco: ${parsedPayment.bancoCodigo.displayName}, Monto: ${parsedPayment.monto}, Ref: ${parsedPayment.referenciaUltimos4}")
 
         // 5. Guardar en Base de Datos Local
-        val amountUsd = if (profile.bcvRate > 0) parsedPayment.monto / profile.bcvRate else 0.0
+        val isUsdt = (parsedPayment.moneda == "USD")
+        val amountVes = if (isUsdt) (parsedPayment.monto * profile.bcvRate) else parsedPayment.monto
+        val amountUsd = if (isUsdt) parsedPayment.monto else (if (profile.bcvRate > 0) parsedPayment.monto / profile.bcvRate else 0.0)
 
         val tx = Transaction(
-            amount = parsedPayment.monto,
+            amount = amountVes,
             amountUsd = amountUsd,
             reference = parsedPayment.referenciaUltimos4,
             bankCode = parsedPayment.bancoCodigo.sudebanCode,
             bankName = parsedPayment.bancoCodigo.displayName,
             senderName = parsedPayment.telefonoOrigen ?: "",
             type = TransactionType.INCOME,
-            category = com.cobrix.pocket.data.model.TransactionCategories.INCOME_AUTO_PAGO_MOVIL,
+            category = if (isUsdt) "Cripto / Binance Pay" else com.cobrix.pocket.data.model.TransactionCategories.INCOME_AUTO_PAGO_MOVIL,
             note = "Detectado automáticamente de ${parsedPayment.bancoCodigo.displayName}",
             timestamp = System.currentTimeMillis(),
             isManual = false
@@ -122,7 +129,11 @@ class PocketNotificationListenerService : NotificationListenerService() {
 
         // 6. Alerta Sonora y Voz según el modo de Soundbox configurado y capacidades del plan
         if (profile.soundboxMode == "VOICE" && PlanCapabilityManager.canUseVoiceSoundbox(this)) {
-            soundHelper?.announcePayment(parsedPayment.monto)
+            if (isUsdt) {
+                soundHelper?.announceCryptoPayment(parsedPayment.monto, "dólares")
+            } else {
+                soundHelper?.announcePayment(parsedPayment.monto)
+            }
         } else if (profile.soundboxMode != "MUTED") {
             soundHelper?.playCashRegisterSound()
         }

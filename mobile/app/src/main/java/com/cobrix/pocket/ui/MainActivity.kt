@@ -43,6 +43,7 @@ import com.cobrix.pocket.service.PocketNotificationListenerService
 import com.cobrix.pocket.utils.BiometricHelper
 import com.cobrix.pocket.utils.LicenseManager
 import com.cobrix.pocket.utils.PreferencesHelper
+import com.cobrix.pocket.utils.QrValidator
 import com.cobrix.pocket.utils.ReportHelper
 import com.cobrix.pocket.utils.SoundHelper
 import com.cobrix.pocket.utils.WhatsAppHelper
@@ -113,6 +114,28 @@ class MainActivity : AppCompatActivity() {
             val croppedUriString = result.data?.getStringExtra(QrCropActivity.EXTRA_RESULT_URI)
             val bankCode = result.data?.getStringExtra(QrCropActivity.EXTRA_BANK_CODE) ?: targetCropBankCode ?: selectedBankConfigCode
             if (croppedUriString != null) {
+                val croppedUri = Uri.parse(croppedUriString)
+                val validation = QrValidator.validateForTarget(this, croppedUri, bankCode)
+                if (validation is QrValidator.ValidationResult.Rejected) {
+                    AlertDialog.Builder(this)
+                        .setTitle("⚠️ Código QR Incompatible")
+                        .setMessage(validation.reason)
+                        .setPositiveButton("Entendido", null)
+                        .setNeutralButton("Ver Zippy PRO") { _: android.content.DialogInterface, _: Int ->
+                            showProUpgradeDialog("Billeteras Digitales y Cobros en Cripto (Binance Pay)")
+                        }
+                        .show()
+                    return@registerForActivityResult
+                }
+
+                if (bankCode == "BINANCE") {
+                    PreferencesHelper.setBinanceQrUri(this, croppedUriString)
+                    PreferencesHelper.setBinanceEnabled(this, true)
+                    updateBinanceSettingsCard()
+                    renderCashierBankCards()
+                    Toast.makeText(this, "✅ QR de Binance Pay guardado con éxito", Toast.LENGTH_SHORT).show()
+                    return@registerForActivityResult
+                }
                 PreferencesHelper.setBankQrUri(this, bankCode, croppedUriString)
                 val bankEntry = BankCatalog.findByCode(bankCode)
                 val bankDisplayName = bankEntry?.name ?: bankCode
@@ -648,6 +671,51 @@ class MainActivity : AppCompatActivity() {
 
             binding.layoutCashierBankCardsContainer.addView(cardBinding.root)
         }
+
+        // Tarjeta de Billetera Digital Binance Pay (Exclusiva Plan PRO)
+        if (PlanCapabilityManager.canUseWallets(this) && PreferencesHelper.isBinanceEnabled(this) && PreferencesHelper.getBinanceQrUri(this) != null) {
+            val binanceCardBinding = ItemCashierBankCardBinding.inflate(layoutInflater, binding.layoutCashierBankCardsContainer, false)
+            val binanceYellow = Color.parseColor("#F0B90B")
+            val binanceDark = Color.parseColor("#181A20")
+
+            binanceCardBinding.tvCashierBankBadge.text = "USDT"
+            binanceCardBinding.tvCashierBankBadge.backgroundTintList = ColorStateList.valueOf(binanceYellow)
+            binanceCardBinding.tvCashierBankBadge.setTextColor(binanceDark)
+
+            binanceCardBinding.tvCashierBankName.text = "Binance Pay"
+            val payId = PreferencesHelper.getBinancePayId(this)
+            binanceCardBinding.tvCashierBankSubtitle.text = if (payId.isNotBlank()) "Pay ID: $payId • Toca para QR 100%" else "Cripto / USDT • Toca para QR 100%"
+            binanceCardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(binanceYellow)
+            binanceCardBinding.btnCardShowQr.iconTint = ColorStateList.valueOf(binanceDark)
+
+            val openBinanceQrAction = View.OnClickListener {
+                val intent = Intent(this, FullScreenQrActivity::class.java).apply {
+                    putExtra(FullScreenQrActivity.EXTRA_AMOUNT_VES, 0.0)
+                    putExtra(FullScreenQrActivity.EXTRA_AMOUNT_USD, 0.0)
+                    putExtra(FullScreenQrActivity.EXTRA_BANK_CODE, "BINANCE")
+                    putExtra(FullScreenQrActivity.EXTRA_BANK_NAME, "Binance Pay")
+                }
+                startActivity(intent)
+            }
+            binanceCardBinding.cardCashierBank.setOnClickListener(openBinanceQrAction)
+            binanceCardBinding.btnCardShowQr.setOnClickListener(openBinanceQrAction)
+
+            binanceCardBinding.btnCardDeleteQr.setOnClickListener {
+                AlertDialog.Builder(this)
+                    .setTitle("Quitar Binance Pay")
+                    .setMessage("¿Deseas quitar la tarjeta de Binance Pay de la pantalla principal?\n(Podrás volver a activarla cuando quieras desde Ajustes > Billeteras Digitales).")
+                    .setPositiveButton("Quitar") { _, _ ->
+                        PreferencesHelper.setBinanceEnabled(this, false)
+                        renderCashierBankCards()
+                        updateBinanceSettingsCard()
+                        Toast.makeText(this, "Tarjeta de Binance Pay quitada de caja", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
+            }
+
+            binding.layoutCashierBankCardsContainer.addView(binanceCardBinding.root)
+        }
     }
 
     /**
@@ -688,17 +756,28 @@ class MainActivity : AppCompatActivity() {
                 val ves = amount * profile.bcvRate
                 dialogBinding.tvWsConvertedAmount.text = String.format(Locale.US, "≈ Bs. %.2f VES (Tasa BCV: %.2f)", ves, profile.bcvRate)
             }
-            dialogBinding.tvWsSelectedBankSubtitle.text = "Datos de: $wsBankName ($wsBankCode)"
+            if (wsBankCode == "BINANCE") {
+                val payId = PreferencesHelper.getBinancePayId(this)
+                val displayId = if (payId.isNotBlank()) "Pay ID: $payId" else "Billetera Binance"
+                dialogBinding.tvWsSelectedBankSubtitle.text = "🟡 $displayId (Cobro en USDT)"
+            } else {
+                dialogBinding.tvWsSelectedBankSubtitle.text = "Datos de: $wsBankName ($wsBankCode)"
+            }
         }
 
         updateWsDisplay()
 
         val isMultibank = PlanCapabilityManager.canUseMultibank(this)
+        val canWallets = PlanCapabilityManager.canUseWallets(this)
+        val hasBinance = canWallets && PreferencesHelper.isBinanceEnabled(this) && PreferencesHelper.getBinanceQrUri(this) != null
         val configuredCodes = PreferencesHelper.getConfiguredBankCodes(this)
-        if (isMultibank && configuredCodes.size > 1) {
+        val totalOptions = (if (isMultibank) configuredCodes.size else 1) + (if (hasBinance) 1 else 0)
+
+        if (totalOptions > 1) {
             dialogBinding.scrollWsBanks.visibility = View.VISIBLE
             dialogBinding.chipGroupWsBanks.removeAllViews()
-            configuredCodes.forEach { code ->
+            val banksToDisplay = if (isMultibank) configuredCodes else listOf(profile.bankCode)
+            banksToDisplay.forEach { code ->
                 val bank = BankCatalog.findByCode(code)
                 val displayName = bank?.name ?: code
                 val chip = Chip(this).apply {
@@ -714,6 +793,26 @@ class MainActivity : AppCompatActivity() {
                 }
                 dialogBinding.chipGroupWsBanks.addView(chip)
                 if (code == wsBankCode) chip.isChecked = true
+            }
+
+            if (hasBinance) {
+                val binanceChip = Chip(this).apply {
+                    text = "🟡 Binance Pay (USDT)"
+                    isCheckable = true
+                    id = View.generateViewId()
+                    isChecked = (wsBankCode == "BINANCE")
+                    setOnClickListener {
+                        wsBankCode = "BINANCE"
+                        wsBankName = "Binance Pay"
+                        if (isWsVesMode) {
+                            dialogBinding.toggleGroupWsCurrency.check(R.id.btnWsCurrencyUsd)
+                        } else {
+                            updateWsDisplay()
+                        }
+                    }
+                }
+                dialogBinding.chipGroupWsBanks.addView(binanceChip)
+                if (wsBankCode == "BINANCE") binanceChip.isChecked = true
             }
         } else {
             dialogBinding.scrollWsBanks.visibility = View.GONE
@@ -793,6 +892,16 @@ class MainActivity : AppCompatActivity() {
             }
 
             val clientPhone = dialogBinding.etWsClientPhone.text.toString().trim()
+
+            if (wsBankCode == "BINANCE") {
+                val payId = PreferencesHelper.getBinancePayId(this)
+                val message = WhatsAppHelper.generateBinancePaymentMessage(payId, amountUsd)
+                val qrUri = PreferencesHelper.getBinanceQrUri(this)?.let { Uri.parse(it) }
+                WhatsAppHelper.sendViaWhatsApp(this, clientPhone, message, qrUri)
+                dialog.dismiss()
+                return@setOnClickListener
+            }
+
             val message = WhatsAppHelper.generatePaymentMessage(
                 profile = profile,
                 amountVes = amountVes,
@@ -1896,6 +2005,103 @@ class MainActivity : AppCompatActivity() {
         binding.switchSelectedBankDetection.isChecked = PreferencesHelper.isBankDetectionEnabled(this, selectedBankConfigCode)
     }
 
+    /**
+     * Configuración de la sección de Billeteras Digitales y Cripto (Binance Pay)
+     * EXCLUSIVO DEL PLAN PRO.
+     */
+    private fun setupSettingsWallets() {
+        val isPro = PlanCapabilityManager.canUseWallets(this)
+
+        if (!isPro) {
+            // Usuario en Plan Básico: mostrar banner de bloqueo PRO
+            binding.cardWalletsProLocked.visibility = View.VISIBLE
+            binding.layoutWalletsProContent.visibility = View.GONE
+            binding.tvSettingsWalletsProBadge.text = "🔒 PRO"
+
+            val proUpgradeClick = View.OnClickListener {
+                showProUpgradeDialog("Billeteras Digitales y Cobros en Cripto (Binance Pay)")
+            }
+            binding.cardSettingsWalletsSection.setOnClickListener(proUpgradeClick)
+            binding.btnUnlockWalletsPro.setOnClickListener(proUpgradeClick)
+        } else {
+            // Usuario con Zippy PRO activo o prueba PRO: habilitar contenido completo
+            binding.cardWalletsProLocked.visibility = View.GONE
+            binding.layoutWalletsProContent.visibility = View.VISIBLE
+            binding.tvSettingsWalletsProBadge.text = "⭐ PRO"
+            binding.cardSettingsWalletsSection.setOnClickListener(null)
+
+            binding.switchBinanceEnabled.setOnCheckedChangeListener { _, isChecked ->
+                PreferencesHelper.setBinanceEnabled(this, isChecked)
+                renderCashierBankCards()
+                val statusText = if (isChecked) "activado en caja" else "desactivado en caja"
+                Toast.makeText(this, "Binance Pay $statusText", Toast.LENGTH_SHORT).show()
+            }
+
+            binding.btnUploadBinanceQr.setOnClickListener {
+                launchCropForBank("BINANCE")
+            }
+
+            binding.btnViewBinanceQr.setOnClickListener {
+                val intent = Intent(this, FullScreenQrActivity::class.java).apply {
+                    putExtra(FullScreenQrActivity.EXTRA_AMOUNT_VES, 0.0)
+                    putExtra(FullScreenQrActivity.EXTRA_AMOUNT_USD, 0.0)
+                    putExtra(FullScreenQrActivity.EXTRA_BANK_CODE, "BINANCE")
+                    putExtra(FullScreenQrActivity.EXTRA_BANK_NAME, "Binance Pay")
+                }
+                startActivity(intent)
+            }
+
+            binding.btnDeleteBinanceQr.setOnClickListener {
+                AlertDialog.Builder(this)
+                    .setTitle("Eliminar QR de Binance Pay")
+                    .setMessage("¿Deseas eliminar el código QR de Binance Pay?")
+                    .setPositiveButton("Eliminar") { _, _ ->
+                        PreferencesHelper.clearBinanceQr(this)
+                        updateBinanceSettingsCard()
+                        renderCashierBankCards()
+                        Toast.makeText(this, "QR de Binance Pay eliminado", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
+            }
+        }
+
+        updateBinanceSettingsCard()
+    }
+
+    private fun updateBinanceSettingsCard() {
+        val isPro = PlanCapabilityManager.canUseWallets(this)
+        if (!isPro) {
+            binding.cardWalletsProLocked.visibility = View.VISIBLE
+            binding.layoutWalletsProContent.visibility = View.GONE
+            return
+        }
+
+        binding.cardWalletsProLocked.visibility = View.GONE
+        binding.layoutWalletsProContent.visibility = View.VISIBLE
+
+        val isEnabled = PreferencesHelper.isBinanceEnabled(this)
+        binding.switchBinanceEnabled.isChecked = isEnabled
+
+        val payId = PreferencesHelper.getBinancePayId(this)
+        if (binding.etBinancePayId.text.toString().isEmpty() && payId.isNotEmpty()) {
+            binding.etBinancePayId.setText(payId)
+        }
+
+        val qrUri = PreferencesHelper.getBinanceQrUri(this)
+        if (qrUri != null) {
+            binding.tvBinanceQrStatus.text = "✅ QR de Binance Pay cargado y listo"
+            binding.tvBinanceQrStatus.setTextColor(ContextCompat.getColor(this, R.color.income_green))
+            binding.btnViewBinanceQr.isEnabled = true
+            binding.btnDeleteBinanceQr.visibility = View.VISIBLE
+        } else {
+            binding.tvBinanceQrStatus.text = "⚠️ Sin código QR cargado"
+            binding.tvBinanceQrStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+            binding.btnViewBinanceQr.isEnabled = false
+            binding.btnDeleteBinanceQr.visibility = View.GONE
+        }
+    }
+
     // --- TAB AJUSTES ---
     private fun setupSettings() {
         binding.toggleGroupTheme.addOnButtonCheckedListener { _, checkedId, isChecked ->
@@ -1945,6 +2151,7 @@ class MainActivity : AppCompatActivity() {
 
         // Gestor Multibanco y Códigos QR
         setupSettingsBankManager()
+        setupSettingsWallets()
 
         // Consulta Automática de Tasa Oficial BCV
         binding.btnFetchBcvRate.setOnClickListener {
@@ -2033,6 +2240,11 @@ class MainActivity : AppCompatActivity() {
                 PreferencesHelper.setPrimaryBank(this, finalBankCode, finalBankName)
             }
             PreferencesHelper.saveUserProfile(this, updated)
+
+            // Guardar Binance Pay ID si PRO está disponible
+            if (PlanCapabilityManager.canUseWallets(this)) {
+                PreferencesHelper.setBinancePayId(this, binding.etBinancePayId.text.toString().trim())
+            }
 
             activeCashierBankCode = finalBankCode
             activeCashierBankName = finalBankName
@@ -2150,6 +2362,7 @@ class MainActivity : AppCompatActivity() {
 
         setupSettingsBankManager()
         setupCashierBankSelector()
+        setupSettingsWallets()
 
         // Estado del Plan Zippy PRO y seguimiento de prueba / renovación
         val planType = PlanCapabilityManager.getPlanType(this)

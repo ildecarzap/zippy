@@ -61,5 +61,8 @@ dependencies {
     // Biometric Security (Huella / PIN)
     implementation("androidx.biometric:biometric:1.1.0")
 
+    // ZXing Core (Decodificación offline de payloads QR)
+    implementation("com.google.zxing:core:3.5.3")
+
     testImplementation(libs.junit)
 }

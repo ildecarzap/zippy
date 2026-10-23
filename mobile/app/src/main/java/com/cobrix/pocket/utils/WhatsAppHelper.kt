@@ -33,6 +33,27 @@ object WhatsAppHelper {
         """.trimIndent()
     }
 
+    fun generateBinancePaymentMessage(
+        payId: String,
+        amountUsd: Double
+    ): String {
+        val usdFormatted = String.format(Locale.US, "%.2f", amountUsd)
+        val idText = if (payId.isNotBlank()) payId else "(Consultar al comercio)"
+
+        return """
+            🟡 *Datos para Pago con Binance Pay (USDT)*
+            ---------------------------------
+            💵 *Monto a transferir:*
+            👉 *$ $usdFormatted USDT*
+            
+            🆔 *Binance Pay ID / Correo:*
+            👉 *$idText*
+            ---------------------------------
+            📸 *Te adjunto el código QR de Binance Pay para escanearlo directo desde tu App de Binance.*
+            ⚡ *Cobro solicitado con Zippy PRO*
+        """.trimIndent()
+    }
+
     /**
      * Detecta si WhatsApp estándar o WhatsApp Business está instalado en el dispositivo.
      */

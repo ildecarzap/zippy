@@ -87,6 +87,21 @@ class SoundHelper(private val context: Context) : TextToSpeech.OnInitListener {
     }
 
     /**
+     * Anuncia el pago recibido en cripto / USDT por voz sintética.
+     */
+    fun announceCryptoPayment(amount: Double, currency: String = "dólares") {
+        if (!isTtsInitialized || tts == null) return
+
+        try {
+            val formatted = if (amount % 1.0 == 0.0) String.format(Locale.US, "%.0f", amount) else String.format(Locale.US, "%.2f", amount)
+            val phrase = "Pago recibido por Binance Pay. $formatted $currency."
+            tts?.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "PAYMENT_ANNOUNCE")
+        } catch (e: Exception) {
+            Log.e("SoundHelper", "Error anunciando voz cripto", e)
+        }
+    }
+
+    /**
      * Anuncia el egreso o gasto registrado por voz.
      */
     fun announceExpense(amount: Double) {

@@ -19,7 +19,8 @@ data class PlanFeatures(
     val canUseVoiceInput: Boolean,     // Carga de ingresos y gastos por voz (dictado)
     val canUseVoiceSoundbox: Boolean,  // Soundbox parlante con síntesis de voz anunciando nombres
     val canUseCloudBackup: Boolean,    // Respaldo en la nube y migración entre teléfonos
-    val historyDaysRetention: Int      // Días de retención de reportes históricos
+    val historyDaysRetention: Int,     // Días de retención de reportes históricos
+    val canUseWallets: Boolean = false // Billeteras digitales y cobros en cripto (Binance Pay / Zinli)
 ) {
     val isProUnlocked: Boolean
         get() = planType != PlanType.FREE

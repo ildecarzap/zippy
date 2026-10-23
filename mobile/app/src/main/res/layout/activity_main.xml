@@ -1203,6 +1203,246 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
+                    <!-- TARJETA BILLETERAS DIGITALES Y CRIPTO (EXCLUSIVO PLAN PRO) -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardSettingsWalletsSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp"
+                        app:cardBackgroundColor="@color/surface">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:gravity="center"
+                                    android:text="🟡"
+                                    android:textSize="18sp"
+                                    android:background="@drawable/bg_badge_rounded"
+                                    android:backgroundTint="@color/binance_badge_bg" />
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="10dp"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Billeteras Digitales y Cripto"
+                                        android:textStyle="bold"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="16sp" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="Acepta pagos en USDT con Binance Pay en tu caja"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="12sp" />
+                                </LinearLayout>
+
+                                <TextView
+                                    android:id="@+id/tvSettingsWalletsProBadge"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="⭐ PRO"
+                                    android:textStyle="bold"
+                                    android:textSize="11sp"
+                                    android:textColor="@color/accent_cyan"
+                                    android:background="#1500D2C4"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="3dp" />
+                            </LinearLayout>
+
+                            <!-- Banner de Bloqueo para Plan Básico Gratuito -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/cardWalletsProLocked"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                app:cardCornerRadius="12dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="@color/binance_yellow"
+                                app:strokeWidth="1dp"
+                                app:cardBackgroundColor="#FFFDF0"
+                                android:visibility="gone">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:padding="14dp">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="🔒 Función Exclusiva de Zippy PRO"
+                                        android:textStyle="bold"
+                                        android:textColor="@color/slate_900"
+                                        android:textSize="14sp" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="4dp"
+                                        android:text="Muestra tu QR de Binance Pay en pantalla, envía cobros en USDT por WhatsApp y recibe pagos en cripto con tu Soundbox activando Zippy PRO."
+                                        android:textColor="@color/slate_700"
+                                        android:textSize="12sp" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnUnlockWalletsPro"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:layout_marginTop="10dp"
+                                        android:text="⭐ Desbloquear Binance Pay con PRO"
+                                        android:textStyle="bold"
+                                        android:textColor="@color/binance_black"
+                                        android:backgroundTint="@color/binance_yellow"
+                                        app:cornerRadius="10dp" />
+                                </LinearLayout>
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <!-- Contenido de Configuración Desbloqueado (Solo para PRO) -->
+                            <LinearLayout
+                                android:id="@+id/layoutWalletsProContent"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:layout_marginTop="12dp">
+
+                                <!-- Sub-tarjeta Binance Pay -->
+                                <com.google.android.material.card.MaterialCardView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    app:cardCornerRadius="12dp"
+                                    app:cardElevation="0dp"
+                                    app:strokeColor="@color/border"
+                                    app:strokeWidth="1dp"
+                                    app:cardBackgroundColor="@color/surface_variant">
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="vertical"
+                                        android:padding="14dp">
+
+                                        <LinearLayout
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:orientation="horizontal"
+                                            android:gravity="center_vertical">
+
+                                            <TextView
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="Binance Pay (USDT)"
+                                                android:textStyle="bold"
+                                                android:textColor="@color/text_primary"
+                                                android:textSize="15sp" />
+
+                                            <View
+                                                android:layout_width="0dp"
+                                                android:layout_height="1dp"
+                                                android:layout_weight="1" />
+
+                                            <com.google.android.material.materialswitch.MaterialSwitch
+                                                android:id="@+id/switchBinanceEnabled"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content" />
+                                        </LinearLayout>
+
+                                        <TextView
+                                            android:id="@+id/tvBinanceQrStatus"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="4dp"
+                                            android:text="⚠️ Sin código QR cargado"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="12sp" />
+
+                                        <!-- Campo Binance Pay ID / Correo -->
+                                        <com.google.android.material.textfield.TextInputLayout
+                                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="10dp"
+                                            android:hint="Binance Pay ID o Correo Binance">
+
+                                            <com.google.android.material.textfield.TextInputEditText
+                                                android:id="@+id/etBinancePayId"
+                                                android:layout_width="match_parent"
+                                                android:layout_height="wrap_content"
+                                                android:inputType="text"
+                                                android:textColor="@color/text_primary" />
+                                        </com.google.android.material.textfield.TextInputLayout>
+
+                                        <!-- Botones de Acción Binance QR -->
+                                        <LinearLayout
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:orientation="horizontal"
+                                            android:layout_marginTop="10dp">
+
+                                            <com.google.android.material.button.MaterialButton
+                                                android:id="@+id/btnUploadBinanceQr"
+                                                android:layout_width="0dp"
+                                                android:layout_height="44dp"
+                                                android:layout_weight="1"
+                                                android:text="✂️ Subir QR"
+                                                android:textSize="12sp"
+                                                android:textStyle="bold"
+                                                android:textColor="@color/binance_black"
+                                                android:backgroundTint="@color/binance_yellow"
+                                                app:cornerRadius="10dp" />
+
+                                            <com.google.android.material.button.MaterialButton
+                                                android:id="@+id/btnViewBinanceQr"
+                                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="44dp"
+                                                android:layout_marginStart="8dp"
+                                                android:text="👁️ Ver"
+                                                android:textSize="12sp"
+                                                app:cornerRadius="10dp" />
+
+                                            <com.google.android.material.button.MaterialButton
+                                                android:id="@+id/btnDeleteBinanceQr"
+                                                style="@style/Widget.Material3.Button.TextButton"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="44dp"
+                                                android:layout_marginStart="4dp"
+                                                android:text="🗑️"
+                                                android:textColor="@color/expense_red"
+                                                android:visibility="gone" />
+                                        </LinearLayout>
+
+                                    </LinearLayout>
+                                </com.google.android.material.card.MaterialCardView>
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
                     <!-- TARJETA 3: ALERTAS, SOUNDBOX Y SEGURIDAD -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"

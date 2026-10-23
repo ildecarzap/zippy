@@ -26,6 +26,14 @@ object PreferencesHelper {
     private const val KEY_THEME_MODE = "theme_mode" // "SYSTEM", "LIGHT", "DARK"
     private const val KEY_CELEBRATION_SCREEN_ENABLED = "celebration_screen_enabled"
 
+    // Billeteras Digitales y Cripto (Exclusivo Plan PRO)
+    private const val KEY_BINANCE_PAY_ID = "wallet_binance_pay_id"
+    private const val KEY_BINANCE_QR_URI = "wallet_binance_qr_uri"
+    private const val KEY_BINANCE_ENABLED = "wallet_binance_enabled"
+    private const val KEY_ZINLI_EMAIL = "wallet_zinli_email"
+    private const val KEY_ZINLI_QR_URI = "wallet_zinli_qr_uri"
+    private const val KEY_ZINLI_ENABLED = "wallet_zinli_enabled"
+
     val DEFAULT_ENABLED_BANKS = setOf("0178", "0134", "0102", "0105", "0108", "0191", "0172")
 
     private fun getPrefs(context: Context): SharedPreferences {
@@ -134,9 +142,15 @@ object PreferencesHelper {
     }
 
     /**
-     * Obtiene el URI del código QR exclusivo asignado al código bancario especificado.
+     * Obtiene el URI del código QR exclusivo asignado al código bancario o billetera especificada.
      */
     fun getBankQrUri(context: Context, bankCode: String): String? {
+        if (bankCode.equals("BINANCE", ignoreCase = true)) {
+            return getBinanceQrUri(context)
+        }
+        if (bankCode.equals("ZINLI", ignoreCase = true)) {
+            return getZinliQrUri(context)
+        }
         val prefs = getPrefs(context)
         val specific = prefs.getString("qr_image_uri_$bankCode", null)
         if (!specific.isNullOrEmpty()) return specific
@@ -350,5 +364,74 @@ object PreferencesHelper {
 
         prefs.edit().remove("pending_celeb_time").apply()
         return CelebrationData(amount, ref, bank, phone, time)
+    }
+
+    // --- BILLETERAS DIGITALES Y CRIPTO (EXCLUSIVO PLAN PRO) ---
+
+    fun getBinancePayId(context: Context): String {
+        return getPrefs(context).getString(KEY_BINANCE_PAY_ID, "") ?: ""
+    }
+
+    fun setBinancePayId(context: Context, payId: String) {
+        getPrefs(context).edit().putString(KEY_BINANCE_PAY_ID, payId.trim()).apply()
+    }
+
+    fun getBinanceQrUri(context: Context): String? {
+        return getPrefs(context).getString(KEY_BINANCE_QR_URI, null)
+    }
+
+    fun setBinanceQrUri(context: Context, uri: String?) {
+        val editor = getPrefs(context).edit()
+        if (uri != null) {
+            editor.putString(KEY_BINANCE_QR_URI, uri)
+        } else {
+            editor.remove(KEY_BINANCE_QR_URI)
+        }
+        editor.apply()
+    }
+
+    fun clearBinanceQr(context: Context) {
+        setBinanceQrUri(context, null)
+    }
+
+    fun isBinanceEnabled(context: Context): Boolean {
+        // En Plan Básico Gratuito, las billeteras no se activan
+        if (!PlanCapabilityManager.canUseWallets(context)) return false
+        return getPrefs(context).getBoolean(KEY_BINANCE_ENABLED, false)
+    }
+
+    fun setBinanceEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_BINANCE_ENABLED, enabled).apply()
+    }
+
+    fun getZinliEmail(context: Context): String {
+        return getPrefs(context).getString(KEY_ZINLI_EMAIL, "") ?: ""
+    }
+
+    fun setZinliEmail(context: Context, email: String) {
+        getPrefs(context).edit().putString(KEY_ZINLI_EMAIL, email.trim()).apply()
+    }
+
+    fun getZinliQrUri(context: Context): String? {
+        return getPrefs(context).getString(KEY_ZINLI_QR_URI, null)
+    }
+
+    fun setZinliQrUri(context: Context, uri: String?) {
+        val editor = getPrefs(context).edit()
+        if (uri != null) {
+            editor.putString(KEY_ZINLI_QR_URI, uri)
+        } else {
+            editor.remove(KEY_ZINLI_QR_URI)
+        }
+        editor.apply()
+    }
+
+    fun isZinliEnabled(context: Context): Boolean {
+        if (!PlanCapabilityManager.canUseWallets(context)) return false
+        return getPrefs(context).getBoolean(KEY_ZINLI_ENABLED, false)
+    }
+
+    fun setZinliEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_ZINLI_ENABLED, enabled).apply()
     }
 }

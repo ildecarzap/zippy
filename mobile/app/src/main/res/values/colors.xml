@@ -55,4 +55,12 @@
     <!-- Navegación -->
     <color name="nav_active">#00B2FE</color>
     <color name="nav_inactive">#627D98</color>
+
+    <!-- Billeteras Digitales y Cripto (Exclusivo Plan PRO) -->
+    <color name="binance_yellow">#F0B90B</color>
+    <color name="binance_yellow_dark">#DDA600</color>
+    <color name="binance_black">#181A20</color>
+    <color name="binance_badge_bg">#FFF8E1</color>
+    <color name="zinli_magenta">#FF0055</color>
+    <color name="zinli_magenta_bg">#FFF0F5</color>
 </resources>

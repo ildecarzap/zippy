@@ -22,6 +22,7 @@ class MultibankParserRouter {
         ProvincialParser(),
         BncParser(),
         BancamigaParser(),
+        BinancePayParser(),
         GenericSmsParser()
     )
 

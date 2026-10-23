@@ -9,7 +9,7 @@ from app.config import settings
 from app.database import get_db
 from app.models import DeviceLicense, AdminUser, PaymentTransaction
 from app.auth import (
-    verify_password, create_session_token, get_current_admin,
+    verify_password, hash_password, create_session_token, get_current_admin,
     SESSION_COOKIE_NAME, SESSION_MAX_AGE
 )
 from app.services.cobrixpay import (
@@ -333,3 +333,79 @@ async def cancel_pending_link_endpoint(
 
     logger.info(f"🚫 [ADMIN] Enlace pendiente de #{device.id} ({device.merchant_name}) anulado por {current_admin.username}")
     return JSONResponse({"success": True, "message": "Enlace de pago y deuda anulados en CobrixPay exitosamente"})
+
+
+@router.get("/licenses/{license_id}/details")
+async def get_license_details(
+    license_id: int,
+    current_admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Devuelve el detalle exhaustivo del comercio, licencias y transacciones."""
+    device = db.query(DeviceLicense).filter(DeviceLicense.id == license_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
+
+    transactions = db.query(PaymentTransaction).filter(
+        PaymentTransaction.device_id == device.device_id
+    ).order_by(PaymentTransaction.created_at.desc()).limit(10).all()
+
+    tx_list = [
+        {
+            "id": t.id,
+            "amount_usd": t.amount_usd,
+            "status": t.status,
+            "reference": t.transaction_reference or "N/A",
+            "payment_method": t.payment_method or "Desconocido",
+            "paid_at": t.paid_at.strftime("%d/%m/%Y %H:%M") if t.paid_at else None,
+            "created_at": t.created_at.strftime("%d/%m/%Y %H:%M") if t.created_at else None
+        }
+        for t in transactions
+    ]
+
+    return JSONResponse({
+        "id": device.id,
+        "device_id": device.device_id,
+        "merchant_name": device.merchant_name,
+        "phone": device.phone,
+        "doc_id": device.doc_id or "",
+        "email": device.email or "",
+        "plan_type": device.plan_type,
+        "is_pro_active": device.is_pro_active,
+        "is_active": device.is_active,
+        "remaining_days": device.remaining_days,
+        "app_version": device.app_version or "1.0.0",
+        "activation_code": getattr(device, "activation_code", "") or "",
+        "created_at": device.created_at.strftime("%d/%m/%Y %H:%M") if device.created_at else "",
+        "last_sync_at": device.last_sync_at.strftime("%d/%m/%Y %H:%M") if device.last_sync_at else "Nunca",
+        "pro_expires_at": device.pro_expires_at.strftime("%d/%m/%Y") if device.pro_expires_at else None,
+        "trial_ends_at": device.trial_ends_at.strftime("%d/%m/%Y") if device.trial_ends_at else None,
+        "pending_payment_url": device.pending_payment_url,
+        "pending_debt_id": device.pending_debt_id,
+        "transactions": tx_list
+    })
+
+
+@router.post("/change-password")
+async def change_admin_password(
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+    current_admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Cambia la contraseña del administrador actual de forma segura."""
+    if not verify_password(current_password, current_admin.password_hash):
+        return JSONResponse({"success": False, "message": "La contraseña actual no es correcta"}, status_code=400)
+
+    if len(new_password) < 6:
+        return JSONResponse({"success": False, "message": "La nueva contraseña debe tener al menos 6 caracteres"}, status_code=400)
+
+    if new_password != confirm_password:
+        return JSONResponse({"success": False, "message": "Las contraseñas nuevas no coinciden"}, status_code=400)
+
+    current_admin.password_hash = hash_password(new_password)
+    db.commit()
+
+    logger.info(f"🔑 [ADMIN] El usuario '{current_admin.username}' cambió su contraseña exitosamente.")
+    return JSONResponse({"success": True, "message": "Contraseña actualizada exitosamente"})
