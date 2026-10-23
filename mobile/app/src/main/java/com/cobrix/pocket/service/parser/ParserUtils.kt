@@ -179,7 +179,11 @@ object ParserUtils {
     private val INCOMING_KEYWORDS = listOf(
         "recibido",
         "recibiste",
+        "recibida",
+        "recibio",
+        "recibió",
         "has recibido",
+        "ha recibido",
         "abono",
         "credito",
         "crédito",
@@ -189,10 +193,22 @@ object ParserUtils {
         "te transfirio",
         "te transfirió",
         "pago recibido",
+        "pago confirmado",
+        "transferencia recibida",
         "tpago recibido",
         "pagoclave recibido",
         "dinero rapido recibido",
-        "dinero rápido recibido"
+        "dinero rápido recibido",
+        // English keywords (Binance Pay, Zinli, Gmail notification headers)
+        "received",
+        "payment received",
+        "payment of",
+        "you received",
+        "you have received",
+        "deposit confirmed",
+        "transfer received",
+        "credit",
+        "credited"
     )
 
     /**

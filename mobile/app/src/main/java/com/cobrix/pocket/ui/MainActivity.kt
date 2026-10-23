@@ -272,6 +272,8 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == PocketNotificationListenerService.ACTION_PAYMENT_RECEIVED) {
                 val amount = intent.getDoubleExtra(PocketNotificationListenerService.EXTRA_AMOUNT, 0.0)
+                val amountUsd = intent.getDoubleExtra(PocketNotificationListenerService.EXTRA_AMOUNT_USD, 0.0)
+                val isCrypto = intent.getBooleanExtra(PocketNotificationListenerService.EXTRA_IS_CRYPTO, false)
                 val ref = intent.getStringExtra(PocketNotificationListenerService.EXTRA_REF) ?: ""
                 val bank = intent.getStringExtra(PocketNotificationListenerService.EXTRA_BANK) ?: ""
                 val phone = intent.getStringExtra(PocketNotificationListenerService.EXTRA_PHONE) ?: ""
@@ -279,8 +281,8 @@ class MainActivity : AppCompatActivity() {
                 runOnUiThread {
                     loadTodayLedger()
                     PreferencesHelper.getAndClearPendingCelebration(this@MainActivity)
-                    if (PreferencesHelper.isCelebrationScreenEnabled(this@MainActivity) && amount > 0.0) {
-                        showPaymentCelebrationDialog(amount, ref, bank, phone)
+                    if (PreferencesHelper.isCelebrationScreenEnabled(this@MainActivity) && (amount > 0.0 || amountUsd > 0.0)) {
+                        showPaymentCelebrationDialog(amount, ref, bank, phone, amountUsd, isCrypto)
                     } else {
                         Toast.makeText(this@MainActivity, "🎉 ¡Nuevo pago registrado en caja!", Toast.LENGTH_LONG).show()
                     }
@@ -352,8 +354,8 @@ class MainActivity : AppCompatActivity() {
         // Verificar si llegó un pago mientras la pantalla estaba apagada o en otra app
         if (PreferencesHelper.isCelebrationScreenEnabled(this)) {
             val pending = PreferencesHelper.getAndClearPendingCelebration(this)
-            if (pending != null && pending.amount > 0.0) {
-                showPaymentCelebrationDialog(pending.amount, pending.ref, pending.bank, pending.phone)
+            if (pending != null && (pending.amount > 0.0 || pending.amountUsd > 0.0)) {
+                showPaymentCelebrationDialog(pending.amount, pending.ref, pending.bank, pending.phone, pending.amountUsd, pending.isCrypto)
             }
         }
 
@@ -1288,14 +1290,25 @@ class MainActivity : AppCompatActivity() {
             transactions.forEach { tx ->
                 val itemBinding = ItemTransactionBinding.inflate(layoutInflater, binding.layoutTransactionsContainer, false)
                 val isIncome = tx.type == TransactionType.INCOME
+                val isCrypto = tx.bankCode.equals("BINANCE", ignoreCase = true) ||
+                               tx.category.contains("Binance", ignoreCase = true) ||
+                               tx.category.contains("Cripto", ignoreCase = true)
 
                 if (isIncome) {
                     itemBinding.ivTxIcon.setImageResource(R.drawable.ic_cashier)
                     itemBinding.ivTxIcon.setColorFilter(ContextCompat.getColor(this, R.color.accent_green))
                     itemBinding.ivTxIcon.backgroundTintList = ContextCompat.getColorStateList(this, R.color.accent_green_bg)
                     val catDisplay = TransactionCategories.getCategoryDisplayName(tx.category)
-                    itemBinding.tvTxTitle.text = if (tx.isManual) "Ingreso: $catDisplay" else "Pago Móvil ${tx.bankName}"
-                    itemBinding.tvTxAmount.text = String.format(Locale.US, "+ Bs. %.2f", tx.amount)
+                    itemBinding.tvTxTitle.text = when {
+                        isCrypto -> "Binance Pay (Cripto)"
+                        tx.isManual -> "Ingreso: $catDisplay"
+                        else -> "Pago Móvil ${tx.bankName}"
+                    }
+                    itemBinding.tvTxAmount.text = if (isCrypto && tx.amountUsd > 0.0) {
+                        String.format(Locale.US, "+ $%.2f USDT", tx.amountUsd)
+                    } else {
+                        String.format(Locale.US, "+ Bs. %.2f", tx.amount)
+                    }
                     itemBinding.tvTxAmount.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
                 } else {
                     itemBinding.ivTxIcon.setImageResource(R.drawable.ic_ledger)
@@ -1308,9 +1321,10 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val refText = if (tx.reference.isNotEmpty()) " • Ref: ${tx.reference}" else ""
+                val senderText = if (tx.senderName.isNotEmpty()) " • Remitente: ${tx.senderName}" else ""
                 val noteText = if (tx.note.isNotEmpty()) " • ${tx.note}" else ""
                 val manualTag = if (tx.isManual) " (Manual)" else ""
-                itemBinding.tvTxSubtitle.text = "${timeFormat.format(Date(tx.timestamp))}$manualTag$refText$noteText"
+                itemBinding.tvTxSubtitle.text = "${timeFormat.format(Date(tx.timestamp))}$manualTag$refText$senderText$noteText"
 
                 // Click en cualquier transacción para editar o eliminar registro
                 itemBinding.root.setOnClickListener {
@@ -1669,6 +1683,20 @@ class MainActivity : AppCompatActivity() {
                 ReportHelper.sharePdf(this, pdfFile)
             } else {
                 Toast.makeText(this, "No se pudo generar el archivo PDF", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        dialogBinding.btnShareOptionCsv.setOnClickListener {
+            if (!PlanCapabilityManager.canExportPdf(this)) {
+                showProUpgradeDialog("Exportación de Reportes en Excel (.csv)")
+                return@setOnClickListener
+            }
+            dialog.dismiss()
+            val csvFile = ReportHelper.generateCsvReport(this, profile, currentFilteredTransactions, filterPeriodLabel)
+            if (csvFile != null) {
+                ReportHelper.shareCsv(this, csvFile)
+            } else {
+                Toast.makeText(this, "No se pudo generar el archivo Excel", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -2342,18 +2370,6 @@ class MainActivity : AppCompatActivity() {
             restoreBackupLauncher.launch("*/*")
         }
 
-        binding.btnSyncCloud.setOnClickListener {
-            if (!PlanCapabilityManager.canUseCloudBackup(this)) {
-                showProUpgradeDialog("Copia de Seguridad y Sincronización en la Nube")
-                return@setOnClickListener
-            }
-            lifecycleScope.launch {
-                val res = CloudSyncService.syncBackupToCloud(this@MainActivity)
-                Toast.makeText(this@MainActivity, res.message, Toast.LENGTH_SHORT).show()
-                binding.tvLastSyncStatus.text = "Último respaldo: ${CloudSyncService.getLastSyncFormatted(this@MainActivity)}"
-            }
-        }
-
         // Hipervínculo Web Oficial
         binding.tvAboutWebsite.setOnClickListener {
             try {
@@ -2500,8 +2516,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.tvLastSyncStatus.text = "Último respaldo: ${CloudSyncService.getLastSyncFormatted(this)}"
-
         updateLicenseBadge()
     }
 
@@ -2635,7 +2649,7 @@ class MainActivity : AppCompatActivity() {
 
         AlertDialog.Builder(this)
             .setTitle("🎉 ¡Prueba de 7 Días Activada!")
-            .setMessage("Tienes acceso a todas las funciones PRO (Multibanco, QR simultáneo, Sincronización en la Nube y Exportación).\n\nPara brindarte soporte prioritario y enviarte tu enlace de pago cuando finalice tu prueba, registra tu comercio por WhatsApp con Ciem tech solutions C.A.")
+            .setMessage("Tienes acceso a todas las funciones PRO (Multibanco, QR simultáneo, Copia de Seguridad y Exportación).\n\nPara brindarte soporte prioritario y enviarte tu enlace de pago cuando finalice tu prueba, registra tu comercio por WhatsApp con Ciem tech solutions C.A.")
             .setPositiveButton("💬 Registrar por WhatsApp") { dialog, _ ->
                 dialog.dismiss()
                 val text = Uri.encode("Hola Ciem tech solutions C.A, acabo de activar mi prueba gratis de 7 días de Zippy PRO. Negocio: '$businessName' (ID Dispositivo: $deviceId). Quedo atento a su soporte y al link de pago al terminar.")
@@ -2651,7 +2665,7 @@ class MainActivity : AppCompatActivity() {
     private fun showSubscriptionExpiredPrompt() {
         AlertDialog.Builder(this)
             .setTitle("⏰ Tu período Zippy PRO ha finalizado")
-            .setMessage("Tu aplicación continúa funcionando con normalidad en el Plan Básico Gratuito (Pago Móvil, tasa BCV y cuadre de caja).\n\nPara reactivar la detección multibanco simultánea, dictado por voz y respaldo en la nube, renueva tu suscripción.")
+            .setMessage("Tu aplicación continúa funcionando con normalidad en el Plan Básico Gratuito (Pago Móvil, tasa BCV y cuadre de caja).\n\nPara reactivar la detección multibanco simultánea, dictado por voz y migración de datos, renueva tu suscripción.")
             .setPositiveButton("💳 Renovar Suscripción") { _, _ ->
                 handleRequestPaymentLinkOption()
             }
@@ -2765,7 +2779,7 @@ class MainActivity : AppCompatActivity() {
                 "• Cobro y conversión de Divisas con Tasa BCV\n" +
                 "• Soundbox con voz parlante y altavoz Bluetooth\n" +
                 "• Carga rápida de ventas y gastos por voz\n" +
-                "• Respaldo en la nube y exportación de reportes\n\n" +
+                "• Copia de seguridad y exportación de reportes\n\n" +
                 "¡Gracias por confiar en Ciem tech solutions C.A!"
             )
             .setPositiveButton("¡Empezar a Usar PRO!") { dialog, _ ->
@@ -2817,16 +2831,29 @@ class MainActivity : AppCompatActivity() {
     private var celebrationDialog: AlertDialog? = null
     private val celebrationDismissHandler = Handler(Looper.getMainLooper())
 
-    private fun showPaymentCelebrationDialog(amount: Double, ref: String, bank: String, phone: String) {
+    private fun showPaymentCelebrationDialog(
+        amount: Double,
+        ref: String,
+        bank: String,
+        phone: String,
+        amountUsd: Double = 0.0,
+        isCrypto: Boolean = false
+    ) {
         celebrationDialog?.dismiss()
         celebrationDismissHandler.removeCallbacksAndMessages(null)
 
         val dialogBinding = DialogPaymentCelebrationBinding.inflate(layoutInflater)
         val profile = PreferencesHelper.getUserProfile(this)
 
-        val amountUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
-        dialogBinding.tvCelebrationAmountVes.text = String.format(Locale.US, "Bs. %.2f", amount)
-        dialogBinding.tvCelebrationAmountUsd.text = String.format(Locale.US, "≈ $%.2f USD (Tasa %.2f)", amountUsd, profile.bcvRate)
+        val isCryptoPayment = isCrypto || bank.contains("Binance", ignoreCase = true) || bank.contains("Cripto", ignoreCase = true)
+        if (isCryptoPayment && amountUsd > 0.0) {
+            dialogBinding.tvCelebrationAmountVes.text = String.format(Locale.US, "$%.2f USDT", amountUsd)
+            dialogBinding.tvCelebrationAmountUsd.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa %.2f)", amount, profile.bcvRate)
+        } else {
+            val calcUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
+            dialogBinding.tvCelebrationAmountVes.text = String.format(Locale.US, "Bs. %.2f", amount)
+            dialogBinding.tvCelebrationAmountUsd.text = String.format(Locale.US, "≈ $%.2f USD (Tasa %.2f)", calcUsd, profile.bcvRate)
+        }
         dialogBinding.tvCelebrationBank.text = bank.ifEmpty { profile.bankName }
         dialogBinding.tvCelebrationRef.text = if (ref.isNotEmpty()) "Ref: •••• $ref" else "Ref confirmada"
 

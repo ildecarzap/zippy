@@ -39,14 +39,16 @@ class FullScreenQrActivity : AppCompatActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == PocketNotificationListenerService.ACTION_PAYMENT_RECEIVED) {
                 val amount = intent.getDoubleExtra(PocketNotificationListenerService.EXTRA_AMOUNT, 0.0)
+                val amountUsd = intent.getDoubleExtra(PocketNotificationListenerService.EXTRA_AMOUNT_USD, 0.0)
+                val isCrypto = intent.getBooleanExtra(PocketNotificationListenerService.EXTRA_IS_CRYPTO, false)
                 val ref = intent.getStringExtra(PocketNotificationListenerService.EXTRA_REF) ?: ""
                 val bank = intent.getStringExtra(PocketNotificationListenerService.EXTRA_BANK) ?: ""
                 val phone = intent.getStringExtra(PocketNotificationListenerService.EXTRA_PHONE) ?: ""
 
                 runOnUiThread {
                     PreferencesHelper.getAndClearPendingCelebration(this@FullScreenQrActivity)
-                    if (PreferencesHelper.isCelebrationScreenEnabled(this@FullScreenQrActivity) && amount > 0.0) {
-                        showPaymentCelebrationAndFinish(amount, ref, bank, phone)
+                    if (PreferencesHelper.isCelebrationScreenEnabled(this@FullScreenQrActivity) && (amount > 0.0 || amountUsd > 0.0)) {
+                        showPaymentCelebrationAndFinish(amount, ref, bank, phone, amountUsd, isCrypto)
                     } else {
                         finish()
                     }
@@ -131,8 +133,8 @@ class FullScreenQrActivity : AppCompatActivity() {
         super.onResume()
         if (PreferencesHelper.isCelebrationScreenEnabled(this)) {
             val pending = PreferencesHelper.getAndClearPendingCelebration(this)
-            if (pending != null && pending.amount > 0.0) {
-                showPaymentCelebrationAndFinish(pending.amount, pending.ref, pending.bank, pending.phone)
+            if (pending != null && (pending.amount > 0.0 || pending.amountUsd > 0.0)) {
+                showPaymentCelebrationAndFinish(pending.amount, pending.ref, pending.bank, pending.phone, pending.amountUsd, pending.isCrypto)
                 return
             }
         }
@@ -157,16 +159,29 @@ class FullScreenQrActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    private fun showPaymentCelebrationAndFinish(amount: Double, ref: String, bank: String, phone: String) {
+    private fun showPaymentCelebrationAndFinish(
+        amount: Double,
+        ref: String,
+        bank: String,
+        phone: String,
+        amountUsd: Double = 0.0,
+        isCrypto: Boolean = false
+    ) {
         celebrationDialog?.dismiss()
         celebrationDismissHandler.removeCallbacksAndMessages(null)
 
         val dialogBinding = DialogPaymentCelebrationBinding.inflate(layoutInflater)
         val profile = PreferencesHelper.getUserProfile(this)
 
-        val amountUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
-        dialogBinding.tvCelebrationAmountVes.text = String.format(Locale.US, "Bs. %.2f", amount)
-        dialogBinding.tvCelebrationAmountUsd.text = String.format(Locale.US, "≈ $%.2f USD (Tasa %.2f)", amountUsd, profile.bcvRate)
+        val isCryptoPayment = isCrypto || bank.contains("Binance", ignoreCase = true) || bank.contains("Cripto", ignoreCase = true)
+        if (isCryptoPayment && amountUsd > 0.0) {
+            dialogBinding.tvCelebrationAmountVes.text = String.format(Locale.US, "$%.2f USDT", amountUsd)
+            dialogBinding.tvCelebrationAmountUsd.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa %.2f)", amount, profile.bcvRate)
+        } else {
+            val calcUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
+            dialogBinding.tvCelebrationAmountVes.text = String.format(Locale.US, "Bs. %.2f", amount)
+            dialogBinding.tvCelebrationAmountUsd.text = String.format(Locale.US, "≈ $%.2f USD (Tasa %.2f)", calcUsd, profile.bcvRate)
+        }
         dialogBinding.tvCelebrationBank.text = bank.ifEmpty { profile.bankName }
         dialogBinding.tvCelebrationRef.text = if (ref.isNotEmpty()) "Ref: •••• $ref" else "Ref confirmada"
 

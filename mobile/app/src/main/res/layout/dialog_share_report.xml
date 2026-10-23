@@ -193,6 +193,19 @@
             android:backgroundTint="@color/accent_cyan"
             android:textColor="@color/white" />
 
+        <!-- Opción 4: Excel (.csv) para auditoría y contabilidad -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnShareOptionCsv"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="8dp"
+            android:text="📊 Exportar a Excel (.csv)"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            app:cornerRadius="12dp" />
+
     </LinearLayout>
 </ScrollView>
 

@@ -1,10 +1,12 @@
 package com.cobrix.pocket.service
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -31,6 +33,8 @@ class PocketNotificationListenerService : NotificationListenerService() {
         private const val TAG = "PocketNotiListener"
         const val ACTION_PAYMENT_RECEIVED = "com.cobrix.pocket.PAYMENT_RECEIVED"
         const val EXTRA_AMOUNT = "extra_amount"
+        const val EXTRA_AMOUNT_USD = "extra_amount_usd"
+        const val EXTRA_IS_CRYPTO = "extra_is_crypto"
         const val EXTRA_REF = "extra_ref"
         const val EXTRA_BANK = "extra_bank"
         const val EXTRA_PHONE = "extra_phone"
@@ -59,15 +63,17 @@ class PocketNotificationListenerService : NotificationListenerService() {
             return
         }
 
-        // 2. Deduplicación por clave de notificación
-        if (PaymentDeduplicator.isNotificationKeyDuplicate(sbn.key)) {
+        // 2. Deduplicación por clave de notificación ya procesada como cobro
+        if (PaymentDeduplicator.isNotificationKeyAlreadyProcessed(sbn.key)) {
             return
         }
 
-        val packageName = sbn.packageName
+        val sbnPackageName = sbn.packageName
         val extras = sbn.notification?.extras ?: return
-        val title = extras.getString("android.title")
-        val text = extras.getCharSequence("android.text")?.toString() ?: ""
+        val title = extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()?.trim()
+            ?: extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim()
+            ?: ""
+        val text = extractFullNotificationText(extras)
         val postTime = sbn.postTime
 
         val isPro = PlanCapabilityManager.isPro(this)
@@ -85,14 +91,14 @@ class PocketNotificationListenerService : NotificationListenerService() {
                 ?: com.cobrix.pocket.data.model.BankCode.fromCode(code)
         }.toMutableSet()
 
-        // Si el usuario tiene Plan PRO y tiene Binance Pay habilitado, incluirlo en la detección
-        if (isPro && PreferencesHelper.isBinanceEnabled(this)) {
+        // Si el usuario tiene Binance Pay habilitado en sus ajustes, incluirlo en la detección
+        if (PreferencesHelper.isBinanceEnabled(this)) {
             enabledBankEnums.add(com.cobrix.pocket.data.model.BankCode.BINANCE)
         }
 
         // 3. Parseo mediante router bancario filtrando bancos permitidos
         val parsedPayment = parserRouter.routeAndParse(
-            packageName = packageName,
+            packageName = sbnPackageName,
             title = title,
             text = text,
             postTimeMillis = postTime,
@@ -104,6 +110,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
             Log.w(TAG, "Pago duplicado detectado: ${parsedPayment.referenciaUltimos4} por ${parsedPayment.monto}")
             return
         }
+        PaymentDeduplicator.markNotificationKeyProcessed(sbn.key)
 
         Log.i(TAG, "¡Pago válido detectado! Banco: ${parsedPayment.bancoCodigo.displayName}, Monto: ${parsedPayment.monto}, Ref: ${parsedPayment.referenciaUltimos4}")
 
@@ -139,21 +146,31 @@ class PocketNotificationListenerService : NotificationListenerService() {
         }
 
         // 7. Notificación visual en Android
-        showLocalPaymentNotification(parsedPayment.monto, parsedPayment.referenciaUltimos4, parsedPayment.bancoCodigo.displayName)
+        showLocalPaymentNotification(
+            montoVes = amountVes,
+            montoUsd = amountUsd,
+            isUsdt = isUsdt,
+            ref4 = parsedPayment.referenciaUltimos4,
+            banco = parsedPayment.bancoCodigo.displayName
+        )
 
         // 8. Guardar para celebración si la app se abre justo después
         PreferencesHelper.savePendingCelebration(
             context = this,
-            amount = parsedPayment.monto,
+            amount = amountVes,
             ref = parsedPayment.referenciaUltimos4,
             bank = parsedPayment.bancoCodigo.displayName,
-            phone = parsedPayment.telefonoOrigen ?: ""
+            phone = parsedPayment.telefonoOrigen ?: "",
+            amountUsd = amountUsd,
+            isCrypto = isUsdt
         )
 
         // 9. Notificar a la UI (MainActivity / FullScreenQrActivity) con package explícito para Android 14+
         val broadcastIntent = Intent(ACTION_PAYMENT_RECEIVED).apply {
-            setPackage(packageName)
-            putExtra(EXTRA_AMOUNT, parsedPayment.monto)
+            setPackage(this@PocketNotificationListenerService.packageName)
+            putExtra(EXTRA_AMOUNT, amountVes)
+            putExtra(EXTRA_AMOUNT_USD, amountUsd)
+            putExtra(EXTRA_IS_CRYPTO, isUsdt)
             putExtra(EXTRA_REF, parsedPayment.referenciaUltimos4)
             putExtra(EXTRA_BANK, parsedPayment.bancoCodigo.displayName)
             putExtra(EXTRA_PHONE, parsedPayment.telefonoOrigen ?: "")
@@ -161,14 +178,71 @@ class PocketNotificationListenerService : NotificationListenerService() {
         sendBroadcast(broadcastIntent)
     }
 
-    private fun showLocalPaymentNotification(monto: Double, ref4: String, banco: String) {
+    /**
+     * Extrae todo el contenido textual disponible de una notificación,
+     * combinando BigTextStyle, InboxStyle y líneas múltiples (crucial para Gmail y apps bancarias).
+     */
+    private fun extractFullNotificationText(extras: Bundle): String {
+        val parts = LinkedHashSet<String>()
+
+        // 1. android.text
+        extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            parts.add(it)
+        }
+
+        // 2. android.bigText (BigTextStyle para correos o notificaciones largas)
+        extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            parts.add(it)
+        }
+
+        // 3. android.textLines (InboxStyle con múltiples líneas)
+        val textLines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+        if (textLines != null) {
+            for (line in textLines) {
+                val lineStr = line?.toString()?.trim()
+                if (!lineStr.isNullOrEmpty()) {
+                    parts.add(lineStr)
+                }
+            }
+        }
+
+        // 4. android.subText
+        extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            parts.add(it)
+        }
+
+        // 5. android.summaryText
+        extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            parts.add(it)
+        }
+
+        return parts.joinToString("\n")
+    }
+
+    private fun showLocalPaymentNotification(
+        montoVes: Double,
+        montoUsd: Double,
+        isUsdt: Boolean,
+        ref4: String,
+        banco: String
+    ) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val formattedMonto = String.format(Locale.US, "%.2f", monto)
+        val title = if (isUsdt) {
+            "✅ Pago Recibido: $${String.format(Locale.US, "%.2f", montoUsd)} USDT"
+        } else {
+            "✅ Pago Recibido: Bs. ${String.format(Locale.US, "%.2f", montoVes)}"
+        }
+
+        val content = if (isUsdt) {
+            "$banco • Ref: $ref4 (Bs. ${String.format(Locale.US, "%.2f", montoVes)})"
+        } else {
+            "$banco • Ref terminada en $ref4"
+        }
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_cashier)
-            .setContentTitle("✅ Pago Recibido: Bs. $formattedMonto")
-            .setContentText("$banco • Ref terminada en $ref4")
+            .setContentTitle(title)
+            .setContentText(content)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()

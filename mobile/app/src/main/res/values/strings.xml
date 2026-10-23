@@ -31,6 +31,6 @@
 
     <!-- Paywall / Pro -->
     <string name="paywall_title">Zippy PRO</string>
-    <string name="paywall_desc">Tu suscripción Zippy PRO ha vencido. Renueva por solo $2.99 para disfrutar de reportes en PDF, carga por voz, multibanco ilimitado y respaldo cloud.</string>
+    <string name="paywall_desc">Tu suscripción Zippy PRO ha vencido. Renueva por solo $2.99 para disfrutar de reportes en PDF y Excel (.csv), carga por voz, multibanco ilimitado y migración de datos.</string>
     <string name="btn_renew">Activar Zippy PRO ($2.99 / mes)</string>
 </resources>

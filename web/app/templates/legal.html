@@ -79,17 +79,17 @@
       <!-- Sección 2 -->
       <div class="card" style="padding: 28px;">
         <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-          <span>2.</span> ¿Cómo funciona la lectura de pagos y el permiso de notificaciones?
+          <span>2.</span> ¿Cómo funciona la confirmación automática y privada de tus cobros?
         </h3>
         <p style="color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 12px;">
-          En Android existe el servicio estándar del sistema operativo denominado <code>NotificationListenerService</code>. Zippy utiliza este permiso exclusivamente para escuchar cuando una aplicación bancaria autorizada por ti (o un SMS oficial de tu banco) te envía una alerta de pago entrante.
+          Zippy incorpora una tecnología inteligente de detección en tiempo real. Esta función opera de forma autónoma en tu teléfono para reconocer de manera instantánea cuando recibes una confirmación de pago emitida por tu banco o billetera autorizada.
         </p>
         <div style="background: var(--color-surface-soft); padding: 16px 20px; border-radius: var(--radius-md); border-left: 4px solid var(--color-primary); font-size: 0.9rem; line-height: 1.6; color: var(--color-text-main); margin-bottom: 12px;">
-          <strong>Ejemplo real:</strong> Tu banco Banesco te envía la notificación: <em>"Pago Móvil recibido por Bs. 350. Ref: 987654"</em>.<br>
-          Zippy lee ese texto localmente en tu teléfono, activa el sonido de confirmación en el mostrador para avisarte a ti y al cliente, y anota los 350 Bs en tu balance de la jornada diaria.
+          <strong>Ejemplo en mostrador:</strong> Tu banco te confirma: <em>"Pago recibido por Bs. 350. Ref: 987654"</em>.<br>
+          Zippy procesa el aviso de forma 100% interna en tu dispositivo, activa la campana o voz del Soundbox para dar fe del cobro ante el cliente, y suma la venta a tu jornada comercial.
         </div>
         <p style="color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6;">
-          <strong>Esa información no se sube a internet ni se almacena en servidores de CIEM.</strong> Todo queda guardado de manera cifrada en la base de datos local SQLite de tu propio teléfono móvil. Si desinstalas la aplicación, tus datos se borran con ella.
+          <strong>Tu información contable es 100% confidencial.</strong> No se comparte con terceros ni se aloja en servidores externos: se resguarda exclusivamente en el almacenamiento seguro y protegido de tu propio dispositivo.
         </p>
       </div>
 
@@ -103,7 +103,7 @@
         </p>
         <ul style="margin-left: 20px; color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6;">
           <li>Solo guardas una imagen o el enlace público estándar que tu billetera te entrega para recibir pagos.</li>
-          <li>Zippy cuenta con un <strong>validador inteligente ZXing</strong> que verifica que cada QR corresponda a su categoría (rechazando que se mezclen billeteras en bancos y viceversa), evitando que un cliente envíe fondos por el canal equivocado.</li>
+          <li>Zippy cuenta con un <strong>sistema de verificación inteligente</strong> que valida la autenticidad y formato del código QR para asegurar que corresponda exactamente al canal elegido, evitando que un cliente envíe fondos por el canal equivocado.</li>
           <li>En ningún momento Zippy tiene acceso a tus fondos en Binance, ni solicita tus claves API privadas ni contraseñas.</li>
         </ul>
       </div>

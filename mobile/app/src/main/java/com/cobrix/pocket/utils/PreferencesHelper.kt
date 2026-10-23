@@ -413,12 +413,24 @@ object PreferencesHelper {
         val ref: String,
         val bank: String,
         val phone: String,
-        val timestamp: Long
+        val timestamp: Long,
+        val amountUsd: Double = 0.0,
+        val isCrypto: Boolean = false
     )
 
-    fun savePendingCelebration(context: Context, amount: Double, ref: String, bank: String, phone: String) {
+    fun savePendingCelebration(
+        context: Context,
+        amount: Double,
+        ref: String,
+        bank: String,
+        phone: String,
+        amountUsd: Double = 0.0,
+        isCrypto: Boolean = false
+    ) {
         getPrefs(context).edit()
             .putFloat("pending_celeb_amount", amount.toFloat())
+            .putFloat("pending_celeb_amount_usd", amountUsd.toFloat())
+            .putBoolean("pending_celeb_is_crypto", isCrypto)
             .putString("pending_celeb_ref", ref)
             .putString("pending_celeb_bank", bank)
             .putString("pending_celeb_phone", phone)
@@ -434,12 +446,14 @@ object PreferencesHelper {
             return null
         }
         val amount = prefs.getFloat("pending_celeb_amount", 0f).toDouble()
+        val amountUsd = prefs.getFloat("pending_celeb_amount_usd", 0f).toDouble()
+        val isCrypto = prefs.getBoolean("pending_celeb_is_crypto", false)
         val ref = prefs.getString("pending_celeb_ref", "") ?: ""
         val bank = prefs.getString("pending_celeb_bank", "") ?: ""
         val phone = prefs.getString("pending_celeb_phone", "") ?: ""
 
         prefs.edit().remove("pending_celeb_time").apply()
-        return CelebrationData(amount, ref, bank, phone, time)
+        return CelebrationData(amount, ref, bank, phone, time, amountUsd, isCrypto)
     }
 
     // --- BILLETERAS DIGITALES Y CRIPTO (EXCLUSIVO PLAN PRO) ---

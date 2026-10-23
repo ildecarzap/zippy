@@ -41,6 +41,23 @@ object PaymentDeduplicator {
     }
 
     /**
+     * Verifica si una clave de notificación ya fue procesada y registrada exitosamente como cobro.
+     */
+    fun isNotificationKeyAlreadyProcessed(sbnKey: String): Boolean {
+        cleanupOldEntries()
+        val now = System.currentTimeMillis()
+        val lastSeen = recentNotificationKeys[sbnKey]
+        return lastSeen != null && (now - lastSeen) < 15_000L
+    }
+
+    /**
+     * Registra que una clave de notificación fue confirmada y procesada como cobro válido.
+     */
+    fun markNotificationKeyProcessed(sbnKey: String) {
+        recentNotificationKeys[sbnKey] = System.currentTimeMillis()
+    }
+
+    /**
      * Verifica si un pago parseado es duplicado basándose en:
      * Banco + Últimos 4 dígitos de Referencia + Monto con 2 decimales.
      */

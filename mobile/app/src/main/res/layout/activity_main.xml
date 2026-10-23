@@ -1770,29 +1770,20 @@
                                 android:textColor="@color/text_secondary"
                                 android:textSize="11sp" />
 
-                            <TextView
-                                android:id="@+id/tvLastSyncStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="Último respaldo: Sin sincronizar"
-                                android:textColor="@color/text_muted"
-                                android:textSize="11sp" />
-
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal"
-                                android:layout_marginTop="10dp">
+                                android:layout_marginTop="12dp">
 
                                 <com.google.android.material.button.MaterialButton
                                     android:id="@+id/btnCreateBackup"
                                     style="@style/Widget.Material3.Button.TonalButton"
                                     android:layout_width="0dp"
-                                    android:layout_height="42dp"
+                                    android:layout_height="44dp"
                                     android:layout_weight="1"
                                     android:layout_marginEnd="4dp"
-                                    android:text="📤 Exportar"
+                                    android:text="📤 Exportar Respaldo"
                                     android:textSize="12sp"
                                     android:textStyle="bold"
                                     app:cornerRadius="8dp" />
@@ -1801,7 +1792,7 @@
                                     android:id="@+id/btnRestoreBackup"
                                     style="@style/Widget.Material3.Button.OutlinedButton"
                                     android:layout_width="0dp"
-                                    android:layout_height="42dp"
+                                    android:layout_height="44dp"
                                     android:layout_weight="1"
                                     android:layout_marginStart="4dp"
                                     android:text="📥 Restaurar"
@@ -1809,16 +1800,6 @@
                                     android:textStyle="bold"
                                     app:cornerRadius="8dp" />
                             </LinearLayout>
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnSyncCloud"
-                                style="@style/Widget.Material3.Button.TonalButton"
-                                android:layout_width="match_parent"
-                                android:layout_height="40dp"
-                                android:layout_marginTop="8dp"
-                                android:text="☁️ Sincronizar con la Nube (PRO)"
-                                android:textSize="12sp"
-                                app:cornerRadius="8dp" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 

@@ -497,4 +497,99 @@ object ReportHelper {
             Toast.makeText(context, "No se pudo compartir el archivo PDF", Toast.LENGTH_SHORT).show()
         }
     }
+
+    /**
+     * Genera un archivo en formato Excel (.csv) con punto y coma ';' y BOM UTF-8,
+     * permitiendo abrirlo directamente en Microsoft Excel o Google Sheets con caracteres en español.
+     */
+    fun generateCsvReport(
+        context: Context,
+        profile: UserProfile,
+        transactions: List<Transaction>,
+        periodTitle: String
+    ): File? {
+        val reportsDir = File(context.cacheDir, "reports")
+        if (!reportsDir.exists()) reportsDir.mkdirs()
+
+        val fileTimestamp = SimpleDateFormat("dd-MM-yy_HHmm", Locale.US).format(Date())
+        val csvFile = File(reportsDir, "reporte_jornada_${fileTimestamp}.csv")
+
+        return try {
+            val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.US)
+            val timeFormat = SimpleDateFormat("HH:mm", Locale.US)
+
+            val sb = StringBuilder()
+            // Encabezado comercial
+            sb.append("Comercio;").append("\"${profile.merchantName}\"").append("\n")
+            sb.append("RIF / Cedula;").append("\"${profile.idCard}\"").append("\n")
+            sb.append("Periodo;").append("\"$periodTitle\"").append("\n")
+            sb.append("Tasa BCV Referencial;").append(String.format(Locale.US, "%.2f", profile.bcvRate)).append("\n\n")
+
+            // Columnas de la tabla
+            sb.append("Fecha;Hora;Tipo;Categoria;Banco / Metodo;Monto Bs;Monto USD;Referencia;Remitente / Pagador;Nota\n")
+
+            for (tx in transactions) {
+                val dateStr = dateFormat.format(Date(tx.timestamp))
+                val timeStr = timeFormat.format(Date(tx.timestamp))
+                val typeStr = if (tx.type == TransactionType.INCOME) "Cobro" else "Gasto"
+                val catStr = TransactionCategories.getCategoryDisplayName(tx.category)
+                val bankStr = tx.bankName.ifEmpty { "Caja" }
+                val amountBs = String.format(Locale.US, "%.2f", tx.amount)
+                val amountUsd = String.format(Locale.US, "%.2f", tx.amountUsd)
+                val refStr = tx.reference
+                val senderStr = tx.senderName
+                val noteStr = tx.note.replace(";", ",")
+
+                sb.append("$dateStr;$timeStr;$typeStr;\"$catStr\";\"$bankStr\";$amountBs;$amountUsd;\"$refStr\";\"$senderStr\";\"$noteStr\"\n")
+            }
+
+            // Resumen de auditoría
+            val (totalIncome, totalExpense) = transactions.partition { it.type == TransactionType.INCOME }
+            val sumIncomeBs = totalIncome.sumOf { it.amount }
+            val sumExpenseBs = totalExpense.sumOf { it.amount }
+            val netBs = sumIncomeBs - sumExpenseBs
+
+            sb.append("\n")
+            sb.append("TOTAL COBRADO (BS);;;;;" + String.format(Locale.US, "%.2f", sumIncomeBs) + "\n")
+            sb.append("TOTAL GASTOS (BS);;;;;" + String.format(Locale.US, "%.2f", sumExpenseBs) + "\n")
+            sb.append("BALANCE NETO (BS);;;;;" + String.format(Locale.US, "%.2f", netBs) + "\n")
+
+            FileOutputStream(csvFile).use { out ->
+                // Escribir BOM UTF-8 (EF BB BF) para que Excel reconozca tildes y caracteres especiales
+                out.write(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()))
+                out.write(sb.toString().toByteArray(Charsets.UTF_8))
+            }
+            csvFile
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Comparte el archivo CSV generado mediante Intent.ACTION_SEND con selector nativo.
+     */
+    fun shareCsv(context: Context, csvFile: File) {
+        val uri: Uri = try {
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", csvFile)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(context, "Error al preparar archivo Excel", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/csv"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, "Cierre de Jornada Zippy (${csvFile.name})")
+            putExtra(Intent.EXTRA_TEXT, "Adjunto reporte detallado en Excel (.csv) de la jornada generado con Zippy.")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        try {
+            context.startActivity(Intent.createChooser(intent, "Compartir Reporte Excel (.csv)"))
+        } catch (e: Exception) {
+            Toast.makeText(context, "No se pudo compartir el archivo Excel", Toast.LENGTH_SHORT).show()
+        }
+    }
 }
