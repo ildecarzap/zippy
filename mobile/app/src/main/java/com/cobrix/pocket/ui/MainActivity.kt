@@ -351,6 +351,12 @@ class MainActivity : AppCompatActivity() {
         // Sincronización reactiva inmediata al volver a la app (detecta pago de CobrixPay o activación de soporte)
         syncLicenseStatus(showToastIfNoChange = false)
 
+        // Re-escanear proactivamente si quedaron notificaciones de cobro en la barra de Android
+        val rescanned = PocketNotificationListenerService.rescanActiveNotifications(playSound = true)
+        if (rescanned > 0) {
+            loadTodayLedger()
+        }
+
         // Verificar si llegó un pago mientras la pantalla estaba apagada o en otra app
         if (PreferencesHelper.isCelebrationScreenEnabled(this)) {
             val pending = PreferencesHelper.getAndClearPendingCelebration(this)
@@ -1232,6 +1238,21 @@ class MainActivity : AppCompatActivity() {
 
         binding.chipGroupLedgerFilter.setOnCheckedStateChangeListener { _, _ ->
             loadTodayLedger()
+        }
+
+        binding.btnRescanNotifications.setOnClickListener {
+            if (!PocketNotificationListenerService.isServiceRunning()) {
+                Toast.makeText(this, "⚠️ Servicio de notificaciones inactivo. Revisa los permisos.", Toast.LENGTH_SHORT).show()
+                checkNotificationPermission()
+                return@setOnClickListener
+            }
+            val count = PocketNotificationListenerService.rescanActiveNotifications(playSound = true)
+            if (count > 0) {
+                Toast.makeText(this, "✅ Se sincronizaron $count cobro(s) de la barra de notificaciones", Toast.LENGTH_LONG).show()
+                loadTodayLedger()
+            } else {
+                Toast.makeText(this, "ℹ️ No hay nuevos cobros pendientes en la barra", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

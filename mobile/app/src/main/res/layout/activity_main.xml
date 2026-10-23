@@ -743,6 +743,17 @@
                                 style="@style/Widget.Material3.Chip.Filter"
                                 android:textSize="11sp" />
                         </com.google.android.material.chip.ChipGroup>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnRescanNotifications"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:layout_marginStart="4dp"
+                            android:contentDescription="Re-escanear notificaciones pendientes"
+                            app:icon="@drawable/ic_sync"
+                            app:iconTint="@color/accent_blue"
+                            app:iconSize="20dp" />
                     </LinearLayout>
 
                     <LinearLayout

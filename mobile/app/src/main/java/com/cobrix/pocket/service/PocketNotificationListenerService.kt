@@ -39,37 +39,97 @@ class PocketNotificationListenerService : NotificationListenerService() {
         const val EXTRA_BANK = "extra_bank"
         const val EXTRA_PHONE = "extra_phone"
         private const val CHANNEL_ID = "cobrix_pocket_alerts"
+
+        @Volatile
+        var instance: PocketNotificationListenerService? = null
+            private set
+
+        /**
+         * Re-escanea todas las notificaciones activas en la barra de Android.
+         * Retorna la cantidad de cobros nuevos detectados y procesados.
+         */
+        fun rescanActiveNotifications(playSound: Boolean = true): Int {
+            return instance?.rescanInternal(playSound) ?: 0
+        }
+
+        fun isServiceRunning(): Boolean = instance != null
     }
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         dbHelper = PocketDatabaseHelper.getInstance(this)
         soundHelper = SoundHelper(this)
         createNotificationChannel()
         Log.i(TAG, "Servicio de escucha Zippy iniciado.")
     }
 
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        instance = this
+        Log.i(TAG, "Notification listener connected.")
+    }
+
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        if (instance == this) {
+            instance = null
+        }
+        Log.i(TAG, "Notification listener disconnected.")
+    }
+
     override fun onDestroy() {
+        if (instance == this) {
+            instance = null
+        }
         soundHelper?.shutdown()
         super.onDestroy()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
+        processStatusBarNotification(sbn, playSound = true)
+    }
 
+    /**
+     * Consulta la barra de notificaciones del sistema Android en busca de cobros pendientes
+     * que no hayan sido procesados previamente.
+     */
+    fun rescanInternal(playSound: Boolean): Int {
+        val activeNotifs = try {
+            activeNotifications
+        } catch (e: Exception) {
+            Log.e(TAG, "Error consultando notificaciones activas: ${e.message}")
+            null
+        } ?: return 0
+
+        var newPaymentsCount = 0
+        for (sbn in activeNotifs) {
+            try {
+                if (processStatusBarNotification(sbn, playSound = playSound)) {
+                    newPaymentsCount++
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error procesando sbn en rescan: ${e.message}")
+            }
+        }
+        return newPaymentsCount
+    }
+
+    private fun processStatusBarNotification(sbn: StatusBarNotification, playSound: Boolean): Boolean {
         // 1. Validar jornada de trabajo: Si la jornada está finalizada o en pausa, inactivar detección y soundbox
         if (!PreferencesHelper.isShiftActive(this)) {
             Log.d(TAG, "Jornada pausada/finalizada. Se omite detección de notificación.")
-            return
+            return false
         }
 
         // 2. Deduplicación por clave de notificación ya procesada como cobro
         if (PaymentDeduplicator.isNotificationKeyAlreadyProcessed(sbn.key)) {
-            return
+            return false
         }
 
         val sbnPackageName = sbn.packageName
-        val extras = sbn.notification?.extras ?: return
+        val extras = sbn.notification?.extras ?: return false
         val title = extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()?.trim()
             ?: extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim()
             ?: ""
@@ -103,12 +163,12 @@ class PocketNotificationListenerService : NotificationListenerService() {
             text = text,
             postTimeMillis = postTime,
             enabledBankCodes = enabledBankEnums
-        ) ?: return
+        ) ?: return false
 
         // 4. Deduplicación profunda (Banco + Ref 4 dígitos + Monto)
         if (PaymentDeduplicator.isPaymentDuplicate(parsedPayment)) {
             Log.w(TAG, "Pago duplicado detectado: ${parsedPayment.referenciaUltimos4} por ${parsedPayment.monto}")
-            return
+            return false
         }
         PaymentDeduplicator.markNotificationKeyProcessed(sbn.key)
 
@@ -135,14 +195,16 @@ class PocketNotificationListenerService : NotificationListenerService() {
         dbHelper.insertTransaction(tx)
 
         // 6. Alerta Sonora y Voz según el modo de Soundbox configurado y capacidades del plan
-        if (profile.soundboxMode == "VOICE" && PlanCapabilityManager.canUseVoiceSoundbox(this)) {
-            if (isUsdt) {
-                soundHelper?.announceCryptoPayment(parsedPayment.monto, "dólares")
-            } else {
-                soundHelper?.announcePayment(parsedPayment.monto)
+        if (playSound) {
+            if (profile.soundboxMode == "VOICE" && PlanCapabilityManager.canUseVoiceSoundbox(this)) {
+                if (isUsdt) {
+                    soundHelper?.announceCryptoPayment(parsedPayment.monto, "dólares")
+                } else {
+                    soundHelper?.announcePayment(parsedPayment.monto)
+                }
+            } else if (profile.soundboxMode != "MUTED") {
+                soundHelper?.playCashRegisterSound()
             }
-        } else if (profile.soundboxMode != "MUTED") {
-            soundHelper?.playCashRegisterSound()
         }
 
         // 7. Notificación visual en Android
@@ -176,6 +238,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
             putExtra(EXTRA_PHONE, parsedPayment.telefonoOrigen ?: "")
         }
         sendBroadcast(broadcastIntent)
+        return true
     }
 
     /**
