@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ajustes de Perfil y Sistema • CIEM Zippy Hub</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/static/images/zippy-logo.jpg">
+</head>
+<body style="background-color: var(--color-bg);">
+
+  <!-- Navbar Admin -->
+  <nav class="navbar">
+    <div class="container nav-inner">
+      <div class="brand">
+        <a href="/{{ secret_path }}/dashboard" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit;">
+          <img src="/static/images/zippy-logo.jpg" alt="Zippy Logo" class="brand-logo">
+          <span>Zippy Hub <small style="font-weight: 500; font-size: 0.75rem; color: var(--color-text-muted); background: var(--color-surface-soft); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--color-border);">Control CIEM</small></span>
+        </a>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <a href="/{{ secret_path }}/dashboard" class="btn btn-outline btn-sm">
+          📊 Listado de Dispositivos
+        </a>
+        <span style="font-size: 0.88rem; color: var(--color-text-muted);">
+          👤 <strong>{{ admin.username }}</strong>
+        </span>
+        <a href="/{{ secret_path }}/logout" class="btn btn-outline btn-sm">Cerrar Sesión</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container" style="padding: 36px 24px; max-width: 960px;">
+
+    <!-- Encabezado de Página -->
+    <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <h1 style="font-size: 1.7rem; font-weight: 800; color: var(--color-text-main);">⚙️ Ajustes de Perfil y Sistema</h1>
+        <p style="color: var(--color-text-muted); font-size: 0.92rem; margin-top: 4px;">
+          Configura tus credenciales, precios del Plan PRO, días de cortesía y datos corporativos.
+        </p>
+      </div>
+      <a href="/{{ secret_path }}/dashboard" class="btn btn-soft btn-sm">
+        ← Volver al Panel
+      </a>
+    </div>
+
+    <!-- Alertas de Éxito o Error -->
+    {% if success == 'system_saved' %}
+    <div style="background: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; padding: 12px 18px; border-radius: var(--radius-md); margin-bottom: 20px; font-weight: 600; font-size: 0.9rem;">
+      ✅ Parámetros del sistema y precios actualizados exitosamente.
+    </div>
+    {% elif success == 'profile_saved' %}
+    <div style="background: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; padding: 12px 18px; border-radius: var(--radius-md); margin-bottom: 20px; font-weight: 600; font-size: 0.9rem;">
+      ✅ Datos de perfil de administrador actualizados exitosamente.
+    </div>
+    {% elif error == 'username_taken' %}
+    <div style="background: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; padding: 12px 18px; border-radius: var(--radius-md); margin-bottom: 20px; font-weight: 600; font-size: 0.9rem;">
+      ⚠️ El nombre de usuario especificado ya se encuentra en uso por otro administrador.
+    </div>
+    {% elif error == 'username_required' %}
+    <div style="background: #FFEBEE; color: #B71C1C; border: 1px solid #FFCDD2; padding: 12px 18px; border-radius: var(--radius-md); margin-bottom: 20px; font-weight: 600; font-size: 0.9rem;">
+      ⚠️ El nombre de usuario es obligatorio.
+    </div>
+    {% endif %}
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 24px;">
+
+      <!-- Tarjeta 1: Perfil y Seguridad (Cambio de Contraseña) -->
+      <div class="card" style="padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: 14px; margin-bottom: 18px;">
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--color-text-main);">👤 Mi Perfil de Administrador</h3>
+            <span style="font-size: 0.82rem; color: var(--color-text-muted);">Actualiza tu usuario, correo y contraseña de acceso.</span>
+          </div>
+          <span class="badge badge-pro">👑 Administrador CIEM</span>
+        </div>
+
+        <form method="POST" action="/{{ secret_path }}/settings/profile" style="margin-bottom: 28px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
+            <div class="form-group">
+              <label class="form-label">Nombre de Usuario</label>
+              <input type="text" name="username" class="form-control" value="{{ admin.username }}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Correo Electrónico de Contacto</label>
+              <input type="email" name="email" class="form-control" value="{{ admin.email or '' }}" placeholder="admin@ciem.com">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-outline btn-sm">💾 Guardar Perfil</button>
+        </form>
+
+        <!-- Sección Cambio de Contraseña -->
+        <div style="background: var(--color-surface-soft); padding: 18px 20px; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 12px;">🔑 Actualizar Contraseña</h4>
+          
+          <form id="changePasswordForm" onsubmit="submitPasswordChange(event)">
+            <div id="pwdAlert" style="display: none; padding: 10px 14px; border-radius: var(--radius-md); margin-bottom: 14px; font-size: 0.85rem;"></div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px;">
+              <div class="form-group">
+                <label class="form-label">Contraseña Actual</label>
+                <input type="password" id="current_password" class="form-control" required placeholder="Tu contraseña actual">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nueva Contraseña (mín 6 caracteres)</label>
+                <input type="password" id="new_password" class="form-control" required minlength="6" placeholder="Nueva contraseña">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Confirmar Nueva Contraseña</label>
+                <input type="password" id="confirm_password" class="form-control" required minlength="6" placeholder="Repite la nueva contraseña">
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-sm" id="btnSubmitPwd">
+              🔐 Cambiar Contraseña
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tarjeta 2: Configuración de Planes, Precios y CobrixPay -->
+      <div class="card" style="padding: 24px;">
+        <div style="border-bottom: 1px solid var(--color-border); padding-bottom: 14px; margin-bottom: 18px;">
+          <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--color-text-main);">💳 Planes, Precios y Expiración</h3>
+          <span style="font-size: 0.82rem; color: var(--color-text-muted);">
+            Estos valores impactan los montos calculados al generar enlaces de CobrixPay y los días de prueba para nuevos comercios.
+          </span>
+        </div>
+
+        <form method="POST" action="/{{ secret_path }}/settings/system">
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div class="form-group">
+              <label class="form-label">Precio Mensual Plan PRO ($ USD)</label>
+              <input type="number" step="0.01" min="0.5" name="pro_price" class="form-control" value="{{ pro_price }}" required>
+              <small style="color: var(--color-text-muted); font-size: 0.78rem;">Monto base mensual de suscripción.</small>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Días de Prueba Gratuita (Trial)</label>
+              <input type="number" step="1" min="1" max="90" name="trial_days" class="form-control" value="{{ trial_days }}" required>
+              <small style="color: var(--color-text-muted); font-size: 0.78rem;">Días que otorga la prueba de cortesía Zippy PRO.</small>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Expiración de Enlaces de Pago (Horas)</label>
+              <input type="number" step="1" min="1" max="168" name="expire_hours" class="form-control" value="{{ expire_hours }}" required>
+              <small style="color: var(--color-text-muted); font-size: 0.78rem;">Tiempo límite antes de que CobrixPay anule la deuda.</small>
+            </div>
+          </div>
+
+          <div style="border-top: 1px solid var(--color-border); padding-top: 18px; margin-bottom: 18px;">
+            <h4 style="font-size: 0.98rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 14px;">🏢 Datos Corporativos de CIEM & Soporte</h4>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+              <div class="form-group">
+                <label class="form-label">Razón Social</label>
+                <input type="text" name="company_name" class="form-control" value="{{ company_name }}" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">RIF Fiscal</label>
+                <input type="text" name="company_rif" class="form-control" value="{{ company_rif }}" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Teléfono / WhatsApp de Soporte</label>
+                <input type="text" name="company_phone" class="form-control" value="{{ company_phone }}" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Correo Oficial de Soporte</label>
+                <input type="email" name="company_email" class="form-control" value="{{ company_email }}" required>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+            <button type="submit" class="btn btn-primary">
+              💾 Guardar Todos los Ajustes del Sistema
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    const secretPath = "{{ secret_path }}";
+
+    async function submitPasswordChange(e) {
+      e.preventDefault();
+      const alertBox = document.getElementById('pwdAlert');
+      const curPwd = document.getElementById('current_password').value;
+      const newPwd = document.getElementById('new_password').value;
+      const confPwd = document.getElementById('confirm_password').value;
+      const btn = document.getElementById('btnSubmitPwd');
+
+      if (newPwd !== confPwd) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#FFEBEE';
+        alertBox.style.color = '#B71C1C';
+        alertBox.innerText = '⚠️ Las contraseñas nuevas no coinciden.';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Verificando...';
+
+      try {
+        const formData = new FormData();
+        formData.append('current_password', curPwd);
+        formData.append('new_password', newPwd);
+        formData.append('confirm_password', confPwd);
+
+        const res = await fetch(`/${secretPath}/change-password`, {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#E8F5E9';
+          alertBox.style.color = '#1B5E20';
+          alertBox.innerText = '✅ ' + data.message;
+          document.getElementById('changePasswordForm').reset();
+        } else {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#FFEBEE';
+          alertBox.style.color = '#B71C1C';
+          alertBox.innerText = '⚠️ ' + (data.message || 'Error al actualizar contraseña');
+        }
+      } catch (err) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#FFEBEE';
+        alertBox.style.color = '#B71C1C';
+        alertBox.innerText = '❌ Error de conexión: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '🔐 Cambiar Contraseña';
+      }
+    }
+  </script>
+
+</body>
+</html>

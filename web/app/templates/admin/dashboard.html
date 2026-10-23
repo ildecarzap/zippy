@@ -26,9 +26,9 @@
         <span style="font-size: 0.88rem; color: var(--color-text-muted);">
           👤 <strong>{{ admin.username }}</strong>
         </span>
-        <button type="button" class="btn btn-outline btn-sm" onclick="openChangePasswordModal()" style="display: flex; align-items: center; gap: 5px;">
-          🔑 Cambiar Contraseña
-        </button>
+        <a href="/{{ secret_path }}/settings" class="btn btn-outline btn-sm" style="display: flex; align-items: center; gap: 6px;">
+          ⚙️ Ajustes de Perfil
+        </a>
         <a href="/{{ secret_path }}/logout" class="btn btn-outline btn-sm">Cerrar Sesión</a>
       </div>
     </div>
@@ -72,6 +72,7 @@
     <!-- Barra de Filtros y Búsqueda -->
     <div class="card" style="padding: 18px 24px; margin-bottom: 24px;">
       <form method="GET" action="/{{ secret_path }}/dashboard" style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+        <input type="hidden" name="page" value="1">
         
         <div style="display: flex; gap: 12px; flex: 1; min-width: 280px;">
           <input 
@@ -105,7 +106,9 @@
     <div class="card" style="padding: 0; overflow: hidden;">
       <div style="padding: 16px 20px; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; background-color: var(--color-surface-soft);">
         <h3 style="font-size: 1rem; font-weight: 700;">Listado de Dispositivos Registrados</h3>
-        <span style="font-size: 0.82rem; color: var(--color-text-muted);">Mostrando {{ devices | length }} dispositivo(s)</span>
+        <span style="font-size: 0.82rem; color: var(--color-text-muted);">
+          Página {{ page }} de {{ total_pages }} ({{ total_filtered }} resultados)
+        </span>
       </div>
 
       <div class="table-responsive">
@@ -116,17 +119,15 @@
               <th>Comercio & Documento</th>
               <th>Teléfono</th>
               <th>Plan Actual</th>
-              <th>Vencimiento / Días</th>
-              <th>Código Activación</th>
               <th>Estado</th>
-              <th style="text-align: right;">Acciones de Gestión</th>
+              <th style="text-align: right;">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {% for device in devices %}
             <tr>
               
-              <!-- ID -->
+              <!-- Dispositivo ID -->
               <td>
                 <code style="font-size: 0.82rem; background: var(--color-surface-soft); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--color-border);" title="{{ device.device_id }}">
                   {{ device.device_id }}
@@ -160,7 +161,7 @@
                 {% endif %}
               </td>
 
-              <!-- Plan Badge -->
+              <!-- Plan Actual -->
               <td>
                 {% if device.plan_type == 'PRO' and device.is_pro_active %}
                 <span class="badge badge-pro">⭐ PRO</span>
@@ -174,42 +175,7 @@
                 {% endif %}
               </td>
 
-              <!-- Vencimiento -->
-              <td>
-                {% if device.is_pro_active %}
-                  <strong style="color: var(--badge-pro-text);">{{ device.remaining_days }} día(s)</strong><br>
-                  <small style="color: var(--color-text-muted);">
-                    {% if device.plan_type == 'PRO' and device.pro_expires_at %}
-                      Hasta {{ device.pro_expires_at.strftime('%d/%m/%Y') }}
-                    {% elif device.trial_ends_at %}
-                      Hasta {{ device.trial_ends_at.strftime('%d/%m/%Y') }}
-                    {% endif %}
-                  </small>
-                {% else %}
-                  <span style="color: var(--color-text-muted); font-size: 0.85rem;">Sin expiración</span>
-                {% endif %}
-              </td>
-
-              <!-- Código de Activación -->
-              <td>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <code style="font-size: 0.84rem; font-weight: 700; background: #EBF3FB; color: #1E6091; padding: 3px 7px; border-radius: 4px; border: 1px solid #B5D6F4;" id="code-{{ device.id }}">
-                    {{ device.activation_code or 'SIN CÓDIGO' }}
-                  </code>
-                  {% if device.activation_code %}
-                  <button type="button" class="btn btn-outline btn-sm" style="padding: 2px 6px; font-size: 0.78rem;" onclick="copyCode('{{ device.activation_code }}')" title="Copiar código">
-                    📋
-                  </button>
-                  {% if device.phone %}
-                  <a href="https://wa.me/{{ device.phone | replace('+', '') | replace(' ', '') }}?text=¡Hola%20{{ device.merchant_name | urlencode }}!%20Tu%20código%20de%20activación%20para%20Zippy%20PRO%20es:%20*{{ device.activation_code }}*.%20Ingrésalo%20en%20tu%20app%20en%20Ajustes%20>%20Plan%20Zippy%20PRO%20>%20Tengo%20un%20código." target="_blank" class="btn btn-outline btn-sm" style="padding: 2px 6px; font-size: 0.78rem; color: #25D366; border-color: #A7F3D0;" title="Enviar código por WhatsApp">
-                    💬
-                  </a>
-                  {% endif %}
-                  {% endif %}
-                </div>
-              </td>
-
-              <!-- Activo / Suspendido -->
+              <!-- Estado -->
               <td>
                 {% if device.is_active %}
                 <span style="color: #246A48; font-weight: 600; font-size: 0.85rem;">● Activo</span>
@@ -218,51 +184,17 @@
                 {% endif %}
               </td>
 
-              <!-- Acciones de 1 Clic -->
+              <!-- Acciones: Ficha Detallada -->
               <td style="text-align: right;">
-                <div style="display: inline-flex; gap: 8px; align-items: center;">
-                  
-                  <!-- Ver Ficha Detallada -->
-                  <button type="button" class="btn btn-outline btn-sm" onclick="openUserDetailsModal({{ device.id }})" title="Ver ficha técnica detallada y código de activación">
-                    👁️ Ficha
-                  </button>
-
-                  <!-- Extender PRO 30 días -->
-                  <form method="POST" action="/{{ secret_path }}/licenses/{{ device.id }}/activate-pro" style="display: inline;">
-                    <input type="hidden" name="days" value="30">
-                    <button type="submit" class="btn btn-success-soft btn-sm" title="Extender PRO 30 días">
-                      ⚡ +30d PRO
-                    </button>
-                  </form>
-
-                  <!-- CobrixPay Modal Button -->
-                  <button type="button" class="btn btn-soft btn-sm" onclick="openCobrixModal({{ device.id }})" title="Generar cobro CobrixPay y enviar por WhatsApp">
-                    💳 CobrixPay
-                  </button>
-
-                  <!-- Degradar a Básico si no paga -->
-                  {% if device.plan_type != 'BASIC' %}
-                  <form method="POST" action="/{{ secret_path }}/licenses/{{ device.id }}/downgrade-basic" style="display: inline;" onsubmit="return confirm('¿Seguro que deseas pasar este dispositivo al Plan Básico?');">
-                    <button type="submit" class="btn btn-outline btn-sm" style="color: #963842; border-color: #F8D7DA;" title="Degradar a Plan Básico">
-                      ⬇️ A Básico
-                    </button>
-                  </form>
-                  {% endif %}
-
-                  <!-- Toggle Activo / Pausado -->
-                  <form method="POST" action="/{{ secret_path }}/licenses/{{ device.id }}/toggle-status" style="display: inline;">
-                    <button type="submit" class="btn btn-outline btn-sm" title="{% if device.is_active %}Suspender{% else %}Activar{% endif %}">
-                      {% if device.is_active %}🔒{% else %}🔓{% endif %}
-                    </button>
-                  </form>
-
-                </div>
+                <button type="button" class="btn btn-outline btn-sm" onclick="openUserDetailsModal({{ device.id }})" title="Ver ficha técnica completa, código de activación y acciones" style="font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                  👁️ Ver Ficha
+                </button>
               </td>
 
             </tr>
             {% else %}
             <tr>
-              <td colspan="8" style="text-align: center; padding: 48px; color: var(--color-text-muted);">
+              <td colspan="6" style="text-align: center; padding: 48px; color: var(--color-text-muted);">
                 No se encontraron dispositivos registrados que coincidan con la búsqueda.
               </td>
             </tr>
@@ -270,6 +202,33 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Barra de Paginación -->
+      {% if total_filtered > 0 %}
+      <div style="padding: 14px 20px; border-top: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; background-color: var(--color-surface-soft);">
+        <div style="font-size: 0.85rem; color: var(--color-text-muted);">
+          Mostrando <strong>{{ start_item }}</strong> a <strong>{{ end_item }}</strong> de <strong>{{ total_filtered }}</strong> comercios
+        </div>
+
+        {% if total_pages > 1 %}
+        <div style="display: flex; gap: 6px; align-items: center;">
+          {% if has_prev %}
+          <a href="/{{ secret_path }}/dashboard?page=1&q={{ q }}&filter_plan={{ filter_plan }}" class="btn btn-outline btn-sm" title="Primera página">«</a>
+          <a href="/{{ secret_path }}/dashboard?page={{ prev_page }}&q={{ q }}&filter_plan={{ filter_plan }}" class="btn btn-outline btn-sm" title="Página anterior">‹ Anterior</a>
+          {% endif %}
+
+          <span style="font-size: 0.85rem; font-weight: 600; padding: 4px 10px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px;">
+            Página {{ page }} de {{ total_pages }}
+          </span>
+
+          {% if has_next %}
+          <a href="/{{ secret_path }}/dashboard?page={{ next_page }}&q={{ q }}&filter_plan={{ filter_plan }}" class="btn btn-outline btn-sm" title="Página siguiente">Siguiente ›</a>
+          <a href="/{{ secret_path }}/dashboard?page={{ total_pages }}&q={{ q }}&filter_plan={{ filter_plan }}" class="btn btn-outline btn-sm" title="Última página">»</a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
     </div>
 
     <!-- Nota de Integración CobrixPay Webhook -->

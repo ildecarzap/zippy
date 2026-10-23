@@ -1,4 +1,5 @@
 import logging
+import math
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Request, Depends, Form, HTTPException, status
@@ -7,7 +8,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
-from app.models import DeviceLicense, AdminUser, PaymentTransaction
+from app.models import DeviceLicense, AdminUser, PaymentTransaction, SystemSetting
 from app.auth import (
     verify_password, hash_password, create_session_token, get_current_admin,
     SESSION_COOKIE_NAME, SESSION_MAX_AGE
@@ -23,6 +24,22 @@ from app.services.cobrixpay import (
 logger = logging.getLogger("zippy.admin")
 router = APIRouter(prefix=f"/{settings.ADMIN_SECRET_PATH}", tags=["Private Admin Portal"])
 templates = Jinja2Templates(directory="app/templates")
+
+def get_system_setting(db: Session, key: str, default: str) -> str:
+    setting = db.query(SystemSetting).filter(SystemSetting.key == key).first()
+    return setting.value if setting else default
+
+def set_system_setting(db: Session, key: str, value: str, description: Optional[str] = None):
+    setting = db.query(SystemSetting).filter(SystemSetting.key == key).first()
+    if setting:
+        setting.value = str(value)
+        if description:
+            setting.description = description
+        setting.updated_at = datetime.utcnow()
+    else:
+        setting = SystemSetting(key=key, value=str(value), description=description)
+        db.add(setting)
+    db.commit()
 
 @router.get("/login", response_class=HTMLResponse)
 async def admin_login_page(request: Request, error: Optional[str] = None):
@@ -89,17 +106,33 @@ async def admin_logout():
 @router.get("/dashboard", response_class=HTMLResponse)
 async def admin_dashboard(
     request: Request,
+    page: int = 1,
+    page_size: int = 15,
     q: Optional[str] = None,
     filter_plan: Optional[str] = None,
     current_admin: AdminUser = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """Panel principal de gestión de licencias Zippy."""
+    """Panel principal de gestión de licencias Zippy con paginación optimizada."""
     try:
         # Barrer automáticamente deudas expiradas para anularlas en CobrixPay
         cleanup_expired_pending_debts(db)
     except Exception as e:
         logger.warning(f"Error en cleanup_expired_pending_debts: {e}")
+
+    now = datetime.utcnow()
+    total_devices = db.query(DeviceLicense).count()
+    pro_devices = db.query(DeviceLicense).filter(
+        DeviceLicense.plan_type == "PRO",
+        DeviceLicense.is_active == True,
+        DeviceLicense.pro_expires_at > now
+    ).count()
+    trial_devices = db.query(DeviceLicense).filter(
+        DeviceLicense.plan_type == "TRIAL",
+        DeviceLicense.is_active == True,
+        DeviceLicense.trial_ends_at > now
+    ).count()
+    basic_devices = max(0, total_devices - pro_devices - trial_devices)
 
     query = db.query(DeviceLicense)
 
@@ -115,9 +148,14 @@ async def admin_dashboard(
     if filter_plan and filter_plan in ["PRO", "TRIAL", "BASIC"]:
         query = query.filter(DeviceLicense.plan_type == filter_plan)
 
-    devices = query.order_by(DeviceLicense.created_at.desc()).all()
+    total_filtered = query.count()
+    total_pages = max(1, math.ceil(total_filtered / page_size))
+    page = max(1, min(page, total_pages))
+    offset = (page - 1) * page_size
 
-    # Asegurar que todos los dispositivos tengan un código de activación único
+    devices = query.order_by(DeviceLicense.created_at.desc()).offset(offset).limit(page_size).all()
+
+    # Asegurar códigos de activación para los dispositivos de la página
     from app.services.cobrixpay import generate_activation_code
     dirty = False
     for d in devices:
@@ -126,11 +164,6 @@ async def admin_dashboard(
             dirty = True
     if dirty:
         db.commit()
-
-    total_devices = db.query(DeviceLicense).count()
-    pro_devices = sum(1 for d in devices if d.is_pro_active and d.plan_type == "PRO")
-    trial_devices = sum(1 for d in devices if d.is_pro_active and d.plan_type == "TRIAL")
-    basic_devices = total_devices - pro_devices - trial_devices
 
     return templates.TemplateResponse(
         request=request,
@@ -145,6 +178,16 @@ async def admin_dashboard(
             "basic_devices": basic_devices,
             "q": q or "",
             "filter_plan": filter_plan or "ALL",
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+            "total_filtered": total_filtered,
+            "start_item": offset + 1 if total_filtered > 0 else 0,
+            "end_item": min(offset + page_size, total_filtered),
+            "has_prev": page > 1,
+            "has_next": page < total_pages,
+            "prev_page": page - 1,
+            "next_page": page + 1,
             "secret_path": settings.ADMIN_SECRET_PATH
         }
     )
@@ -409,3 +452,99 @@ async def change_admin_password(
 
     logger.info(f"🔑 [ADMIN] El usuario '{current_admin.username}' cambió su contraseña exitosamente.")
     return JSONResponse({"success": True, "message": "Contraseña actualizada exitosamente"})
+
+
+@router.get("/settings", response_class=HTMLResponse)
+async def admin_settings_page(
+    request: Request,
+    current_admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Vista de Ajustes de Perfil, Contraseña, Precios y Parámetros del Sistema."""
+    pro_price = get_system_setting(db, "pro_plan_price_usd", str(settings.COBRIXPAY_PLAN_PRICE_USD))
+    trial_days = get_system_setting(db, "trial_days", "7")
+    expire_hours = get_system_setting(db, "cobrix_link_expire_hours", str(settings.COBRIXPAY_LINK_EXPIRE_HOURS))
+    company_name = get_system_setting(db, "company_name", settings.COMPANY_NAME)
+    company_rif = get_system_setting(db, "company_rif", settings.COMPANY_RIF)
+    company_phone = get_system_setting(db, "company_phone", settings.COMPANY_PHONE)
+    company_email = get_system_setting(db, "company_email", settings.COMPANY_EMAIL)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/settings.html",
+        context={
+            "settings": settings,
+            "admin": current_admin,
+            "secret_path": settings.ADMIN_SECRET_PATH,
+            "pro_price": pro_price,
+            "trial_days": trial_days,
+            "expire_hours": expire_hours,
+            "company_name": company_name,
+            "company_rif": company_rif,
+            "company_phone": company_phone,
+            "company_email": company_email,
+            "success": request.query_params.get("success"),
+            "error": request.query_params.get("error")
+        }
+    )
+
+
+@router.post("/settings/system")
+async def update_system_settings(
+    pro_price: float = Form(...),
+    trial_days: int = Form(...),
+    expire_hours: int = Form(...),
+    company_name: str = Form(...),
+    company_rif: str = Form(...),
+    company_phone: str = Form(...),
+    company_email: str = Form(...),
+    current_admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Guarda los parámetros de precios, días de prueba y datos corporativos."""
+    set_system_setting(db, "pro_plan_price_usd", str(pro_price), "Precio mensual del Plan PRO en USD")
+    set_system_setting(db, "trial_days", str(trial_days), "Días de prueba gratuita")
+    set_system_setting(db, "cobrix_link_expire_hours", str(expire_hours), "Horas de expiración para enlaces CobrixPay")
+    set_system_setting(db, "company_name", company_name.strip(), "Razón social")
+    set_system_setting(db, "company_rif", company_rif.strip(), "RIF fiscal")
+    set_system_setting(db, "company_phone", company_phone.strip(), "Teléfono oficial de contacto")
+    set_system_setting(db, "company_email", company_email.strip(), "Correo oficial de soporte")
+
+    logger.info(f"⚙️ [ADMIN] Parámetros del sistema actualizados por {current_admin.username}")
+    return RedirectResponse(
+        url=f"/{settings.ADMIN_SECRET_PATH}/settings?success=system_saved",
+        status_code=status.HTTP_303_SEE_OTHER
+    )
+
+
+@router.post("/settings/profile")
+async def update_admin_profile(
+    username: str = Form(...),
+    email: str = Form(...),
+    current_admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Actualiza datos del perfil del administrador."""
+    username = username.strip()
+    if not username:
+        return RedirectResponse(
+            url=f"/{settings.ADMIN_SECRET_PATH}/settings?error=username_required",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+
+    existing = db.query(AdminUser).filter(AdminUser.username == username, AdminUser.id != current_admin.id).first()
+    if existing:
+        return RedirectResponse(
+            url=f"/{settings.ADMIN_SECRET_PATH}/settings?error=username_taken",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
+
+    current_admin.username = username
+    current_admin.email = email.strip()
+    db.commit()
+
+    logger.info(f"👤 [ADMIN] Perfil actualizado para ID {current_admin.id}: {username}")
+    return RedirectResponse(
+        url=f"/{settings.ADMIN_SECRET_PATH}/settings?success=profile_saved",
+        status_code=status.HTTP_303_SEE_OTHER
+    )

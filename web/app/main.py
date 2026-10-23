@@ -29,6 +29,12 @@ try:
             ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS pending_link_expires_at TIMESTAMP WITH TIME ZONE;
             ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS activation_code VARCHAR(50);
             CREATE INDEX IF NOT EXISTS ix_zippy_device_licenses_activation_code ON zippy_device_licenses (activation_code);
+            CREATE TABLE IF NOT EXISTS zippy_system_settings (
+                key VARCHAR(100) PRIMARY KEY,
+                value VARCHAR(500) NOT NULL,
+                description VARCHAR(255),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
         """))
         conn.commit()
     
