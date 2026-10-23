@@ -27,6 +27,7 @@
         <li><a href="/" class="nav-link">Inicio</a></li>
         <li><a href="/guia" class="nav-link">Instructivo</a></li>
         <li><a href="/planes" class="nav-link">Planes</a></li>
+        <li><a href="/legal" class="nav-link">Seguridad & Legal</a></li>
         <li><a href="https://wa.me/{{ settings.COMPANY_WHATSAPP }}" target="_blank" class="btn btn-soft btn-sm">Soporte WhatsApp</a></li>
       </ul>
     </div>
@@ -46,13 +47,19 @@
           <span>Zippy</span>
         </div>
         <p>Tu caja registradora inteligente y punto de cobro móvil para comercios y emprendedores en Venezuela.</p>
+        <p style="margin-top: 8px;">
+          <a href="/legal" style="font-weight: 600; font-size: 0.85rem; color: var(--color-primary);">
+            🔒 Manifiesto de Seguridad y Tranquilidad del Comercio →
+          </a>
+        </p>
       </div>
 
       <div class="footer-meta">
         <strong>{{ settings.COMPANY_NAME }}</strong><br>
         RIF: {{ settings.COMPANY_RIF }}<br>
         Correo: <a href="mailto:{{ settings.COMPANY_EMAIL }}">{{ settings.COMPANY_EMAIL }}</a><br>
-        WhatsApp: <a href="https://wa.me/{{ settings.COMPANY_WHATSAPP }}">{{ settings.COMPANY_PHONE }}</a>
+        WhatsApp: <a href="https://wa.me/{{ settings.COMPANY_WHATSAPP }}">{{ settings.COMPANY_PHONE }}</a><br>
+        <a href="/legal" style="font-size: 0.82rem; color: var(--color-text-muted);">Marco Legal & Cero Custodia</a>
       </div>
     </div>
 

@@ -41,3 +41,17 @@ async def plans_page(request: Request):
             "page_title": "Planes y Precios • Zippy"
         }
     )
+
+@router.get("/legal", response_class=HTMLResponse)
+@router.get("/seguridad", response_class=HTMLResponse)
+async def legal_page(request: Request):
+    """Página de Seguridad, Privacidad y Marco Legal de Zippy."""
+    return templates.TemplateResponse(
+        request=request,
+        name="legal.html",
+        context={
+            "settings": settings,
+            "page_title": "Seguridad, Privacidad y Marco Legal • Zippy"
+        }
+    )
+

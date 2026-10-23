@@ -30,7 +30,8 @@
         <li><strong>Rubro:</strong> Selecciona la categoría de tu comercio (Alimentos, Farmacia, Ropa, etc.).</li>
         <li><strong>Teléfono de Pago Móvil:</strong> El número asociado a tus cuentas bancarias para recibir fondos.</li>
         <li><strong>Bancos Disponibles:</strong> Elige entre <em>Banesco, Mercantil, BNC o Banco de Venezuela</em>. Puedes activar o desactivar cada banco con un simple toque.</li>
-        <li><strong>Cargar Código QR:</strong> Puedes asociar la imagen de tu código QR específico a cada banco seleccionado para que se guarde de forma independiente.</li>
+        <li><strong>Billeteras Digitales (Plan PRO):</strong> Si posees Zippy PRO, puedes activar el apartado de billeteras para recibir pagos con código QR de <strong>Binance Pay (USDT)</strong> y billeteras internacionales.</li>
+        <li><strong>Cargar Código QR:</strong> Puedes asociar la imagen de tu código QR específico a cada banco o billetera seleccionada. Zippy cuenta con validación inteligente que verifica que cada QR sea auténtico y pertenezca a la categoría correspondiente.</li>
       </ul>
     </div>
 
@@ -41,12 +42,12 @@
         <h2 style="font-size: 1.35rem; font-weight: 700;">Cobro Inmediato con QR en Mostrador</h2>
       </div>
       <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
-        En la pantalla principal (<strong>Inicio</strong>), Zippy te muestra un carrusel o botones directos de tus bancos habilitados:
+        En la pantalla principal (<strong>Inicio</strong>), Zippy te muestra las tarjetas de cobro de tus bancos y billeteras habilitadas:
       </p>
       <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
-        <li>Toca el botón del banco que tu cliente desea utilizar para proyectar su código QR en pantalla grande.</li>
-        <li>El cliente solo debe escanear el QR desde la app de su banco sin tener que digitar tu teléfono ni cédula.</li>
-        <li><strong>Compartir por WhatsApp:</strong> Si el cliente está pagando a distancia, presiona el botón <em>"Compartir Datos"</em> para enviar los datos bancarios y el QR directamente por WhatsApp.</li>
+        <li>Toca la tarjeta del banco o billetera que tu cliente desea utilizar para proyectar su código QR en pantalla completa.</li>
+        <li>El cliente solo debe escanear el QR desde la app de su banco o Binance sin tener que digitar tu teléfono ni cédula.</li>
+        <li><strong>Cobrar por WhatsApp:</strong> Si el cliente está pagando a distancia, presiona el botón <em>"Cobrar por WhatsApp"</em> para enviar los datos bancarios, monto y comprobante directamente por chat.</li>
       </ul>
     </div>
 
@@ -54,14 +55,29 @@
     <div class="card">
       <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
         <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">3</span>
-        <h2 style="font-size: 1.35rem; font-weight: 700;">Soundbox: Confirmación Sonora de Cobro</h2>
+        <h2 style="font-size: 1.35rem; font-weight: 700;">Soundbox: Confirmación Sonora y Lectura Push</h2>
       </div>
       <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
         ¡No pierdas tiempo pidiendo capturas de pantalla ni revisando la banca en línea! Zippy detecta las notificaciones de tu banco al instante:
       </p>
-      <div style="background-color: var(--color-surface-soft); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: 12px;">
+      <div style="background-color: var(--color-surface-soft); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: 16px;">
         <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>🔔 Plan Básico (Gratuito):</strong> Emite el sonido nítido de una auténtica campana de caja registradora <em>"¡Ka-ching!"</em> cuando recibes un Pago Móvil.</p>
         <p style="font-size: 0.9rem;"><strong>🗣️ Zippy PRO:</strong> Además del sonido, una voz inteligente canta en voz alta el monto exacto y el banco (ej: <em>"Pago móvil recibido de 450 bolívares en Banesco"</em>).</p>
+      </div>
+
+      <!-- ALERTA VITAL: Dependencia 100% de Notificaciones Push y Batería -->
+      <div style="background: #FFFBEB; border: 1px solid #FCD34D; border-left: 5px solid #F59E0B; padding: 18px 20px; border-radius: var(--radius-md);">
+        <h3 style="font-size: 1rem; font-weight: 700; color: #92400E; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+          <span>⚠️</span> REQUISITO CRÍTICO: ¿Cómo garantizar que la detección funcione siempre?
+        </h3>
+        <p style="font-size: 0.88rem; color: #78350F; line-height: 1.5; margin-bottom: 10px;">
+          <strong>El funcionamiento del Soundbox depende al 100% de las notificaciones que tu propio banco envía a tu celular.</strong> Si el banco no te envía una notificación o tu teléfono la silencia, Zippy no podrá cantarla. Asegúrate de cumplir estos 3 pasos:
+        </p>
+        <ol style="margin-left: 20px; font-size: 0.88rem; color: #78350F; line-height: 1.6;">
+          <li><strong>Notificaciones del Banco Activas:</strong> Verifica que la app de tu banco (o la app de Mensajes SMS de tu banco) tenga permiso de mostrar notificaciones y banners en tu pantalla.</li>
+          <li><strong>Permiso de Notificaciones en Zippy:</strong> Al instalar la app, concédele acceso a notificaciones en <em>Ajustes de Zippy > Detección de Pagos</em>.</li>
+          <li><strong>Batería "Sin Restricciones" (Vital en Xiaomi, Samsung y Motorola):</strong> Ve a <em>Ajustes de tu Celular > Aplicaciones > Zippy > Batería</em> y selecciona <strong>"Sin Restricciones" (No optimizar)</strong>. Esto evita que Android ponga la app a "dormir" en segundo plano cuando apagues la pantalla.</li>
+        </ol>
       </div>
     </div>
 

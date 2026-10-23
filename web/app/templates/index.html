@@ -1,35 +1,104 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="hero">
+<!-- Hero Section -->
+<section class="hero" style="padding: 56px 0 44px 0;">
   <div class="container">
     <div class="hero-pill">
-      <span>⚡</span> Cobros rápidos, seguros y sin comisiones extras
+      <span>⚡</span> Cobros rápidos, seguros y sin comisiones • Bancos y Billeteras Digitales
     </div>
-    <h1 class="hero-title">
+    
+    <div style="margin: 16px 0 8px 0;">
+      <span style="font-size: 1.15rem; font-weight: 700; color: var(--color-primary); letter-spacing: 0.5px; text-transform: uppercase;">
+        "Todos tus QR en la palma de tu mano"
+      </span>
+    </div>
+
+    <h1 class="hero-title" style="margin-top: 8px;">
       Tu punto de cobro móvil y caja registradora <span>inteligente</span>
     </h1>
-    <p class="hero-subtitle">
-      Zippy convierte tu teléfono Android en un centro de cobro con código QR para Banesco, Mercantil, BNC y Venezuela, detección automática de Pago Móvil por notificaciones bancarias y libreta de cuadre diario.
+
+    <p class="hero-subtitle" style="max-width: 760px; margin: 16px auto 28px auto;">
+      Zippy convierte tu teléfono Android en el mostrador de cobro definitivo. Agrupa los códigos QR de tus bancos (Banesco, Mercantil, BNC, Venezuela) y billeteras digitales (Binance Pay), confirma cada venta con sonido o locución en voz alta y cuadra tu jornada diaria al instante.
     </p>
 
     <div class="hero-actions">
       <a href="/guia" class="btn btn-primary">📖 Instructivo y Manual de Uso</a>
       <a href="/planes" class="btn btn-soft">⭐ Ver Planes y Precios</a>
+      <a href="/legal" class="btn btn-outline">🔒 Seguridad & Cero Custodia</a>
     </div>
   </div>
 </section>
 
-<!-- Sección de Funcionalidades Principales -->
-<section style="padding: 40px 0;">
-  <div class="container">
+<!-- Sección de Transparencia y Seguridad: ¿Cómo funciona y por qué es 100% seguro? -->
+<section style="padding: 44px 0; background: linear-gradient(180deg, #F8FAF9 0%, #EFF5F4 100%); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);">
+  <div class="container" style="max-width: 960px;">
+    
     <div style="text-align: center; margin-bottom: 32px;">
-      <h2 style="font-size: 1.85rem; font-weight: 700;">Diseñado para el comercio venezolano</h2>
-      <p style="color: var(--color-text-muted);">Todo lo que necesitas en una sola app ligera, sin requerir data constante.</p>
+      <span class="badge badge-pro" style="margin-bottom: 10px;">🔒 Seguridad & Privacidad Total</span>
+      <h2 style="font-size: 1.85rem; font-weight: 800; color: var(--color-text-main);">
+        Tu dinero en tu cuenta, tus datos en tu celular
+      </h2>
+      <p style="color: var(--color-text-muted); max-width: 680px; margin: 8px auto 0 auto; font-size: 0.96rem;">
+        Zippy <strong>NO es una pasarela intermedia ni un banco</strong>. No toca tu dinero, no cobra comisiones porcentuales y no almacena claves bancarias.
+      </p>
+    </div>
+
+    <div class="grid-3" style="margin-bottom: 24px;">
+      <div class="card" style="padding: 22px;">
+        <div style="font-size: 1.8rem; margin-bottom: 8px;">🚫</div>
+        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 6px;">Cero Custodia de Fondos</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.88rem; line-height: 1.5;">
+          Cuando un cliente te paga, el dinero viaja <strong>directamente desde su app a tu cuenta bancaria o a tu Binance</strong>. Zippy jamás intermedia los fondos.
+        </p>
+      </div>
+
+      <div class="card" style="padding: 22px;">
+        <div style="font-size: 1.8rem; margin-bottom: 8px;">🔑</div>
+        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 6px;">Cero Datos Sensibles</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.88rem; line-height: 1.5;">
+          Nunca te pediremos contraseñas bancarias, coordenadas, SMS con códigos ni llaves de billeteras. Tu acceso a tus bancos permanece 100% privado en tu poder.
+        </p>
+      </div>
+
+      <div class="card" style="padding: 22px;">
+        <div style="font-size: 1.8rem; margin-bottom: 8px;">📲</div>
+        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 6px;">Procesamiento 100% Local</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.88rem; line-height: 1.5;">
+          Tus códigos QR, tus ventas registradas y tu balance diario se almacenan exclusivamente en la memoria protegida de tu propio dispositivo Android.
+        </p>
+      </div>
+    </div>
+
+    <!-- Explicación de la dependencia de notificaciones push -->
+    <div class="card" style="background: #ffffff; border-left: 4px solid var(--color-primary); padding: 22px 26px;">
+      <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; color: var(--color-text-main); display: flex; align-items: center; gap: 8px;">
+        <span>🔔</span> ¿Cómo detecta Zippy los pagos entrantes? (Dependencia 100% de Notificaciones)
+      </h3>
+      <p style="color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 10px;">
+        Zippy utiliza el permiso oficial de Android <code>NotificationListenerService</code> para escuchar las <strong>notificaciones push o SMS que tu propio banco envía a la pantalla de tu celular</strong> cuando te llega un Pago Móvil.
+      </p>
+      <p style="color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 12px;">
+        Al recibir esa alerta en tu teléfono, Zippy extrae de forma instantánea el monto y la referencia para activar la campana sonora del Soundbox y sumar la venta a tu jornada. Por esta razón, <strong>el servicio depende al 100% de que las notificaciones de tu banco estén activas en tu celular</strong>.
+      </p>
+      <a href="/legal" style="font-size: 0.88rem; font-weight: 700; color: var(--color-primary); text-decoration: none;">
+        Leer el Manifiesto Legal y de Privacidad de Zippy →
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<!-- Sección de Funcionalidades Principales -->
+<section style="padding: 50px 0;">
+  <div class="container">
+    <div style="text-align: center; margin-bottom: 36px;">
+      <h2 style="font-size: 1.85rem; font-weight: 800;">Todo lo que tu mostrador necesita en una sola app</h2>
+      <p style="color: var(--color-text-muted); font-size: 0.95rem;">Ligera, veloz y lista para trabajar incluso sin conexión de datos constante.</p>
     </div>
 
     <div class="grid-3">
-      <!-- Tarjeta 1 -->
+      <!-- Tarjeta 1: Bancos Nacionales -->
       <div class="card">
         <div class="feature-icon">📲</div>
         <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Cobro con QR por Banco</h3>
@@ -38,25 +107,37 @@
         </p>
       </div>
 
-      <!-- Tarjeta 2 -->
+      <!-- Tarjeta 2: Billeteras Digitales (Binance Pay) -->
+      <div class="card" style="border: 1px solid var(--badge-pro-border); background: #FAFDFB;">
+        <div class="feature-icon">💎</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h3 style="font-size: 1.15rem; margin-bottom: 0;">Billeteras Digitales</h3>
+          <span class="badge badge-pro">⭐ Exclusivo PRO</span>
+        </div>
+        <p style="color: var(--color-text-muted); font-size: 0.92rem;">
+          Acepta pagos internacionales en divisas y criptoactivos. Exhibe tu código QR de <strong>Binance Pay (USDT)</strong> y billeteras digitales validadas sin intermediarios.
+        </p>
+      </div>
+
+      <!-- Tarjeta 3: Soundbox -->
       <div class="card">
         <div class="feature-icon">🔔</div>
-        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Soundbox de Confirmación</h3>
+        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Soundbox Inteligente</h3>
         <p style="color: var(--color-text-muted); font-size: 0.92rem;">
-          Sonido auténtico de caja registradora en el plan gratuito y locución inteligente de voz en Zippy PRO para cantar el monto recibido en voz alta en el mostrador.
+          Sonido auténtico de campana de caja registradora en el plan gratuito y locución inteligente de voz en Zippy PRO para cantar el monto recibido en voz alta en el mostrador.
         </p>
       </div>
 
-      <!-- Tarjeta 3 -->
+      <!-- Tarjeta 4: Detección Automática -->
       <div class="card">
         <div class="feature-icon">⚡</div>
-        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Detección Automática</h3>
+        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Detección Automática Push</h3>
         <p style="color: var(--color-text-muted); font-size: 0.92rem;">
-          Zippy detecta las notificaciones de tu banco de Pago Móvil recibido en tu teléfono, validando la referencia y sumándolo automáticamente a tu total del día.
+          Zippy lee las notificaciones bancarias de Pago Móvil en tu teléfono, validando la referencia oficial y sumándolo automáticamente a tu total del día.
         </p>
       </div>
 
-      <!-- Tarjeta 4 -->
+      <!-- Tarjeta 5: Carga por Voz -->
       <div class="card">
         <div class="feature-icon">🎙️</div>
         <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Carga por Voz de Caja</h3>
@@ -65,21 +146,12 @@
         </p>
       </div>
 
-      <!-- Tarjeta 5 -->
+      <!-- Tarjeta 6: Cierre con BCV y Respaldo -->
       <div class="card">
         <div class="feature-icon">📊</div>
-        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Cierre de Jornada con BCV</h3>
+        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Cierre Diario con Tasa BCV</h3>
         <p style="color: var(--color-text-muted); font-size: 0.92rem;">
-          Filtra por día, rango de fechas o mes. Conoce la tasa oficial del BCV al momento en que se cobró y genera reportes detallados en Excel o PDF listos para WhatsApp.
-        </p>
-      </div>
-
-      <!-- Tarjeta 6 -->
-      <div class="card">
-        <div class="feature-icon">☁️</div>
-        <h3 style="margin-bottom: 10px; font-size: 1.15rem;">Copia de Seguridad Total</h3>
-        <p style="color: var(--color-text-muted); font-size: 0.92rem;">
-          Empaqueta tus transacciones, configuraciones y códigos QR en un archivo de respaldo para migrar a un teléfono nuevo en 1 clic sin perder tu historial.
+          Conoce la tasa oficial del BCV al momento del cobro y genera reportes detallados en Excel (.csv) o PDF listos para auditar o enviar a tus socios por WhatsApp.
         </p>
       </div>
     </div>
@@ -87,14 +159,17 @@
 </section>
 
 <!-- Llamado a la Acción para Usuarios de la App -->
-<section style="padding: 48px 0; background-color: var(--color-surface-soft); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);">
+<section style="padding: 50px 0; background-color: var(--color-surface-soft); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);">
   <div class="container" style="text-align: center;">
     <span class="badge badge-trial" style="margin-bottom: 16px;">¿Llegaste desde la app Zippy?</span>
-    <h2 style="font-size: 1.75rem; margin-bottom: 12px;">Descubre paso a paso cómo configurar y usar Zippy</h2>
-    <p style="color: var(--color-text-muted); max-width: 600px; margin: 0 auto 24px;">
-      Nuestro instructivo interactivo te guía en la configuración de bancos, cómo habilitar los permisos de notificación y cómo activar tu prueba gratuita de 7 días.
+    <h2 style="font-size: 1.85rem; margin-bottom: 12px; font-weight: 800;">Descubre paso a paso cómo configurar y usar Zippy</h2>
+    <p style="color: var(--color-text-muted); max-width: 620px; margin: 0 auto 24px; font-size: 0.96rem;">
+      Nuestro instructivo interactivo te guía en la configuración de bancos y billeteras, permisos de notificación, optimización de batería y activación de tu prueba gratuita.
     </p>
-    <a href="/guia" class="btn btn-primary">👉 Abrir el Instructivo de Uso</a>
+    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+      <a href="/guia" class="btn btn-primary">👉 Abrir el Instructivo de Uso</a>
+      <a href="/legal" class="btn btn-outline">🔒 Ver Marco Legal y Privacidad</a>
+    </div>
   </div>
 </section>
 {% endblock %}
