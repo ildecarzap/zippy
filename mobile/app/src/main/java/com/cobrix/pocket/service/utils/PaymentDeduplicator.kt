@@ -16,8 +16,8 @@ object PaymentDeduplicator {
 
     private const val TAG = "PaymentDeduplicator"
 
-    // Ventana de deduplicación: 3 minutos (180.000 ms)
-    private const val DEDUPLICATION_WINDOW_MS = 180_000L
+    // Ventana de deduplicación: 24 horas (86.400.000 ms) para cubrir toda la jornada diaria
+    private const val DEDUPLICATION_WINDOW_MS = 86_400_000L
 
     // Caché de pagos recientes: Clave -> Timestamp en ms
     private val recentPayments = ConcurrentHashMap<String, Long>()
@@ -30,13 +30,11 @@ object PaymentDeduplicator {
      */
     fun isNotificationKeyDuplicate(sbnKey: String): Boolean {
         cleanupOldEntries()
-        val now = System.currentTimeMillis()
         val lastSeen = recentNotificationKeys[sbnKey]
-        if (lastSeen != null && (now - lastSeen) < 15_000L) {
-            // Misma notificación actualizada por el sistema o la app en menos de 15 segundos
+        if (lastSeen != null) {
             return true
         }
-        recentNotificationKeys[sbnKey] = now
+        recentNotificationKeys[sbnKey] = System.currentTimeMillis()
         return false
     }
 
@@ -45,9 +43,7 @@ object PaymentDeduplicator {
      */
     fun isNotificationKeyAlreadyProcessed(sbnKey: String): Boolean {
         cleanupOldEntries()
-        val now = System.currentTimeMillis()
-        val lastSeen = recentNotificationKeys[sbnKey]
-        return lastSeen != null && (now - lastSeen) < 15_000L
+        return recentNotificationKeys.containsKey(sbnKey)
     }
 
     /**
@@ -69,7 +65,7 @@ object PaymentDeduplicator {
 
         val lastSeen = recentPayments[key]
         if (lastSeen != null && (now - lastSeen) < DEDUPLICATION_WINDOW_MS) {
-            Log.w(TAG, "Deduplicación activa: Se detectó pago repetido en ventana de ${DEDUPLICATION_WINDOW_MS / 1000}s -> $key")
+            Log.w(TAG, "Deduplicación activa: Se detectó pago repetido en ventana de 24h -> $key")
             return true
         }
 
@@ -78,12 +74,12 @@ object PaymentDeduplicator {
     }
 
     /**
-     * Limpia entradas expiradas para prevenir fugas de memoria en ejecuciones continuas 24/7.
+     * Limpia entradas expiradas de más de 24 horas para prevenir fugas de memoria.
      */
     private fun cleanupOldEntries() {
         val now = System.currentTimeMillis()
         recentPayments.entries.removeIf { (now - it.value) > DEDUPLICATION_WINDOW_MS }
-        recentNotificationKeys.entries.removeIf { (now - it.value) > 30_000L }
+        recentNotificationKeys.entries.removeIf { (now - it.value) > DEDUPLICATION_WINDOW_MS }
     }
 
     fun clear() {

@@ -351,12 +351,6 @@ class MainActivity : AppCompatActivity() {
         // Sincronización reactiva inmediata al volver a la app (detecta pago de CobrixPay o activación de soporte)
         syncLicenseStatus(showToastIfNoChange = false)
 
-        // Re-escanear proactivamente si quedaron notificaciones de cobro en la barra de Android
-        val rescanned = PocketNotificationListenerService.rescanActiveNotifications(playSound = true)
-        if (rescanned > 0) {
-            loadTodayLedger()
-        }
-
         // Verificar si llegó un pago mientras la pantalla estaba apagada o en otra app
         if (PreferencesHelper.isCelebrationScreenEnabled(this)) {
             val pending = PreferencesHelper.getAndClearPendingCelebration(this)

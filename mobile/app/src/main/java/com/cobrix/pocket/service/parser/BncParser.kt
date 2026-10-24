@@ -12,7 +12,7 @@ class BncParser : BankParser {
         if (pkg.contains("bnc")) return true
         if (pkg.contains("mercantil") || pkg.contains("banesco") || pkg.contains("provincial") ||
             pkg.contains("bbva") || pkg.contains("bdv") || pkg.contains("bancodevenezuela") ||
-            pkg.contains("bancamiga")) return false
+            pkg.contains("bancamiga") || pkg.contains("ubii")) return false
 
         val combined = "$title $text".lowercase(Locale.ROOT)
         return combined.contains("bnc") || combined.contains("banco nacional de credito")

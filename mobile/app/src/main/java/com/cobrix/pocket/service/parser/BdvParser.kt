@@ -11,7 +11,8 @@ class BdvParser : BankParser {
         val pkg = packageName.lowercase(Locale.ROOT)
         if (pkg.contains("bdv") || pkg.contains("bancodevenezuela")) return true
         if (pkg.contains("mercantil") || pkg.contains("banesco") || pkg.contains("provincial") ||
-            pkg.contains("bbva") || pkg.contains("bnc") || pkg.contains("bancamiga")) return false
+            pkg.contains("bbva") || pkg.contains("bnc") || pkg.contains("bancamiga") ||
+            pkg.contains("ubii")) return false
 
         val combined = "$title $text".lowercase(Locale.ROOT)
         return combined.contains("pagoclave") || combined.contains("pago clave") ||

@@ -12,7 +12,7 @@ class BancamigaParser : BankParser {
         if (pkg.contains("bancamiga")) return true
         if (pkg.contains("mercantil") || pkg.contains("banesco") || pkg.contains("provincial") ||
             pkg.contains("bbva") || pkg.contains("bnc") || pkg.contains("bdv") ||
-            pkg.contains("bancodevenezuela")) return false
+            pkg.contains("bancodevenezuela") || pkg.contains("ubii")) return false
 
         val combined = "$title $text".lowercase(Locale.ROOT)
         return combined.contains("bancamiga")

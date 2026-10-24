@@ -10,11 +10,14 @@ import java.util.regex.Pattern
  */
 object ParserUtils {
 
-    // Extrae montos en formatos: 1.250,50 | 1250,50 | 1250.50 | 50,00 | 50.00 precedidos o seguidos de Bs / VES
+    private const val AMOUNT_NUMBER_REGEX =
+        """(?:[0-9]{1,3}(?:[.,][0-9]{3})+(?:[.,][0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)(?!\d)"""
+
+    // Extrae montos en formatos: 1.250,50 | 1.800,00 | 1800,00 | 1800.00 | 1.800 | 1800 | 50,00 | 50.00 precedidos o seguidos de Bs / VES
     private val AMOUNT_PATTERNS = listOf(
-        Pattern.compile("""(?:bs\.?|bsd\.?|ves|bsf\.?)\s*([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{1,2})?|[0-9]+(?:,[0-9]{1,2})?|[0-9]+\.[0-9]{2})""", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("""([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{1,2})?|[0-9]+(?:,[0-9]{1,2})?)\s*(?:bs\.?|bsd\.?|ves)""", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("""(?:monto|por|valor|importe)\s*[:.]?\s*(?:bs\.?|ves)?\s*([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{1,2})?|[0-9]+(?:,[0-9]{1,2})?|[0-9]+\.[0-9]{2})""", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("""(?:bs\.?|bsd\.?|ves|bsf\.?)\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("""($AMOUNT_NUMBER_REGEX)\s*(?:bs\.?|bsd\.?|ves)""", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("""(?:monto|por|valor|importe)\s*[:.]?\s*(?:bs\.?|ves)?\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE)
     )
 
     // Extrae referencias de 4 a 16 dígitos
@@ -93,10 +96,14 @@ object ParserUtils {
 
     fun extractBankName(text: String): String? {
         val lower = text.lowercase(Locale.ROOT)
+        // Priorizar bancos emisores específicos sobre Ubii si ambos están presentes en el texto
         for ((keyword, bankFullName) in KNOWN_BANKS) {
-            if (lower.contains(keyword)) {
+            if (keyword != "ubii" && keyword != "ubiipagos" && lower.contains(keyword)) {
                 return bankFullName
             }
+        }
+        if (lower.contains("ubii") || lower.contains("ubiipagos")) {
+            return "Ubii App"
         }
         return null
     }
@@ -228,15 +235,40 @@ object ParserUtils {
         return INCOMING_KEYWORDS.any { lower.contains(it) }
     }
 
-    private fun parseAmountStringToDouble(amountStr: String): Double? {
+    fun parseAmountStringToDouble(amountStr: String): Double? {
         return try {
             var clean = amountStr.trim()
             if (clean.contains(".") && clean.contains(",")) {
-                // Formato venezolano: 1.250,50 -> 1250.50
-                clean = clean.replace(".", "").replace(",", ".")
+                val lastDot = clean.lastIndexOf('.')
+                val lastComma = clean.lastIndexOf(',')
+                clean = if (lastComma > lastDot) {
+                    // Formato venezolano: 1.250,50 o 1.800,00 -> 1250.50
+                    clean.replace(".", "").replace(",", ".")
+                } else {
+                    // Formato anglosajón: 1,800.00 -> 1800.00
+                    clean.replace(",", "")
+                }
             } else if (clean.contains(",")) {
-                // Formato con coma decimal: 50,00 -> 50.00
-                clean = clean.replace(",", ".")
+                val parts = clean.split(",")
+                clean = if (parts.size == 2 && parts[1].length == 3 && parts[0].length in 1..3) {
+                    // Miles con coma sin decimales (1,800) -> 1800
+                    parts[0] + parts[1]
+                } else {
+                    // Decimal con coma (50,00 o 1800,00) -> 50.00 o 1800.00
+                    clean.replace(",", ".")
+                }
+            } else if (clean.contains(".")) {
+                val parts = clean.split(".")
+                clean = if (parts.size > 2) {
+                    // Múltiples separadores de miles (1.000.000)
+                    clean.replace(".", "")
+                } else if (parts.size == 2 && parts[1].length == 3 && parts[0].length in 1..3) {
+                    // Separador de miles venezolano sin decimales: 1.800 -> 1800
+                    parts[0] + parts[1]
+                } else {
+                    // Decimal estándar: 50.00 o 1800.00
+                    clean
+                }
             }
             clean.toDoubleOrNull()
         } catch (e: Exception) {

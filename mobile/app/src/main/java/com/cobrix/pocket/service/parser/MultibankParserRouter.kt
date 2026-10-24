@@ -69,21 +69,12 @@ class MultibankParserRouter {
             }
         }
 
-        // 2. Si es un paquete de SMS genérico y no encajó en bancos específicos, probar GenericSmsParser
+        // 4. Si es un paquete de SMS genérico y no encajó en bancos específicos, probar GenericSmsParser
         if (ParserUtils.isSmsPackage(packageName)) {
             val smsParser = allParsers.firstOrNull { it is GenericSmsParser }
             val result = smsParser?.parse(packageName, title, text, postTimeMillis)
             if (result != null) {
                 Log.i(TAG, "Notificación parseada como SMS bancario genérico")
-                return result
-            }
-        }
-
-        // 3. Fallback inteligente (para simulación manual o textos con formato variable)
-        for (parser in parsersToUse) {
-            val result = parser.parse(packageName, title, text, postTimeMillis)
-            if (result != null) {
-                Log.i(TAG, "Notificación parseada por fallback secundario: ${parser.bankCode.displayName}")
                 return result
             }
         }

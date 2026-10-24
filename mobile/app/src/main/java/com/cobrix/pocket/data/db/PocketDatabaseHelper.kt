@@ -86,6 +86,42 @@ class PocketDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABAS
         return db.insert(TABLE_TRANSACTIONS, null, values)
     }
 
+    /**
+     * Verifica si ya existe en SQLite un cobro registrado con la misma referencia y monto
+     * dentro de una ventana de tiempo (ej. la jornada actual).
+     */
+    fun hasDuplicateIncome(reference: String, amountVes: Double, amountUsd: Double = 0.0, sinceTimestamp: Long = 0L): Boolean {
+        if (reference.isBlank() || reference == "0000" || reference.equals("nada", ignoreCase = true)) return false
+        val db = readableDatabase
+        val query = if (sinceTimestamp > 0) {
+            """
+            SELECT COUNT(*) FROM $TABLE_TRANSACTIONS 
+            WHERE $COL_TYPE = ? AND $COL_REFERENCE = ? 
+            AND (ABS($COL_AMOUNT - ?) < 0.05 OR ($COL_AMOUNT_USD > 0 AND ABS($COL_AMOUNT_USD - ?) < 0.01))
+            AND $COL_TIMESTAMP >= ?
+            """.trimIndent()
+        } else {
+            """
+            SELECT COUNT(*) FROM $TABLE_TRANSACTIONS 
+            WHERE $COL_TYPE = ? AND $COL_REFERENCE = ? 
+            AND (ABS($COL_AMOUNT - ?) < 0.05 OR ($COL_AMOUNT_USD > 0 AND ABS($COL_AMOUNT_USD - ?) < 0.01))
+            """.trimIndent()
+        }
+        val args = if (sinceTimestamp > 0) {
+            arrayOf(TransactionType.INCOME.name, reference, amountVes.toString(), amountUsd.toString(), sinceTimestamp.toString())
+        } else {
+            arrayOf(TransactionType.INCOME.name, reference, amountVes.toString(), amountUsd.toString())
+        }
+        val cursor = db.rawQuery(query, args)
+        var exists = false
+        cursor.use {
+            if (it.moveToFirst()) {
+                exists = it.getInt(0) > 0
+            }
+        }
+        return exists
+    }
+
     fun updateTransaction(tx: Transaction): Int {
         val db = writableDatabase
         val values = ContentValues().apply {

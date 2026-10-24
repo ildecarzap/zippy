@@ -2,6 +2,7 @@ package com.cobrix.pocket.service.parser
 
 import com.cobrix.pocket.data.model.BankCode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -93,5 +94,25 @@ class BinancePayParserTest {
 
         val payment = parser.parse(packageName, title, text, 2000L)
         assertNull("Los pagos salientes deben descartarse", payment)
+    }
+
+    @Test
+    fun testFiatBolivaresIsDiscarded() {
+        val packageName = "com.cobrix.pocket"
+        val title = "✅ Pago Recibido: Bs. 900.00"
+        val text = "Banco Mercantil • Ref terminada en 3817"
+
+        val payment = parser.parse(packageName, title, text, 2000L)
+        assertNull("Las notificaciones en bolívares nunca deben ser Binance Pay", payment)
+    }
+
+    @Test
+    fun testZippySelfNotificationNotHandled() {
+        val packageName = "com.cobrix.pocket"
+        val title = "✅ Pago Recibido: Bs. 180.00"
+        val text = "Ubii App • Ref: 0515"
+
+        val canHandle = parser.canHandle(packageName, title, text)
+        assertFalse("Binance no debe manejar notificaciones de Zippy", canHandle)
     }
 }

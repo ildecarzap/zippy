@@ -30,7 +30,7 @@ class BinancePayParser : BankParser {
 
     // 5. Referencia / ID de Orden o Pago: "ID de orden: 123456", "Order ID: 123456", "ID de transacción: ..."
     private val orderPattern = Pattern.compile(
-        """(?i)(?:id de orden|order id|id de transacci[oó]n|transaction id|id de pago|pay id|referencia|ref)\s*[:.]?\s*([A-Za-z0-9_-]{4,24})"""
+        """(?i)(?:id de orden|order id|id de transacci[oó]n|transaction id|id de pago|pay id|referencia|ref)\s*[:.]?\s*([0-9]{4,24})"""
     )
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
@@ -57,6 +57,13 @@ class BinancePayParser : BankParser {
     ): ParsedPayment? {
         val combined = "$title $text"
         if (ParserUtils.isOutgoingTransaction(combined)) return null
+
+        val lowerCombined = combined.lowercase(Locale.ROOT)
+        // Binance Pay NUNCA procesa transacciones en bolívares (VES / Bs)
+        if (lowerCombined.contains("bs.") || lowerCombined.contains("bs ") || lowerCombined.contains("ves") ||
+            lowerCombined.contains("bolívares") || lowerCombined.contains("bolivares") || lowerCombined.contains("bsd")) {
+            return null
+        }
 
         var amount: Double? = null
         var amountRaw = ""
@@ -101,8 +108,8 @@ class BinancePayParser : BankParser {
             }
         }
 
-        // Fallback genérico de utilidades
-        if (amount == null) {
+        // Fallback sólo si el texto contiene indicadores explícitos de token cripto (USDT, BUSD, USD)
+        if (amount == null && (lowerCombined.contains("usdt") || lowerCombined.contains("busd") || lowerCombined.contains("usd"))) {
             val fallback = ParserUtils.extractAmount(combined)
             if (fallback != null && fallback.first > 0.0) {
                 amount = fallback.first

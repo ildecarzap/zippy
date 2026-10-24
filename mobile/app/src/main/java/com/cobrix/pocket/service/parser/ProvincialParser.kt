@@ -15,7 +15,8 @@ class ProvincialParser : BankParser {
         val pkg = packageName.lowercase(Locale.ROOT)
         if (pkg.contains("provincial") || pkg.contains("bbva")) return true
         if (pkg.contains("mercantil") || pkg.contains("banesco") || pkg.contains("bnc") ||
-            pkg.contains("bdv") || pkg.contains("bancodevenezuela") || pkg.contains("bancamiga")) return false
+            pkg.contains("bdv") || pkg.contains("bancodevenezuela") || pkg.contains("bancamiga") ||
+            pkg.contains("ubii")) return false
 
         val lowerCombined = combined.lowercase(Locale.ROOT)
         return lowerCombined.contains("provincial") || lowerCombined.contains("bbva")

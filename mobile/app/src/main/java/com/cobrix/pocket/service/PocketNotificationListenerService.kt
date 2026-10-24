@@ -117,6 +117,23 @@ class PocketNotificationListenerService : NotificationListenerService() {
     }
 
     private fun processStatusBarNotification(sbn: StatusBarNotification, playSound: Boolean): Boolean {
+        // 0. Filtros de seguridad del sistema Android:
+        // Descartar notificaciones emitidas por Zippy (evita feedback loop y falsos cobros de Binance Pay)
+        val sbnPackageName = sbn.packageName
+        if (sbnPackageName == packageName || sbnPackageName.contains("cobrix")) {
+            return false
+        }
+
+        // Descartar notificaciones persistentes (servicios foreground, etc.)
+        if (sbn.isOngoing) {
+            return false
+        }
+
+        // Descartar notificaciones resumen de grupo (FLAG_GROUP_SUMMARY) para evitar mezclar textos
+        if ((sbn.notification?.flags ?: 0) and Notification.FLAG_GROUP_SUMMARY != 0) {
+            return false
+        }
+
         // 1. Validar jornada de trabajo: Si la jornada está finalizada o en pausa, inactivar detección y soundbox
         if (!PreferencesHelper.isShiftActive(this)) {
             Log.d(TAG, "Jornada pausada/finalizada. Se omite detección de notificación.")
@@ -128,7 +145,6 @@ class PocketNotificationListenerService : NotificationListenerService() {
             return false
         }
 
-        val sbnPackageName = sbn.packageName
         val extras = sbn.notification?.extras ?: return false
         val title = extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()?.trim()
             ?: extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim()
@@ -165,19 +181,56 @@ class PocketNotificationListenerService : NotificationListenerService() {
             enabledBankCodes = enabledBankEnums
         ) ?: return false
 
-        // 4. Deduplicación profunda (Banco + Ref 4 dígitos + Monto)
+        // 4. Deduplicación profunda en memoria (Banco + Ref 4 dígitos + Monto)
         if (PaymentDeduplicator.isPaymentDuplicate(parsedPayment)) {
-            Log.w(TAG, "Pago duplicado detectado: ${parsedPayment.referenciaUltimos4} por ${parsedPayment.monto}")
+            Log.w(TAG, "Pago duplicado detectado en memoria: ${parsedPayment.referenciaUltimos4} por ${parsedPayment.monto}")
+            PaymentDeduplicator.markNotificationKeyProcessed(sbn.key)
             return false
         }
+
+        // 5. Deduplicación en Base de Datos SQLite (garantiza que si la app se abre o reinicia no vuelva a duplicar)
+        val isUsdt = (parsedPayment.moneda == "USD")
+        val amountVes = if (isUsdt) (parsedPayment.monto * profile.bcvRate) else parsedPayment.monto
+        val amountUsd = if (isUsdt) parsedPayment.monto else (if (profile.bcvRate > 0) parsedPayment.monto / profile.bcvRate else 0.0)
+
+        val cal = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val startOfDay = cal.timeInMillis
+
+        if (dbHelper.hasDuplicateIncome(parsedPayment.referenciaUltimos4, amountVes, amountUsd, startOfDay)) {
+            Log.w(TAG, "Pago ya registrado previamente en BD para la jornada: ref=${parsedPayment.referenciaUltimos4}, monto=$amountVes")
+            PaymentDeduplicator.markNotificationKeyProcessed(sbn.key)
+            return false
+        }
+
         PaymentDeduplicator.markNotificationKeyProcessed(sbn.key)
 
         Log.i(TAG, "¡Pago válido detectado! Banco: ${parsedPayment.bancoCodigo.displayName}, Monto: ${parsedPayment.monto}, Ref: ${parsedPayment.referenciaUltimos4}")
 
-        // 5. Guardar en Base de Datos Local
-        val isUsdt = (parsedPayment.moneda == "USD")
-        val amountVes = if (isUsdt) (parsedPayment.monto * profile.bcvRate) else parsedPayment.monto
-        val amountUsd = if (isUsdt) parsedPayment.monto else (if (profile.bcvRate > 0) parsedPayment.monto / profile.bcvRate else 0.0)
+        // 6. Guardar en Base de Datos Local
+        val hasExternalOrigin = parsedPayment.bancoEmisor != parsedPayment.bancoCodigo.displayName &&
+                parsedPayment.bancoEmisor != "SMS Bancario" &&
+                parsedPayment.bancoEmisor.isNotBlank()
+
+        val senderDetails = when {
+            hasExternalOrigin && !parsedPayment.telefonoOrigen.isNullOrBlank() ->
+                "${parsedPayment.bancoEmisor} • ${parsedPayment.telefonoOrigen}"
+            hasExternalOrigin ->
+                parsedPayment.bancoEmisor
+            !parsedPayment.telefonoOrigen.isNullOrBlank() ->
+                parsedPayment.telefonoOrigen
+            else -> ""
+        }
+
+        val noteText = if (hasExternalOrigin) {
+            "Detectado automáticamente en ${parsedPayment.bancoCodigo.displayName} (Origen: ${parsedPayment.bancoEmisor})"
+        } else {
+            "Detectado automáticamente de ${parsedPayment.bancoCodigo.displayName}"
+        }
 
         val tx = Transaction(
             amount = amountVes,
@@ -185,16 +238,16 @@ class PocketNotificationListenerService : NotificationListenerService() {
             reference = parsedPayment.referenciaUltimos4,
             bankCode = parsedPayment.bancoCodigo.sudebanCode,
             bankName = parsedPayment.bancoCodigo.displayName,
-            senderName = parsedPayment.telefonoOrigen ?: "",
+            senderName = senderDetails,
             type = TransactionType.INCOME,
             category = if (isUsdt) "Cripto / Binance Pay" else com.cobrix.pocket.data.model.TransactionCategories.INCOME_AUTO_PAGO_MOVIL,
-            note = "Detectado automáticamente de ${parsedPayment.bancoCodigo.displayName}",
+            note = noteText,
             timestamp = System.currentTimeMillis(),
             isManual = false
         )
         dbHelper.insertTransaction(tx)
 
-        // 6. Alerta Sonora y Voz según el modo de Soundbox configurado y capacidades del plan
+        // 7. Alerta Sonora y Voz según el modo de Soundbox configurado y capacidades del plan
         if (playSound) {
             if (profile.soundboxMode == "VOICE" && PlanCapabilityManager.canUseVoiceSoundbox(this)) {
                 if (isUsdt) {
@@ -207,35 +260,41 @@ class PocketNotificationListenerService : NotificationListenerService() {
             }
         }
 
-        // 7. Notificación visual en Android
+        // 8. Notificación visual en Android
+        val displayBankName = if (hasExternalOrigin) {
+            "${parsedPayment.bancoCodigo.displayName} (de ${parsedPayment.bancoEmisor})"
+        } else {
+            parsedPayment.bancoCodigo.displayName
+        }
+
         showLocalPaymentNotification(
             montoVes = amountVes,
             montoUsd = amountUsd,
             isUsdt = isUsdt,
             ref4 = parsedPayment.referenciaUltimos4,
-            banco = parsedPayment.bancoCodigo.displayName
+            banco = displayBankName
         )
 
-        // 8. Guardar para celebración si la app se abre justo después
+        // 9. Guardar para celebración si la app se abre justo después
         PreferencesHelper.savePendingCelebration(
             context = this,
             amount = amountVes,
             ref = parsedPayment.referenciaUltimos4,
-            bank = parsedPayment.bancoCodigo.displayName,
-            phone = parsedPayment.telefonoOrigen ?: "",
+            bank = displayBankName,
+            phone = senderDetails,
             amountUsd = amountUsd,
             isCrypto = isUsdt
         )
 
-        // 9. Notificar a la UI (MainActivity / FullScreenQrActivity) con package explícito para Android 14+
+        // 10. Notificar a la UI (MainActivity / FullScreenQrActivity) con package explícito para Android 14+
         val broadcastIntent = Intent(ACTION_PAYMENT_RECEIVED).apply {
             setPackage(this@PocketNotificationListenerService.packageName)
             putExtra(EXTRA_AMOUNT, amountVes)
             putExtra(EXTRA_AMOUNT_USD, amountUsd)
             putExtra(EXTRA_IS_CRYPTO, isUsdt)
             putExtra(EXTRA_REF, parsedPayment.referenciaUltimos4)
-            putExtra(EXTRA_BANK, parsedPayment.bancoCodigo.displayName)
-            putExtra(EXTRA_PHONE, parsedPayment.telefonoOrigen ?: "")
+            putExtra(EXTRA_BANK, displayBankName)
+            putExtra(EXTRA_PHONE, senderDetails)
         }
         sendBroadcast(broadcastIntent)
         return true
