@@ -115,4 +115,19 @@ class BinancePayParserTest {
         val canHandle = parser.canHandle(packageName, title, text)
         assertFalse("Binance no debe manejar notificaciones de Zippy", canHandle)
     }
+
+    @Test
+    fun testExactUserPushNotification() {
+        val packageName = "com.binance.dev"
+        val title = "Has recibido un pago"
+        val text = "Recibiste un pago de 0.37 USDT de Mcdh-61869"
+
+        assertTrue(parser.canHandle(packageName, title, text))
+
+        val payment = parser.parse(packageName, title, text, 1729710000000L)
+        assertNotNull(payment)
+        assertEquals(0.37, payment!!.monto, 0.001)
+        assertEquals("Mcdh-61869", payment.telefonoOrigen)
+        assertEquals("1869", payment.referenciaUltimos4)
+    }
 }

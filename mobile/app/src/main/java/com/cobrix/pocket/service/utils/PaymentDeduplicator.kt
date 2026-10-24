@@ -63,10 +63,34 @@ object PaymentDeduplicator {
         val key = "${payment.bancoCodigo.name}_${payment.referenciaUltimos4}_$formattedAmount"
         val now = System.currentTimeMillis()
 
+        // 1. Deduplicación estándar (Banco + Ref4 + Monto) para toda la jornada
         val lastSeen = recentPayments[key]
         if (lastSeen != null && (now - lastSeen) < DEDUPLICATION_WINDOW_MS) {
             Log.w(TAG, "Deduplicación activa: Se detectó pago repetido en ventana de 24h -> $key")
             return true
+        }
+
+        // 2. Deduplicación inteligente para Binance Pay (Push de Binance App vs Correo de Gmail)
+        if (payment.bancoCodigo == com.cobrix.pocket.data.model.BankCode.BINANCE) {
+            // A. Si coincide el remitente (ID / Nickname Binance) y el monto dentro de 10 minutos
+            if (!payment.telefonoOrigen.isNullOrBlank()) {
+                val senderKey = "BINANCE_SENDER_${payment.telefonoOrigen}_$formattedAmount"
+                val lastSenderSeen = recentPayments[senderKey]
+                if (lastSenderSeen != null && (now - lastSenderSeen) < 600_000L) {
+                    Log.w(TAG, "Deduplicación Binance activa (Push + Email por remitente/monto): $senderKey")
+                    return true
+                }
+                recentPayments[senderKey] = now
+            }
+
+            // B. Si llega un pago de Binance del mismo monto exacto dentro de 3 minutos
+            val binanceAmountKey = "BINANCE_AMT_$formattedAmount"
+            val lastAmtSeen = recentPayments[binanceAmountKey]
+            if (lastAmtSeen != null && (now - lastAmtSeen) < 180_000L) {
+                Log.w(TAG, "Deduplicación Binance activa (Push + Email simultáneo por monto): $binanceAmountKey")
+                return true
+            }
+            recentPayments[binanceAmountKey] = now
         }
 
         recentPayments[key] = now

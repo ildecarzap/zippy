@@ -23,9 +23,15 @@ class BinancePayParser : BankParser {
         """(?i)([0-9]+(?:[.,][0-9]{1,8})?|[0-9]*[.,][0-9]+)\s*(?:USDT|BUSD)"""
     )
 
-    // 4. Remitente / Pagador: "Remitente:\nMcdh-61869", "Remitente: Mcdh-61869", "Sender: John"
-    private val senderPattern = Pattern.compile(
-        """(?i)(?:remitente|sender|de|from)\s*[:.]?\s*([A-Za-z0-9_.-]+)"""
+    // 4. Remitente / Pagador
+    private val explicitSenderPattern = Pattern.compile(
+        """(?i)(?:remitente|sender)\s*[:.]?\s*([A-Za-z0-9_.-]+)"""
+    )
+    private val cryptoAfterSenderPattern = Pattern.compile(
+        """(?i)(?:USDT|USD|BUSD)\s+(?:de|from)\s+([A-Za-z0-9_.-]+)"""
+    )
+    private val fallbackSenderPattern = Pattern.compile(
+        """(?i)(?:de|from)\s+([A-Za-z][A-Za-z0-9_.-]*)"""
     )
 
     // 5. Referencia / ID de Orden o Pago: "ID de orden: 123456", "Order ID: 123456", "ID de transacción: ..."
@@ -119,9 +125,33 @@ class BinancePayParser : BankParser {
 
         if (amount == null || amount <= 0.0) return null
 
-        // Extraer remitente
-        val senderMatcher = senderPattern.matcher(combined)
-        val sender = if (senderMatcher.find()) senderMatcher.group(1)?.trim() else null
+        // Extraer remitente evitando capturar montos o números
+        var sender: String? = null
+        val explicitMatcher = explicitSenderPattern.matcher(combined)
+        if (explicitMatcher.find()) {
+            val candidate = explicitMatcher.group(1)?.trim()
+            if (candidate != null && !candidate.matches(Regex("^[0-9.]+$"))) {
+                sender = candidate
+            }
+        }
+        if (sender == null) {
+            val cryptoAfterMatcher = cryptoAfterSenderPattern.matcher(combined)
+            if (cryptoAfterMatcher.find()) {
+                val candidate = cryptoAfterMatcher.group(1)?.trim()
+                if (candidate != null && !candidate.matches(Regex("^[0-9.]+$"))) {
+                    sender = candidate
+                }
+            }
+        }
+        if (sender == null) {
+            val fallbackMatcher = fallbackSenderPattern.matcher(combined)
+            if (fallbackMatcher.find()) {
+                val candidate = fallbackMatcher.group(1)?.trim()
+                if (candidate != null && !candidate.matches(Regex("^[0-9.]+$"))) {
+                    sender = candidate
+                }
+            }
+        }
 
         // Extraer referencia u orden
         val orderMatcher = orderPattern.matcher(combined)

@@ -201,7 +201,14 @@ class PocketNotificationListenerService : NotificationListenerService() {
         }
         val startOfDay = cal.timeInMillis
 
-        if (dbHelper.hasDuplicateIncome(parsedPayment.referenciaUltimos4, amountVes, amountUsd, startOfDay)) {
+        if (dbHelper.hasDuplicateIncome(
+                reference = parsedPayment.referenciaUltimos4,
+                amountVes = amountVes,
+                amountUsd = amountUsd,
+                sinceTimestamp = startOfDay,
+                isCrypto = isUsdt,
+                sender = parsedPayment.telefonoOrigen
+            )) {
             Log.w(TAG, "Pago ya registrado previamente en BD para la jornada: ref=${parsedPayment.referenciaUltimos4}, monto=$amountVes")
             PaymentDeduplicator.markNotificationKeyProcessed(sbn.key)
             return false

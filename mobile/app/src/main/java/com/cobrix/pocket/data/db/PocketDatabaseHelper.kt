@@ -88,11 +88,52 @@ class PocketDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABAS
 
     /**
      * Verifica si ya existe en SQLite un cobro registrado con la misma referencia y monto
-     * dentro de una ventana de tiempo (ej. la jornada actual).
+     * dentro de una ventana de tiempo (ej. la jornada actual), o duplicado reciente de Binance Pay.
      */
-    fun hasDuplicateIncome(reference: String, amountVes: Double, amountUsd: Double = 0.0, sinceTimestamp: Long = 0L): Boolean {
-        if (reference.isBlank() || reference == "0000" || reference.equals("nada", ignoreCase = true)) return false
+    fun hasDuplicateIncome(
+        reference: String,
+        amountVes: Double,
+        amountUsd: Double = 0.0,
+        sinceTimestamp: Long = 0L,
+        isCrypto: Boolean = false,
+        sender: String? = null
+    ): Boolean {
         val db = readableDatabase
+
+        // Verificación especial para Binance Pay (Cripto): evitar duplicados entre Push y Gmail
+        if (isCrypto && amountUsd > 0.0) {
+            val tenMinutesAgo = System.currentTimeMillis() - 600_000L
+            val cryptoQuery = """
+                SELECT $COL_SENDER_NAME, $COL_REFERENCE FROM $TABLE_TRANSACTIONS 
+                WHERE $COL_TYPE = ? AND ($COL_CATEGORY LIKE '%Binance%' OR $COL_BANK_CODE = 'BINANCE')
+                AND ABS($COL_AMOUNT_USD - ?) < 0.005 
+                AND $COL_TIMESTAMP >= ?
+            """.trimIndent()
+            val cryptoCursor = db.rawQuery(cryptoQuery, arrayOf(TransactionType.INCOME.name, amountUsd.toString(), tenMinutesAgo.toString()))
+            var cryptoDuplicate = false
+            cryptoCursor.use {
+                while (it.moveToNext()) {
+                    val prevSender = it.getString(0) ?: ""
+                    val prevRef = it.getString(1) ?: ""
+                    // Si coincide monto y además (mismo remitente, o misma ref, o llegó en menos de 5 minutos)
+                    if (!sender.isNullOrBlank() && prevSender.isNotBlank() && (prevSender.contains(sender) || sender.contains(prevSender))) {
+                        cryptoDuplicate = true
+                        break
+                    }
+                    if (reference.isNotBlank() && prevRef == reference) {
+                        cryptoDuplicate = true
+                        break
+                    }
+                    // Si es exactamente el mismo monto USDT en menos de 10 minutos
+                    cryptoDuplicate = true
+                    break
+                }
+            }
+            if (cryptoDuplicate) return true
+        }
+
+        if (reference.isBlank() || reference == "0000" || reference.equals("nada", ignoreCase = true)) return false
+
         val query = if (sinceTimestamp > 0) {
             """
             SELECT COUNT(*) FROM $TABLE_TRANSACTIONS 
