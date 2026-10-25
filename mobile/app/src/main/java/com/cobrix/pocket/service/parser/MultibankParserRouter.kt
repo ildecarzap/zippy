@@ -45,6 +45,16 @@ class MultibankParserRouter {
 
         val combined = "$title $text"
 
+        // 0. FILTRO ANTI-ESTAFAS PARA SMS: Si la notificación proviene de una app de SMS (Google Messages, etc.),
+        // el remitente (title) DEBE ser un código corto bancario oficial o un nombre institucional de banco.
+        // Se bloquea de inmediato cualquier SMS proveniente de números celulares personales (0414, 0424, 0412, etc.).
+        if (ParserUtils.isSmsPackage(packageName)) {
+            if (!ParserUtils.isLegitimateBankSmsSender(title)) {
+                Log.w(TAG, "SMS descartado por seguridad anti-fraude: el remitente '$title' es un teléfono personal y no un banco oficial.")
+                return null
+            }
+        }
+
         // 1. FILTRO DE SALIDA: Descartar inmediatamente notificaciones de débito, compras o envíos salientes
         if (ParserUtils.isOutgoingTransaction(combined)) {
             Log.d(TAG, "Notificación descartada: es un pago saliente/débito ($packageName)")

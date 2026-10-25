@@ -123,12 +123,71 @@ object ParserUtils {
         return null
     }
 
+    // Códigos cortos SMS oficiales asignados a la banca en Venezuela
+    val OFFICIAL_BANK_SMS_SHORTCODES = setOf(
+        "2661", "2662", "26371", // BDV (Banco de Venezuela)
+        "2846",                  // Banesco
+        "24024",                 // Banco Mercantil
+        "2282",                  // BBVA Provincial
+        "8234",                  // Bancamiga
+        "2620", "2621",          // BNC (Banco Nacional de Crédito)
+        "2376",                  // Banco del Tesoro
+        "2274",                  // Bancaribe
+        "100100",                // 100% Banco
+        "8244"                   // Ubii
+    )
+
     fun isSmsPackage(packageName: String): Boolean {
         val lower = packageName.lowercase(Locale.ROOT)
         return lower.contains("mms") ||
                lower.contains("messaging") ||
                lower.contains("message") ||
                lower.contains("telephony")
+    }
+
+    /**
+     * Valida si el remitente de una notificación SMS es un emisor bancario institucional legítimo.
+     * FILTRO ANTI-ESTAFAS: Bloquea inmediatamente mensajes de números celulares personales (0414, 0424, etc.)
+     * para evitar que un tercero envíe un SMS falso fingiendo ser el banco.
+     */
+    fun isLegitimateBankSmsSender(sender: String?): Boolean {
+        if (sender.isNullOrBlank()) return false
+        val clean = sender.replace("+", "").replace("-", "").replace(" ", "").trim().lowercase(Locale.ROOT)
+
+        // 1. Si el remitente es un número celular personal venezolano o estándar internacional -> BLOQUEAR
+        val isMobileNumber = clean.startsWith("58414") || clean.startsWith("58424") || clean.startsWith("58412") ||
+                clean.startsWith("58416") || clean.startsWith("58426") ||
+                clean.startsWith("0414") || clean.startsWith("0424") || clean.startsWith("0412") ||
+                clean.startsWith("0416") || clean.startsWith("0426") ||
+                clean.startsWith("414") || clean.startsWith("424") || clean.startsWith("412") ||
+                clean.startsWith("416") || clean.startsWith("426")
+
+        if (isMobileNumber) {
+            return false // Es un teléfono celular común y corriente de persona, NUNCA un banco
+        }
+
+        // Si es una cadena numérica de más de 6 dígitos que no sea un shortcode conocido -> BLOQUEAR
+        if (clean.all { it.isDigit() } && clean.length > 6 && !OFFICIAL_BANK_SMS_SHORTCODES.contains(clean)) {
+            return false
+        }
+
+        // 2. Si es uno de los códigos cortos bancarios oficiales (2661, 2846, 24024, etc.) -> VÁLIDO
+        if (OFFICIAL_BANK_SMS_SHORTCODES.contains(clean)) {
+            return true
+        }
+
+        // 3. Si el remitente es un nombre corporativo / Alphanumeric Sender ID oficial de banco -> VÁLIDO
+        val hasBankKeyword = clean.contains("bdv") || clean.contains("venezuela") ||
+                clean.contains("banesco") || clean.contains("mercantil") ||
+                clean.contains("provincial") || clean.contains("bbva") ||
+                clean.contains("bnc") || clean.contains("bancamiga") ||
+                clean.contains("bancaribe") || clean.contains("tesoro") ||
+                clean.contains("banplus") || clean.contains("plaza") ||
+                clean.contains("sofitasa") || clean.contains("ubii") ||
+                clean.contains("100% banco") || clean.contains("100%banco") ||
+                clean.contains("banco")
+
+        return hasBankKeyword
     }
 
     /**
