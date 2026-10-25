@@ -15,7 +15,8 @@ class BanescoParser : BankParser {
             pkg.contains("bancamiga") || pkg.contains("ubii")) return false
 
         val combined = "$title $text".lowercase(Locale.ROOT)
-        return combined.contains("banesco") && !combined.contains("de banesco")
+        return combined.contains("banesco") || combined.contains("pago movil banesco") ||
+                combined.contains("pago móvil banesco") || combined.contains("2846")
     }
 
     override fun parse(

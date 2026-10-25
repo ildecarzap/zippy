@@ -39,8 +39,10 @@ object PreferencesHelper {
     private const val KEY_PRICE_1M = "pricing_pro_1m"
     private const val KEY_PRICE_3M = "pricing_pro_3m"
     private const val KEY_PRICE_12M = "pricing_pro_12m"
+    private const val KEY_DETECT_SMS = "pref_detect_sms_enabled"
+    private const val KEY_FIRST_LAUNCH = "pref_is_first_launch"
 
-    val DEFAULT_ENABLED_BANKS = setOf("0178", "0134", "0102", "0105", "0108", "0191", "0172")
+    val DEFAULT_ENABLED_BANKS = setOf("0102", "0134", "0105", "0108", "0191", "0172", "0178", "0000")
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -75,7 +77,7 @@ object PreferencesHelper {
     }
 
     fun getPrimaryBankCode(context: Context): String {
-        return getPrefs(context).getString(KEY_BANK_CODE, "0178") ?: "0178"
+        return getPrefs(context).getString(KEY_BANK_CODE, "0102") ?: "0102"
     }
 
     fun setPrimaryBank(context: Context, bankCode: String, bankName: String) {
@@ -104,7 +106,7 @@ object PreferencesHelper {
 
     fun getEnabledBankCodes(context: Context): Set<String> {
         val prefs = getPrefs(context)
-        val primary = prefs.getString(KEY_BANK_CODE, "0178") ?: "0178"
+        val primary = prefs.getString(KEY_BANK_CODE, "0102") ?: "0102"
 
         // Si el usuario está en el Plan Básico (gratis), solo tiene acceso a 1 banco activo (el que elija libremente)
         if (!PlanCapabilityManager.canUseMultibank(context)) {
@@ -134,11 +136,61 @@ object PreferencesHelper {
     }
 
     fun isSmsDetectionEnabled(context: Context): Boolean {
-        return isBankDetectionEnabled(context, "0000")
+        return getPrefs(context).getBoolean(KEY_DETECT_SMS, true)
     }
 
     fun setSmsDetectionEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_DETECT_SMS, enabled).apply()
         setBankDetectionEnabled(context, "0000", enabled)
+    }
+
+    fun isFirstLaunch(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_FIRST_LAUNCH, true)
+    }
+
+    fun setFirstLaunch(context: Context, isFirst: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_FIRST_LAUNCH, isFirst).apply()
+    }
+
+    /**
+     * Agrega un banco a la lista de bancos configurados del usuario.
+     */
+    fun addConfiguredBank(context: Context, bankCode: String, bankName: String) {
+        val prefs = getPrefs(context)
+        val current = getEnabledBankCodes(context).toMutableSet()
+        current.add(bankCode)
+        prefs.edit().putStringSet(KEY_ENABLED_BANKS, current).apply()
+        // Si no había banco principal o estaba en default sin QR, asegurar que sea utilizable
+        if (prefs.getString(KEY_BANK_CODE, null).isNullOrEmpty()) {
+            setPrimaryBank(context, bankCode, bankName)
+        }
+    }
+
+    /**
+     * Remueve un banco de la lista y borra su código QR asociado.
+     */
+    fun removeConfiguredBank(context: Context, bankCode: String) {
+        val prefs = getPrefs(context)
+        clearBankQr(context, bankCode)
+        val current = getEnabledBankCodes(context).toMutableSet()
+        current.remove(bankCode)
+        val editor = prefs.edit().putStringSet(KEY_ENABLED_BANKS, current)
+        // Si se removió el banco principal, asignar el siguiente banco disponible
+        val primary = prefs.getString(KEY_BANK_CODE, "0102")
+        if (primary == bankCode) {
+            val remaining = current.filter { it != "0000" && BankCatalog.findByCode(it) != null }
+            val nextCode = remaining.firstOrNull() ?: "0102"
+            val nextName = BankCatalog.findByCode(nextCode)?.name ?: "Banco de Venezuela"
+            editor.putString(KEY_BANK_CODE, nextCode)
+            editor.putString(KEY_BANK_NAME, nextName)
+            val nextQr = getBankQrUri(context, nextCode)
+            if (nextQr != null) {
+                editor.putString(KEY_QR_URI, nextQr)
+            } else {
+                editor.remove(KEY_QR_URI)
+            }
+        }
+        editor.apply()
     }
 
     /**
@@ -155,7 +207,7 @@ object PreferencesHelper {
 
         // Fallback de emergencia: banco principal configurado
         val prefs = getPrefs(context)
-        val primary = prefs.getString(KEY_BANK_CODE, "0178") ?: "0178"
+        val primary = prefs.getString(KEY_BANK_CODE, "0102") ?: "0102"
         return listOf(primary)
     }
 
@@ -172,7 +224,7 @@ object PreferencesHelper {
         val prefs = getPrefs(context)
         val specific = prefs.getString("qr_image_uri_$bankCode", null)
         if (!specific.isNullOrEmpty()) return specific
-        val activeBank = prefs.getString(KEY_BANK_CODE, "0178")
+        val activeBank = prefs.getString(KEY_BANK_CODE, "0102")
         if (bankCode == activeBank) {
             return prefs.getString(KEY_QR_URI, null)
         }
@@ -193,7 +245,7 @@ object PreferencesHelper {
         } else {
             editor.remove("qr_image_uri_$bankCode")
         }
-        val activeBank = prefs.getString(KEY_BANK_CODE, "0178")
+        val activeBank = prefs.getString(KEY_BANK_CODE, "0102")
         if (bankCode == activeBank) {
             if (uri != null) {
                 editor.putString(KEY_QR_URI, uri)
@@ -350,19 +402,34 @@ object PreferencesHelper {
         } else {
             rawSoundboxMode
         }
-        val bankCode = prefs.getString(KEY_BANK_CODE, "0178") ?: "0178"
+        val bankCode = prefs.getString(KEY_BANK_CODE, "0102") ?: "0102"
         val bankEntry = BankCatalog.findByCode(bankCode)
-        val defaultBankName = bankEntry?.name ?: "Ubii App"
+        val defaultBankName = bankEntry?.name ?: "Banco de Venezuela"
         val bankName = prefs.getString(KEY_BANK_NAME, defaultBankName) ?: defaultBankName
         val bankQr = getBankQrUri(context, bankCode)
 
+        var merchantName = prefs.getString(KEY_MERCHANT_NAME, "") ?: ""
+        if (merchantName == "Mi Negocio / Taxi" || merchantName == "Mi Negocio") {
+            merchantName = ""
+        }
+
+        var phoneNumber = prefs.getString(KEY_PHONE, "") ?: ""
+        if (phoneNumber == "04141234567") {
+            phoneNumber = ""
+        }
+
+        var idCard = prefs.getString(KEY_ID_CARD, "") ?: ""
+        if (idCard == "V-18456789") {
+            idCard = ""
+        }
+
         return UserProfile(
-            merchantName = prefs.getString(KEY_MERCHANT_NAME, "Mi Negocio / Taxi") ?: "",
+            merchantName = merchantName,
             businessCategory = prefs.getString(KEY_BUSINESS_CATEGORY, "Transporte / Taxi") ?: "Transporte / Taxi",
             bankCode = bankCode,
             bankName = bankName,
-            phoneNumber = prefs.getString(KEY_PHONE, "04141234567") ?: "",
-            idCard = prefs.getString(KEY_ID_CARD, "V-18456789") ?: "",
+            phoneNumber = phoneNumber,
+            idCard = idCard,
             email = prefs.getString(KEY_EMAIL, "") ?: "",
             qrImageUri = bankQr,
             bcvRate = prefs.getFloat(KEY_BCV_RATE, 45.0f).toDouble(),

@@ -21,8 +21,8 @@ mobile/*.iml
 mobile/.cxx/
 mobile/captures/
 mobile/app/build/
-mobile/*.apk
-mobile/*.aab
+*.apk
+*.aab
 
 # Python / FastAPI (Web)
 web/__pycache__/

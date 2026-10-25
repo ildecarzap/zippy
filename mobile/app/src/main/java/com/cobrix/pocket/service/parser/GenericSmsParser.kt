@@ -12,14 +12,27 @@ class GenericSmsParser : BankParser {
         if (ParserUtils.isOutgoingTransaction(combined)) return false
 
         val isSms = ParserUtils.isSmsPackage(packageName)
+        if (!isSms) return false
+
         val lower = combined.lowercase(Locale.ROOT)
-        val hasPaymentWords = lower.contains("recibiste") ||
+        val hasPaymentWords = ParserUtils.hasIncomingIndicators(combined) ||
+                lower.contains("recibiste") ||
                 lower.contains("recibido") ||
+                lower.contains("recibio") ||
+                lower.contains("recibió") ||
                 lower.contains("tpago") ||
                 lower.contains("pago movil") ||
+                lower.contains("pago móvil") ||
                 lower.contains("pagoclave") ||
-                lower.contains("abono")
-        return isSms && hasPaymentWords
+                lower.contains("pago clave") ||
+                lower.contains("abono") ||
+                lower.contains("acreditado") ||
+                lower.contains("acreditada") ||
+                lower.contains("credito") ||
+                lower.contains("crédito") ||
+                lower.contains("dinero rapido") ||
+                lower.contains("dinero rápido")
+        return hasPaymentWords
     }
 
     override fun parse(

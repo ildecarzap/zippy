@@ -15,16 +15,17 @@ object ParserUtils {
 
     // Extrae montos en formatos: 1.250,50 | 1.800,00 | 1800,00 | 1800.00 | 1.800 | 1800 | 50,00 | 50.00 precedidos o seguidos de Bs / VES
     private val AMOUNT_PATTERNS = listOf(
-        Pattern.compile("""(?:bs\.?|bsd\.?|ves|bsf\.?)\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("""($AMOUNT_NUMBER_REGEX)\s*(?:bs\.?|bsd\.?|ves)""", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("""(?:monto|por|valor|importe)\s*[:.]?\s*(?:bs\.?|ves)?\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("""(?:bs\.?|bsd\.?|bss\.?|ves|bsf\.?)\s*[:.]?\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("""($AMOUNT_NUMBER_REGEX)\s*[:.]?\s*(?:bs\.?|bsd\.?|bss\.?|ves)""", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("""(?:monto|por|valor|importe)\s*[:.]?\s*(?:bs\.?|ves)?\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("""(?:recibido|recibiste|abono|acreditado|acreditada)\s*(?:de|por)?\s*[:.]?\s*(?:bs\.?|ves)?\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE)
     )
 
     // Extrae referencias de 4 a 16 dígitos
     private val REFERENCE_PATTERNS = listOf(
-        Pattern.compile("""(?:ref\.?|referencia|nro\.?|operaci[oó]n|num|clave)\s*[:.]?\s*([0-9]{4,16})""", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("""\b(?:ref|nro)[:#\s]*([0-9]{4,16})\b""", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("""\b([0-9]{8,16})\b""") // Números largos de 8+ dígitos si no tienen palabra ref explícita
+        Pattern.compile("""(?:ref\.?|referencia|nro\.?|operaci[oó]n|num|clave|comprobante|recibo|secuencia|aprobaci[oó]n|id|transacci[oó]n)\s*[:.]?\s*([0-9]{4,16})""", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("""\b(?:ref|nro|id|sec|op)[:#\s]*([0-9]{4,16})\b""", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("""\b([0-9]{6,16})\b""") // Números de 6+ dígitos si no tienen palabra ref explícita
     )
 
     // Extrae números venezolanos (0414, 0424, 0412, 0416, 0426)
@@ -32,18 +33,23 @@ object ParserUtils {
         """(?:\+?58|0)?\s*(414|424|412|416|426)[-.\s]*([0-9]{3})[-.\s]*([0-9]{4})"""
     )
 
-    // Catálogo de bancos para identificación del emisor en el texto
+    // Catálogo de bancos para identificación del emisor en el texto (incluyendo números cortos SMS oficiales)
     private val KNOWN_BANKS = mapOf(
         "mercantil" to "Banco Mercantil",
+        "24024" to "Banco Mercantil",
         "banesco" to "Banesco",
+        "2846" to "Banesco",
         "venezuela" to "Banco de Venezuela",
         "bdv" to "Banco de Venezuela",
+        "2661" to "Banco de Venezuela",
+        "2662" to "Banco de Venezuela",
         "provincial" to "BBVA Provincial",
         "bbva" to "BBVA Provincial",
+        "2282" to "BBVA Provincial",
         "bnc" to "Banco Nacional de Crédito",
         "banco nacional de credito" to "Banco Nacional de Crédito",
-        "bancaribe" to "Bancaribe",
         "bancamiga" to "Bancamiga",
+        "8234" to "Bancamiga",
         "banplus" to "Banplus",
         "plaza" to "Banco Plaza",
         "tesoro" to "Banco del Tesoro",
@@ -71,11 +77,20 @@ object ParserUtils {
     }
 
     fun extractReference(text: String): String? {
+        val detectedPhone = extractPhone(text)
         for (pattern in REFERENCE_PATTERNS) {
             val matcher = pattern.matcher(text)
-            if (matcher.find()) {
+            while (matcher.find()) {
                 val ref = matcher.group(1)?.trim()
                 if (!ref.isNullOrBlank() && ref.length >= 4) {
+                    // Evitar que un número de teléfono sea catalogado como referencia bancaria
+                    if (detectedPhone != null && (ref == detectedPhone || (ref.length >= 7 && detectedPhone.contains(ref)))) {
+                        continue
+                    }
+                    if ((ref.startsWith("0414") || ref.startsWith("0424") || ref.startsWith("0412") ||
+                         ref.startsWith("0416") || ref.startsWith("0426") || ref.startsWith("584")) && ref.length in 10..12) {
+                        continue
+                    }
                     return ref
                 }
             }
@@ -127,59 +142,43 @@ object ParserUtils {
                lower.contains("email")
     }
 
-    // Palabras inequívocas de que la transacción es un débito o pago saliente realizado por el usuario
-    private val OUTGOING_KEYWORDS = listOf(
-        "has realizado",
-        "realizaste",
+    // Frases explícitas e inequívocas de que la transacción es un débito o pago saliente realizado por el usuario
+    private val STRICT_OUTGOING_KEYWORDS = listOf(
         "has enviado",
         "enviaste",
+        "has realizado un pago",
+        "realizaste un pago",
         "envio de pago movil",
         "envío de pago móvil",
         "envio de pago",
         "envío de pago",
-        "envio exitoso",
-        "envío exitoso",
         "pago movil enviado",
         "pago móvil enviado",
-        "pago movil exitoso",
-        "pago móvil exitoso",
-        "debito",
-        "débito",
+        "debito a su cuenta",
+        "débito a su cuenta",
+        "debito en cuenta",
+        "débito en cuenta",
         "cargo en cuenta",
-        "cargado",
-        "transferencia realizada",
         "transferencia enviada",
+        "transferencia realizada a terceros",
+        "transferencia a terceros",
+        "transferencia saliente",
         "has transferido",
         "transferiste",
         "comprobante de envio",
         "comprobante de envío",
-        "pago realizado",
-        "pago emitido",
-        "operacion realizada",
-        "operación realizada",
-        "compra realizada",
-        "compra en",
         "compra pos",
-        "punto de venta",
-        "pago en comercio",
-        "cargo por comision",
-        "cargo por comisión",
-        "comision",
-        "comisión",
+        "compra en punto de venta",
         "retiro de cajero",
+        "retiro en cajero",
         "retiro cajero",
         "retiro atm",
-        "retiro",
         "pago de tarjeta",
         "pago tdd",
         "pago tdc",
-        "transferencia a terceros",
-        "transferencia saliente",
-        "egreso",
         "salida de fondos",
         "recarga realizada",
-        "pago de servicio",
-        "consumo"
+        "pago de servicio"
     )
 
     // Palabras inequívocas de que la transacción es un crédito o dinero recibido
@@ -224,7 +223,18 @@ object ParserUtils {
      */
     fun isOutgoingTransaction(text: String): Boolean {
         val lower = text.lowercase(Locale.ROOT)
-        return OUTGOING_KEYWORDS.any { lower.contains(it) }
+        // Si contiene palabras inequívocas de crédito / dinero recibido, NUNCA es saliente,
+        // salvo que explícitamente diga que el usuario lo envió
+        if (hasIncomingIndicators(text)) {
+            val userSentExplicitly = lower.contains("has enviado") ||
+                    lower.contains("enviaste") ||
+                    lower.contains("pago movil enviado") ||
+                    lower.contains("pago móvil enviado") ||
+                    lower.contains("has transferido") ||
+                    lower.contains("transferiste")
+            return userSentExplicitly
+        }
+        return STRICT_OUTGOING_KEYWORDS.any { lower.contains(it) }
     }
 
     /**

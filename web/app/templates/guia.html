@@ -4,136 +4,362 @@
 <div class="container" style="padding: 48px 24px;">
   
   <!-- Encabezado de la Guía -->
-  <div style="text-align: center; margin-bottom: 48px;">
-    <span class="badge badge-pro" style="margin-bottom: 12px;">Manual Oficial de Usuario</span>
-    <h1 style="font-size: 2.25rem; font-weight: 800; margin-bottom: 12px;">
+  <div style="text-align: center; margin-bottom: 40px;">
+    <span class="badge badge-pro" style="margin-bottom: 12px;">Manual Oficial con Fotos • Versión 2026</span>
+    <h1 style="font-size: 2.25rem; font-weight: 800; margin-bottom: 12px; color: var(--color-text-main);">
       Guía de Inicio Rápido e Instructivo Zeasy
     </h1>
-    <p style="color: var(--color-text-muted); max-width: 650px; margin: 0 auto;">
-      Aprende a configurar tu cuenta, mostrar los códigos QR de tus bancos, recibir pagos con sonido de caja y cuadrar tu día con la tasa BCV oficial.
+    <p style="color: var(--color-text-muted); max-width: 680px; margin: 0 auto; font-size: 1.05rem; line-height: 1.6;">
+      Aprende paso a paso cómo configurar tus datos, vincular tus bancos y códigos QR, activar el botón <strong>"En Jornada"</strong> para cantar los pagos en voz alta y cuadrar tu día con la tasa BCV oficial.
     </p>
   </div>
 
-  <div style="max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px;">
+  <!-- Botones Descargar Folletos PDF -->
+  <div style="display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-bottom: 36px;">
+    <a href="/static/docs/zeasy-folleto-media-carta-optimizado.pdf" download class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; font-weight: 700; border-radius: var(--radius-md); box-shadow: var(--shadow-md);">
+      <span>📄</span> Descargar Folleto (Media Carta • 2 por hoja)
+    </a>
+    <a href="/static/docs/zeasy-folleto-un-cuarto-carta.pdf" download class="btn btn-soft" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; font-weight: 700; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+      <span>📑</span> Descargar Folleto (Cuarto de Carta • 4 por hoja)
+    </a>
+  </div>
 
-    <!-- Paso 1 -->
-    <div class="card">
-      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
-        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">1</span>
-        <h2 style="font-size: 1.35rem; font-weight: 700;">Configura tu Comercio y Bancos</h2>
-      </div>
-      <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
-        Al abrir Zeasy por primera vez, ingresa en la pestaña <strong>Configuraciones</strong> en la barra inferior:
-      </p>
-      <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
-        <li><strong>Nombre del negocio:</strong> El nombre comercial con el que te identifican tus clientes.</li>
-        <li><strong>Rubro:</strong> Selecciona la categoría de tu comercio (Alimentos, Farmacia, Ropa, etc.).</li>
-        <li><strong>Teléfono de Pago Móvil:</strong> El número asociado a tus cuentas bancarias para recibir fondos.</li>
-        <li><strong>Bancos Disponibles:</strong> Elige entre <em>Banesco, Mercantil, BNC o Banco de Venezuela</em>. Puedes activar o desactivar cada banco con un simple toque.</li>
-        <li><strong>Billeteras Digitales (Plan PRO):</strong> Si posees Zeasy PRO, puedes activar el apartado de billeteras para recibir pagos con código QR de <strong>Binance Pay (USDT)</strong> y billeteras internacionales.</li>
-        <li><strong>Cargar Código QR:</strong> Puedes asociar la imagen de tu código QR específico a cada banco o billetera seleccionada. Zeasy cuenta con validación inteligente que verifica que cada QR sea auténtico y pertenezca a la categoría correspondiente.</li>
-      </ul>
-    </div>
+  <div style="max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 36px;">
 
-    <!-- Paso 2 -->
-    <div class="card">
-      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
-        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">2</span>
-        <h2 style="font-size: 1.35rem; font-weight: 700;">Cobro Inmediato con QR en Mostrador</h2>
-      </div>
-      <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
-        En la pantalla principal (<strong>Inicio</strong>), Zeasy te muestra las tarjetas de cobro de tus bancos y billeteras habilitadas:
-      </p>
-      <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
-        <li>Toca la tarjeta del banco o billetera que tu cliente desea utilizar para proyectar su código QR en pantalla completa.</li>
-        <li>El cliente solo debe escanear el QR desde la app de su banco o Binance sin tener que digitar tu teléfono ni cédula.</li>
-        <li><strong>Cobrar por WhatsApp:</strong> Si el cliente está pagando a distancia, presiona el botón <em>"Cobrar por WhatsApp"</em> para enviar los datos bancarios, monto y comprobante directamente por chat.</li>
-      </ul>
-    </div>
+    <!-- ========================================================================= -->
+    <!-- ALERTA MÁXIMA / REGLA DE ORO #1: ESTAR "EN JORNADA" ACTIVA -->
+    <!-- ========================================================================= -->
+    <div style="background: linear-gradient(135deg, #064E3B 0%, #065F46 100%); border: 2px solid #10B981; border-radius: var(--radius-lg); padding: 28px 24px; color: #FFFFFF; box-shadow: 0 10px 25px rgba(5, 150, 105, 0.25);">
+      <div style="display: flex; align-items: flex-start; gap: 18px; flex-wrap: wrap;">
+        <div style="background: #10B981; color: #FFFFFF; font-size: 2rem; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+          🟢
+        </div>
+        <div style="flex: 1; min-width: 260px;">
+          <div style="display: inline-block; background: rgba(16, 185, 129, 0.25); border: 1px solid #34D399; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; color: #A7F3D0;">
+            Condición Indispensable para Choferes y Negocios
+          </div>
+          <h2 style="font-size: 1.45rem; font-weight: 800; margin: 0 0 10px 0; color: #FFFFFF;">
+            El botón «En Jornada» DEBE estar activo (Verde) para escuchar los pagos
+          </h2>
+          <p style="font-size: 0.98rem; color: #D1FAE5; line-height: 1.6; margin: 0 0 16px 0;">
+            Zeasy cuenta con un sistema inteligente de protección y descanso. <strong>Si tu jornada está en pausa o finalizada, la aplicación ignora intencionalmente las notificaciones</strong> para no despertarte de noche ni mezclar gastos personales con los de tu trabajo.
+          </p>
 
-    <!-- Paso 3 -->
-    <div class="card">
-      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
-        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">3</span>
-        <h2 style="font-size: 1.35rem; font-weight: 700;">Soundbox: Confirmación Sonora y Lectura Push</h2>
-      </div>
-      <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
-        ¡No pierdas tiempo pidiendo capturas de pantalla ni revisando la banca en línea! Zeasy detecta las notificaciones de tu banco al instante:
-      </p>
-      <div style="background-color: var(--color-surface-soft); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: 16px;">
-        <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>🔔 Plan Básico (Gratuito):</strong> Emite el sonido nítido de una auténtica campana de caja registradora <em>"¡Ka-ching!"</em> cuando recibes un Pago Móvil.</p>
-        <p style="font-size: 0.9rem;"><strong>🗣️ Zeasy PRO:</strong> Además del sonido, una voz inteligente canta en voz alta el monto exacto y el banco (ej: <em>"Pago móvil recibido de 450 bolívares en Banesco"</em>).</p>
-      </div>
-
-      <!-- ALERTA VITAL: Dependencia 100% de Notificaciones Push y Batería -->
-      <div style="background: #FFFBEB; border: 1px solid #FCD34D; border-left: 5px solid #F59E0B; padding: 18px 20px; border-radius: var(--radius-md);">
-        <h3 style="font-size: 1rem; font-weight: 700; color: #92400E; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-          <span>⚠️</span> REQUISITO CRÍTICO: ¿Cómo garantizar que la detección funcione siempre?
-        </h3>
-        <p style="font-size: 0.88rem; color: #78350F; line-height: 1.5; margin-bottom: 10px;">
-          <strong>El funcionamiento del Soundbox depende al 100% de las notificaciones que tu propio banco envía a tu celular.</strong> Si el banco no te envía una notificación o tu teléfono la silencia, Zeasy no podrá cantarla. Asegúrate de cumplir estos 3 pasos:
-        </p>
-        <ol style="margin-left: 20px; font-size: 0.88rem; color: #78350F; line-height: 1.6;">
-          <li><strong>Notificaciones del Banco Activas:</strong> Verifica que la app de tu banco (o la app de Mensajes SMS de tu banco) tenga permiso de mostrar notificaciones y banners en tu pantalla.</li>
-          <li><strong>Permiso de Notificaciones en Zeasy:</strong> Al instalar la app, concédele acceso a notificaciones en <em>Ajustes de Zeasy > Detección de Pagos</em>.</li>
-          <li><strong>Batería "Sin Restricciones" (Vital en Xiaomi, Samsung y Motorola):</strong> Ve a <em>Ajustes de tu Celular > Aplicaciones > Zeasy > Batería</em> y selecciona <strong>"Sin Restricciones" (No optimizar)</strong>. Esto evita que Android ponga la app a "dormir" en segundo plano cuando apagues la pantalla.</li>
-        </ol>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.15);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="display: inline-flex; align-items: center; gap: 6px; background: #047857; color: #ECFDF5; padding: 6px 14px; border-radius: 20px; font-weight: 800; font-size: 0.88rem; border: 1px solid #34D399;">
+                🟢 En Jornada
+              </span>
+              <span style="font-size: 0.88rem; color: #A7F3D0;">
+                <strong>LISTO PARA COBRAR:</strong> Soundbox activo y escuchando pagos en segundo plano.
+              </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="display: inline-flex; align-items: center; gap: 6px; background: #374151; color: #9CA3AF; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.88rem; border: 1px solid #4B5563;">
+                ⚪ Pausa / Fin
+              </span>
+              <span style="font-size: 0.88rem; color: #D1D5DB;">
+                <strong>EN REPOSO:</strong> La app no canta pagos para permitirte descansar.
+              </span>
+            </div>
+          </div>
+          <p style="font-size: 0.88rem; color: #FCD34D; margin-top: 12px; margin-bottom: 0;">
+            💡 <strong>Consejo para taxistas:</strong> Al encender tu taxi o comenzar tu turno cada día, abre Zeasy y verifica que en la esquina superior derecha aparezca el botón verde <strong>«En Jornada»</strong>.
+          </p>
+        </div>
       </div>
     </div>
 
-    <!-- Paso 4 -->
-    <div class="card">
-      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
-        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">4</span>
-        <h2 style="font-size: 1.35rem; font-weight: 700;">Carga por Voz de Ingresos y Egresos</h2>
+    <!-- ========================================================================= -->
+    <!-- SECCIÓN CRÍTICA: Puntos Fundamentales a Tener en Cuenta -->
+    <!-- ========================================================================= -->
+    <div style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border: 2px solid #FCD34D; border-radius: var(--radius-lg); padding: 26px 22px; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.12);">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+        <span style="font-size: 1.8rem;">⚡</span>
+        <div>
+          <h2 style="font-size: 1.3rem; font-weight: 800; color: #92400E; margin: 0;">
+            Las 3 Reglas de Oro Técnicas de Zeasy
+          </h2>
+          <p style="font-size: 0.9rem; color: #78350F; margin-top: 4px; line-height: 1.4;">
+            Para que no se te escape ningún pago móvil, revisa que cumplas estas 3 condiciones en tu teléfono:
+          </p>
+        </div>
       </div>
-      <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
-        En la pestaña <strong>Jornada</strong>, puedes registrar las ventas en efectivo, compras a proveedores o gastos de transporte tocando el botón de micrófono:
-      </p>
-      <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
-        <li>Di: <code>"Ingreso diez dólares venta de repuestos"</code> → Se registra automáticamente como ingreso en USD.</li>
-        <li>Di: <code>"Gasto quince dólares compra de bolsas"</code> → Se resta de tu balance como egreso del día.</li>
-      </ul>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 18px;">
+        
+        <!-- Punto 1: QR Sin Monto -->
+        <div style="background: #FFFFFF; border-radius: var(--radius-md); padding: 18px; border: 1px solid #FDE68A; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+              <span style="background: #FEE2E2; color: #DC2626; font-weight: 800; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">1</span>
+              <h3 style="font-size: 0.98rem; font-weight: 700; color: #1E293B;">QRs Bancarios: ¡SIN monto configurado!</h3>
+            </div>
+            <p style="font-size: 0.86rem; color: #475569; line-height: 1.5;">
+              Al descargar tu código QR desde la app de tu banco (BDV, Banesco, Mercantil, Provincial, etc.), <strong>déjalo siempre SIN monto fijo</strong> (monto en 0 o en blanco).
+            </p>
+          </div>
+          <div style="margin-top: 12px; padding: 10px; background: #FEF2F2; border-radius: var(--radius-sm); border-left: 3px solid #EF4444;">
+            <p style="font-size: 0.8rem; color: #991B1B; line-height: 1.45; margin: 0;">
+              <strong>⚠️ Motivo:</strong> Si le fijas un monto, el QR siempre cobrará exactamente esa misma cantidad fija a cada cliente o carrera.
+            </p>
+          </div>
+        </div>
+
+        <!-- Punto 2: Notificaciones Activas -->
+        <div style="background: #FFFFFF; border-radius: var(--radius-md); padding: 18px; border: 1px solid #FDE68A; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+              <span style="background: #DBEAFE; color: #2563EB; font-weight: 800; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">2</span>
+              <h3 style="font-size: 0.98rem; font-weight: 700; color: #1E293B;">Notificaciones bancarias y SMS activos</h3>
+            </div>
+            <p style="font-size: 0.86rem; color: #475569; line-height: 1.5;">
+              Las apps de tus bancos y tu aplicación de Mensajes SMS deben tener <strong>las notificaciones y avisos permitidos</strong> en el teléfono.
+            </p>
+          </div>
+          <div style="margin-top: 12px; padding: 10px; background: #EFF6FF; border-radius: var(--radius-sm); border-left: 3px solid #3B82F6;">
+            <p style="font-size: 0.8rem; color: #1E40AF; line-height: 1.45; margin: 0;">
+              <strong>🔔 Motivo:</strong> Zeasy lee la notificación oficial que emite tu banco en la barra superior. Si está silenciada, no podrá cantar el cobro.
+            </p>
+          </div>
+        </div>
+
+        <!-- Punto 3: Mismo Número Celular -->
+        <div style="background: #FFFFFF; border-radius: var(--radius-md); padding: 18px; border: 1px solid #FDE68A; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+              <span style="background: #D1FAE5; color: #059669; font-weight: 800; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">3</span>
+              <h3 style="font-size: 0.98rem; font-weight: 700; color: #1E293B;">Mismo teléfono en el equipo y en el banco</h3>
+            </div>
+            <p style="font-size: 0.86rem; color: #475569; line-height: 1.5;">
+              El celular donde tienes instalado Zeasy <strong>debe ser el mismo número que tienes afiliado para recibir los pagos móviles</strong>.
+            </p>
+          </div>
+          <div style="margin-top: 12px; padding: 10px; background: #ECFDF5; border-radius: var(--radius-sm); border-left: 3px solid #10B981;">
+            <p style="font-size: 0.8rem; color: #065F46; line-height: 1.45; margin: 0;">
+              <strong>📱 Motivo:</strong> El banco envía el SMS o alerta push al chip que está dentro de este teléfono.
+            </p>
+          </div>
+        </div>
+
+      </div>
     </div>
 
-    <!-- Paso 5 -->
-    <div class="card">
-      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
-        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">5</span>
-        <h2 style="font-size: 1.35rem; font-weight: 700;">Cierre de Jornada y Tasa Oficial BCV</h2>
+    <!-- ========================================================================= -->
+    <!-- PASO 1: PANTALLA DE AJUSTES (PERFIL Y TASA BCV) -->
+    <!-- ========================================================================= -->
+    <div class="card" style="padding: 28px;">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px;">
+        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.15rem; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">1</span>
+        <div>
+          <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0;">Paso 1: Ajustes • Identificación y Tasa BCV</h2>
+          <span style="font-size: 0.85rem; color: var(--color-text-muted);">Configuración inicial del negocio o chofer</span>
+        </div>
       </div>
-      <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
-        Al terminar tu día de trabajo:
-      </p>
-      <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
-        <li>Revisa el total cobrado en Bolívares y su equivalencia en Dólares según la tasa oficial del BCV del momento exacto del cobro.</li>
-        <li>Genera reportes descargables en formato <strong>Excel (.csv)</strong> o <strong>PDF</strong> (exclusivo de Zeasy PRO). El nombre del archivo se guarda con la fecha y hora exacta (ej. <code>reporte_jornada_21-10-26_1630.csv</code> o <code>.pdf</code>) e incluye los números de referencia para auditar con el banco.</li>
-      </ul>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; align-items: center;">
+        <div>
+          <p style="color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 14px;">
+            En la barra inferior, toca el icono <strong>⚙️ Ajustes</strong>:
+          </p>
+          <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
+            <li><strong>Limpieza con un toque:</strong> Al tocar la casilla de <em>Nombre</em>, <em>Cédula</em> o <em>Teléfono</em>, los datos de ejemplo se borran solos al instante. No tienes que borrar letra por letra.</li>
+            <li><strong>Nombre del Negocio / Chofer:</strong> Escribe tu nombre o nombre comercial (ej. <em>Taxi 45, Abasto El Triunfo</em>).</li>
+            <li><strong>Rubro del Negocio:</strong> Selecciona <em>Transporte / Taxi</em>, <em>Comercio</em>, u <em>Otro</em>.</li>
+            <li><strong>Tasa BCV del Día:</strong> Presiona el botón <strong>[🔄 BCV Oficial]</strong> para consultar y actualizar la tasa oficial automáticamente en un clic.</li>
+            <li><strong>Modo Claro / Modo Oscuro:</strong> Elige la visualización que prefieras para cuidar la batería y visibilidad en tu auto.</li>
+          </ul>
+        </div>
+        <div style="text-align: center;">
+          <div style="display: inline-block; background: #0F172A; padding: 10px; border-radius: 28px; box-shadow: 0 14px 30px rgba(0,0,0,0.18); border: 2px solid #E2E8F0;">
+            <img src="/static/images/app-guide/guia-3-ajustes-perfil.png" alt="Ajustes Perfil Zeasy" style="width: 100%; max-width: 260px; height: auto; border-radius: 20px; display: block;">
+          </div>
+          <div style="margin-top: 8px; font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600;">
+            📱 Pantalla de Ajustes: Perfil y Tasa BCV
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Paso 6 -->
-    <div class="card">
-      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
-        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.1rem; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">6</span>
-        <h2 style="font-size: 1.35rem; font-weight: 700;">Copia de Seguridad y Cambio de Celular</h2>
+    <!-- ========================================================================= -->
+    <!-- PASO 2: PANTALLA DE AJUSTES (BANCOS Y QR UNIFICADOS) -->
+    <!-- ========================================================================= -->
+    <div class="card" style="padding: 28px;">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px;">
+        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.15rem; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">2</span>
+        <div>
+          <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0;">Paso 2: Pago Móvil, Bancos y Código QR Directo</h2>
+          <span style="font-size: 0.85rem; color: var(--color-text-muted);">Carga el QR de tu banco en un solo lugar</span>
+        </div>
       </div>
-      <p style="color: var(--color-text-muted); margin-bottom: 14px; font-size: 0.95rem;">
-        Si cambias de teléfono o quieres asegurar tus datos:
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; align-items: center;">
+        <div style="text-align: center; order: 2;">
+          <div style="display: inline-block; background: #0F172A; padding: 10px; border-radius: 28px; box-shadow: 0 14px 30px rgba(0,0,0,0.18); border: 2px solid #E2E8F0;">
+            <img src="/static/images/app-guide/guia-4-ajustes-bancos-qr.png" alt="Bancos y QR Zeasy" style="width: 100%; max-width: 260px; height: auto; border-radius: 20px; display: block;">
+          </div>
+          <div style="margin-top: 8px; font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600;">
+            📱 Tarjeta de Banco y Carga de QR unificada
+          </div>
+        </div>
+
+        <div style="order: 1;">
+          <p style="color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 14px;">
+            Desliza hacia abajo en la misma pestaña de <strong>Ajustes</strong>:
+          </p>
+          <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
+            <li><strong>Teléfono Pago Móvil y Cédula:</strong> Ingresa tus datos receptores exactos.</li>
+            <li><strong>Tarjeta de Banco y QR Integrado:</strong> El banco seleccionado (ej. <em>Banco Mercantil, BDV, Banesco</em>) tiene allí mismo los botones <strong>[✂️ Cargar / Cambiar QR]</strong> y <strong>[👁️ Ver QR]</strong>. Ya no tienes que buscar opciones por separado.</li>
+            <li><strong>Recorte guiado del QR:</strong> Al subir la captura, la app te permite recortar el código de forma centrada para que el escáner del cliente lo lea en medio segundo.</li>
+            <li><strong>Botón <code>(+) Agregar otro banco y código QR</code>:</strong> Si cobras por más de un banco (multibanco), presiona este botón para agregarlo con su propio QR.</li>
+            <li><strong>Interruptor «Escuchar pagos por SMS bancario»:</strong> Déjalo encendido (verde) para capturar cobros cuando no tengas datos y te llegue un mensaje de texto.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PASO 3: SOUNDBOX, ALERTAS Y BOTÓN GUARDAR -->
+    <!-- ========================================================================= -->
+    <div class="card" style="padding: 28px;">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px;">
+        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.15rem; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">3</span>
+        <div>
+          <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0;">Paso 3: Soundbox de Voz y Guardar Configuración</h2>
+          <span style="font-size: 0.85rem; color: var(--color-text-muted);">Elige cómo quieres que Zeasy te avise al cobrar</span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; align-items: center;">
+        <div>
+          <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
+            <li><strong>Billeteras Digitales y Cripto (Binance Pay):</strong> Sección exclusiva para cobrar en USDT sin tocar bancos nacionales. Puedes activar el interruptor y subir tu QR de Binance Pay.</li>
+            <li><strong>🎉 Pantalla con Confeti:</strong> Enciende este interruptor para que al caer un pago la pantalla se ilumine con fuegos artificiales y muestre el monto y referencia en gigante (ideal para enseñárselo al cliente).</li>
+            <li><strong>Modo de Soundbox:</strong>
+              <ul>
+                <li><strong>🗣️ Voz:</strong> Canta en altavoz: <em>"Pago móvil recibido de 180 bolívares en Banco Mercantil"</em>.</li>
+                <li><strong>💰 Caja:</strong> Emite el clásico sonido de campana <em>¡Ka-ching!</em>.</li>
+                <li><strong>🔕 Silencio:</strong> Alerta visual únicamente.</li>
+              </ul>
+            </li>
+            <li><strong>🔊 Botón «Probar Soundbox ahora»:</strong> Presiónalo para escuchar una prueba y regular el volumen del celular.</li>
+            <li><strong>💾 ¡IMPORTANTE! Botón «Guardar Configuración»:</strong> Al terminar de colocar tus datos, pulsa el botón azul grande al final para guardar todos tus cambios en la memoria del teléfono.</li>
+          </ul>
+        </div>
+        <div style="text-align: center;">
+          <div style="display: inline-block; background: #0F172A; padding: 10px; border-radius: 28px; box-shadow: 0 14px 30px rgba(0,0,0,0.18); border: 2px solid #E2E8F0;">
+            <img src="/static/images/app-guide/guia-5-ajustes-soundbox.png" alt="Soundbox y Guardar en Zeasy" style="width: 100%; max-width: 260px; height: auto; border-radius: 20px; display: block;">
+          </div>
+          <div style="margin-top: 8px; font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600;">
+            📱 Soundbox, Confeti y Guardar
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PASO 4: PANTALLA COBRAR (MOSTRAR QR Y WHATSAPP) -->
+    <!-- ========================================================================= -->
+    <div class="card" style="padding: 28px;">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px;">
+        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.15rem; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">4</span>
+        <div>
+          <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0;">Paso 4: Pantalla «Cobrar» • Tu Mostrador Diario</h2>
+          <span style="font-size: 0.85rem; color: var(--color-text-muted);">Muestra tu código QR en brillo máximo o cobra por chat</span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; align-items: center;">
+        <div style="text-align: center; order: 2;">
+          <div style="display: inline-block; background: #0F172A; padding: 10px; border-radius: 28px; box-shadow: 0 14px 30px rgba(0,0,0,0.18); border: 2px solid #E2E8F0;">
+            <img src="/static/images/app-guide/guia-1-cobrar.png" alt="Pantalla Cobrar con QR" style="width: 100%; max-width: 260px; height: auto; border-radius: 20px; display: block;">
+          </div>
+          <div style="margin-top: 8px; font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600;">
+            📱 Pantalla Principal de Cobro
+          </div>
+        </div>
+
+        <div style="order: 1;">
+          <p style="color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 14px;">
+            En la pestaña <strong>💳 Cobrar</strong>:
+          </p>
+          <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
+            <li><strong>Botón 🟢 «En Jornada» (Arriba a la derecha):</strong> Verifica siempre que esté encendido en color verde. Si dice <em>Pausa</em>, tócalo para reanudar el turno.</li>
+            <li><strong>📸 Mostrar Código QR en Pantalla:</strong> Toca el botón azul de tu banco. La pantalla se colocará al 100% de brillo con tu QR en grande y tus datos (teléfono, cédula y banco) para que el pasajero escanee cómodamente desde el asiento trasero.</li>
+            <li><strong>💬 Digitar Monto y Enviar por WhatsApp:</strong> Si un cliente no está presente o quiere los datos por mensaje, presiona este botón para escribir el monto en Bolívares o Dólares y enviar la solicitud de cobro con formato profesional a su WhatsApp.</li>
+            <li><strong>➕ Agregar nuevo QR:</strong> Acceso rápido a Ajustes si necesitas configurar un banco adicional.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PASO 5: PANTALLA JORNADA (TOTAL GANADO Y GASTOS) -->
+    <!-- ========================================================================= -->
+    <div class="card" style="padding: 28px;">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px;">
+        <span style="background-color: var(--color-primary-soft); color: var(--color-primary); font-weight: 800; font-size: 1.15rem; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--color-primary-border);">5</span>
+        <div>
+          <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0;">Paso 5: Pantalla «Jornada» • Cuadre Diario y Carga por Voz</h2>
+          <span style="font-size: 0.85rem; color: var(--color-text-muted);">Control total de tus cobros, gasolina y gastos</span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; align-items: center;">
+        <div>
+          <p style="color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 14px;">
+            En la pestaña <strong>📋 Jornada</strong>:
+          </p>
+          <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
+            <li><strong>Ganancia Neta en Tiempo Real:</strong> Zeasy suma automáticamente cada pago móvil que entra y te muestra el total en <strong>Bolívares (Bs.) y su equivalente exacto en Dólares ($ USD)</strong> con la tasa oficial BCV de cada momento.</li>
+            <li><strong>🎙️ Cargar Movimiento por Voz:</strong> Mientras conduces o atiendes, no necesitas teclear. Presiona el botón del micrófono y di:
+              <br><em style="color: var(--color-primary); font-weight: 600;">"Ingreso cinco dólares carrera a Altamira"</em> o 
+              <br><em style="color: #DC2626; font-weight: 600;">"Gasto veinte dólares de gasolina"</em>.
+            </li>
+            <li><strong>📊 Botón Reportes (PDF y Excel):</strong> Al terminar tu día, genera tu reporte consolidado con números de referencia bancaria para auditar tus cuentas o compartirlo por WhatsApp.</li>
+            <li><strong>Filtros Hoy / Ayer / Todos:</strong> Consulta el historial de días anteriores con un solo toque.</li>
+          </ul>
+        </div>
+        <div style="text-align: center;">
+          <div style="display: inline-block; background: #0F172A; padding: 10px; border-radius: 28px; box-shadow: 0 14px 30px rgba(0,0,0,0.18); border: 2px solid #E2E8F0;">
+            <img src="/static/images/app-guide/guia-2-jornada.png" alt="Pantalla Jornada Zeasy" style="width: 100%; max-width: 260px; height: auto; border-radius: 20px; display: block;">
+          </div>
+          <div style="margin-top: 8px; font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600;">
+            📱 Pantalla de Jornada y Cierre de Ventas
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- ALERTA DE BATERÍA Y PERMISOS DEL SISTEMA -->
+    <!-- ========================================================================= -->
+    <div style="background: #F8FAFC; border: 1px solid var(--color-border); border-left: 5px solid var(--color-primary); padding: 22px 24px; border-radius: var(--radius-md);">
+      <h3 style="font-size: 1.1rem; font-weight: 800; color: #1E293B; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+        <span>🔋</span> Ajuste Vital de Batería en Teléfonos Xiaomi, Samsung y Motorola
+      </h3>
+      <p style="font-size: 0.9rem; color: #475569; line-height: 1.6; margin-bottom: 12px;">
+        Los teléfonos Android modernos a veces ponen las aplicaciones a «dormir» si apagas la pantalla para ahorrar batería. Para asegurarte de que Zeasy cante los pagos incluso con el teléfono bloqueado o guardado en el bolsillo:
       </p>
-      <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
-        <li>En <strong>Configuraciones → Copia de Seguridad</strong>, presiona <em>"Exportar Respaldo"</em>.</li>
-        <li>Puedes enviarte el archivo por WhatsApp o guardarlo en Google Drive.</li>
-        <li>En tu nuevo teléfono, instala Zeasy y presiona <em>"Restaurar Respaldo"</em> para recuperar todas tus transacciones, configuraciones y códigos QR de inmediato.</li>
-      </ul>
+      <ol style="margin-left: 20px; font-size: 0.88rem; color: #334155; line-height: 1.7;">
+        <li>Entra en <strong>Ajustes de tu celular → Aplicaciones → Zeasy</strong>.</li>
+        <li>Toca en <strong>Batería</strong> (o <em>Ahorro de batería</em>).</li>
+        <li>Selecciona <strong>«Sin Restricciones»</strong> (o <em>No optimizar</em>).</li>
+      </ol>
+      <p style="font-size: 0.85rem; color: #059669; font-weight: 700; margin-top: 8px; margin-bottom: 0;">
+        ✅ Con esto, Zeasy cantará tus pagos de inmediato sin importar si la pantalla está apagada o si estás usando otra aplicación como Waze, Maps o WhatsApp.
+      </p>
     </div>
 
   </div>
 
-  <!-- Pie de ayuda -->
-  <div style="text-align: center; margin-top: 48px;">
-    <p style="color: var(--color-text-muted); margin-bottom: 16px;">¿Tienes alguna duda o necesitas ayuda para configurar tu banco?</p>
-    <a href="https://wa.me/{{ settings.COMPANY_WHATSAPP }}?text=Hola,%20necesito%20ayuda%20con%20la%20app%20Zeasy" target="_blank" class="btn btn-primary">
-      💬 Contactar a Soporte por WhatsApp
+  <!-- Pie de ayuda y Soporte -->
+  <div style="text-align: center; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--color-border);">
+    <p style="color: var(--color-text-muted); margin-bottom: 16px; font-size: 1rem;">
+      ¿Tienes alguna duda o quieres que te ayudemos a configurar tu banco y QR?
+    </p>
+    <a href="https://wa.me/{{ settings.COMPANY_WHATSAPP }}?text=Hola,%20necesito%20ayuda%20para%20configurar%20mi%20Zeasy" target="_blank" class="btn btn-primary" style="padding: 12px 28px; font-weight: 700; font-size: 1rem; border-radius: var(--radius-md);">
+      💬 Contactar a Asistencia Técnica por WhatsApp
     </a>
   </div>
 

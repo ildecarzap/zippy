@@ -15,8 +15,7 @@ class MercantilParser : BankParser {
             pkg.contains("bancamiga") || pkg.contains("ubii")) return false
 
         val combined = "$title $text".lowercase(Locale.ROOT)
-        return combined.contains("tpago") ||
-                (combined.contains("mercantil") && !combined.contains("de mercantil"))
+        return combined.contains("tpago") || combined.contains("mercantil") || combined.contains("24024")
     }
 
     override fun parse(

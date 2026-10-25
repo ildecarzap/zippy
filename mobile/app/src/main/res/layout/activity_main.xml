@@ -859,6 +859,93 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
+                    <!-- TARJETA INFORMATIVA: GUÍA RÁPIDA DE CONFIGURACIÓN -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardOnboardingGuide"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/accent_cyan"
+                        app:strokeWidth="1.5dp"
+                        app:cardBackgroundColor="@color/surface">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="🚀 Guía Rápida de Configuración"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="15sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="3 PASOS"
+                                    android:textColor="@color/accent_cyan"
+                                    android:textStyle="bold"
+                                    android:textSize="10sp"
+                                    android:background="#1500D2C4"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="3dp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="1️⃣ Ingresa tu Teléfono y Cédula donde recibes tus pagos móviles.\n2️⃣ Agrega tu Banco y sube tu Código QR.\n⚠️ IMPORTANTE: En tu banco genera el QR SIN MONTO FIJO para que tus pasajeros puedan escanearlo siempre.\n3️⃣ Activa los permisos de notificaciones para que Zeasy cante los pagos en voz alta."
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp"
+                                android:lineSpacingExtra="3dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginTop="12dp">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnOpenWebGuide"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="44dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="📖 Ver Guía con Fotos"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnQuickSupport"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="44dp"
+                                    android:layout_marginStart="4dp"
+                                    android:text="💬 WhatsApp"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    app:cornerRadius="8dp" />
+                            </LinearLayout>
+
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
                     <!-- TARJETA 1: DATOS DEL COMERCIO Y TASA BCV -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
@@ -1075,21 +1162,69 @@
                                     android:textColor="@color/text_primary" />
                             </com.google.android.material.textfield.TextInputLayout>
 
-                            <!-- Banco Principal Receptor -->
-                            <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginVertical="14dp"
+                                android:background="@color/border" />
+
+                            <!-- SECCIÓN UNIFICADA: MIS BANCOS Y CÓDIGOS QR -->
+                            <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:hint="Banco Principal Predeterminado">
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
 
-                                <AutoCompleteTextView
-                                    android:id="@+id/actvSettingsBank"
-                                    android:layout_width="match_parent"
+                                <TextView
+                                    android:layout_width="0dp"
                                     android:layout_height="wrap_content"
-                                    android:inputType="none"
-                                    android:textColor="@color/text_primary" />
-                            </com.google.android.material.textfield.TextInputLayout>
+                                    android:layout_weight="1"
+                                    android:text="🏦 Mis Bancos y Códigos QR"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="INMEDIATO"
+                                    android:textColor="@color/accent_cyan"
+                                    android:textStyle="bold"
+                                    android:textSize="10sp"
+                                    android:background="#1500D2C4"
+                                    android:paddingHorizontal="7dp"
+                                    android:paddingVertical="3dp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Configura tus bancos y carga el código QR de cada uno en un solo lugar:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp" />
+
+                            <!-- Contenedor dinámico de bancos y sus códigos QR -->
+                            <LinearLayout
+                                android:id="@+id/llConfiguredBanksContainer"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:layout_marginTop="10dp" />
+
+                            <!-- Botón (+) Agregar otro banco y QR -->
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnAddAnotherBank"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="50dp"
+                                android:layout_marginTop="4dp"
+                                android:text="➕ Agregar otro banco y código QR"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/accent_cyan"
+                                app:strokeColor="@color/accent_cyan"
+                                app:cornerRadius="10dp" />
 
                             <View
                                 android:layout_width="match_parent"
@@ -1097,165 +1232,23 @@
                                 android:layout_marginVertical="14dp"
                                 android:background="@color/border" />
 
-                            <!-- Sub-sección QR por Banco -->
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <!-- Detección automática por SMS Bancario -->
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/switchDetectSms"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Bancos disponibles para cobro con QR:"
+                                android:text="🔔 Escuchar pagos por SMS bancario"
+                                android:textSize="13sp"
                                 android:textStyle="bold"
-                                android:textColor="@color/text_primary"
-                                android:textSize="13sp" />
+                                android:textColor="@color/text_primary" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Toca un banco para cargar su QR exclusivo o activar/desactivar su botón en caja:"
+                                android:text="Detecta automáticamente pagos móviles recibidos por mensajes de texto de tu banco (ej. BDV 26371, Banesco 2661)."
                                 android:textColor="@color/text_secondary"
-                                android:textSize="12sp" />
-
-                            <!-- Chips de Bancos Disponibles (Banesco, BDV, Mercantil, BNC) -->
-                            <HorizontalScrollView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:scrollbars="none"
-                                android:layout_marginTop="8dp">
-
-                                <com.google.android.material.chip.ChipGroup
-                                    android:id="@+id/chipGroupSettingsBanks"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    app:singleSelection="true"
-                                    app:selectionRequired="true" />
-                            </HorizontalScrollView>
-
-                            <!-- Tarjeta interactiva del banco seleccionado -->
-                            <com.google.android.material.card.MaterialCardView
-                                android:id="@+id/cardSelectedBankConfig"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="10dp"
-                                app:cardCornerRadius="12dp"
-                                app:cardElevation="0dp"
-                                app:strokeColor="@color/border"
-                                app:strokeWidth="1dp"
-                                app:cardBackgroundColor="@color/surface_variant">
-
-                                <LinearLayout
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:orientation="vertical"
-                                    android:padding="14dp">
-
-                                    <LinearLayout
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:orientation="horizontal"
-                                        android:gravity="center_vertical">
-
-                                        <TextView
-                                            android:id="@+id/tvSettingsSelectedBankName"
-                                            android:layout_width="0dp"
-                                            android:layout_height="wrap_content"
-                                            android:layout_weight="1"
-                                            android:text="Banesco (0134)"
-                                            android:textColor="@color/text_primary"
-                                            android:textStyle="bold"
-                                            android:textSize="15sp" />
-
-                                        <TextView
-                                            android:id="@+id/tvSettingsSelectedBankPrimaryBadge"
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="wrap_content"
-                                            android:text="⭐ PRINCIPAL"
-                                            android:textColor="@color/accent_cyan"
-                                            android:textStyle="bold"
-                                            android:textSize="11sp"
-                                            android:background="#1500D2C4"
-                                            android:paddingHorizontal="8dp"
-                                            android:paddingVertical="3dp" />
-                                    </LinearLayout>
-
-                                    <TextView
-                                        android:id="@+id/tvSettingsSelectedBankQrStatus"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:layout_marginTop="4dp"
-                                        android:text="⚠️ Sin código QR cargado"
-                                        android:textColor="@color/text_secondary"
-                                        android:textSize="12sp" />
-
-                                    <!-- Botones de Acción para el QR -->
-                                    <LinearLayout
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:orientation="horizontal"
-                                        android:layout_marginTop="10dp">
-
-                                        <com.google.android.material.button.MaterialButton
-                                            android:id="@+id/btnUploadSelectedBankQr"
-                                            style="@style/Widget.Material3.Button.TonalButton"
-                                            android:layout_width="0dp"
-                                            android:layout_height="44dp"
-                                            android:layout_weight="1"
-                                            android:layout_marginEnd="3dp"
-                                            android:text="✂️ Subir QR"
-                                            android:textSize="11sp"
-                                            android:textStyle="bold"
-                                            app:cornerRadius="8dp" />
-
-                                        <com.google.android.material.button.MaterialButton
-                                            android:id="@+id/btnViewSelectedBankQr"
-                                            style="@style/Widget.Material3.Button.OutlinedButton"
-                                            android:layout_width="0dp"
-                                            android:layout_height="44dp"
-                                            android:layout_weight="1"
-                                            android:layout_marginHorizontal="3dp"
-                                            android:text="👁️ Ver QR"
-                                            android:textSize="11sp"
-                                            android:textStyle="bold"
-                                            app:cornerRadius="8dp" />
-
-                                        <com.google.android.material.button.MaterialButton
-                                            android:id="@+id/btnDeleteSelectedBankQr"
-                                            style="@style/Widget.Material3.Button.TextButton"
-                                            android:layout_width="wrap_content"
-                                            android:layout_height="44dp"
-                                            android:layout_marginStart="3dp"
-                                            android:text="🗑️ Quitar"
-                                            android:textSize="11sp"
-                                            android:textColor="@color/expense_red" />
-                                    </LinearLayout>
-
-                                    <View
-                                        android:layout_width="match_parent"
-                                        android:layout_height="1dp"
-                                        android:layout_marginVertical="10dp"
-                                        android:background="@color/border" />
-
-                                    <!-- Switch Activar / Destildar banco para caja y detección -->
-                                    <com.google.android.material.materialswitch.MaterialSwitch
-                                        android:id="@+id/switchSelectedBankDetection"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:text="Habilitar banco en caja y detección"
-                                        android:textSize="13sp"
-                                        android:textStyle="bold"
-                                        android:textColor="@color/text_primary" />
-
-                                    <!-- Botón para marcar como Principal -->
-                                    <com.google.android.material.button.MaterialButton
-                                        android:id="@+id/btnMakeSelectedBankPrimary"
-                                        style="@style/Widget.Material3.Button.TextButton"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="38dp"
-                                        android:layout_marginTop="4dp"
-                                        android:text="⭐ Marcar como Banco Principal Predeterminado"
-                                        android:textSize="11sp"
-                                        android:textColor="@color/accent_cyan" />
-
-                                </LinearLayout>
-                            </com.google.android.material.card.MaterialCardView>
+                                android:textSize="11sp" />
 
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
@@ -1533,16 +1526,6 @@
                                 android:textColor="@color/text_secondary"
                                 android:textSize="12sp" />
 
-                            <!-- Detección de SMS Bancarios General -->
-                            <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/switchDetectSms"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="12dp"
-                                android:text="📨 Detectar Pagos por SMS Bancarios"
-                                android:textSize="13sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/text_primary" />
 
                             <!-- Pantalla de Celebración / Confeti al Recibir Pago -->
                             <com.google.android.material.materialswitch.MaterialSwitch

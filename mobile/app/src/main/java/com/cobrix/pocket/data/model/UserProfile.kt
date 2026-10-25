@@ -3,8 +3,8 @@ package com.cobrix.pocket.data.model
 data class UserProfile(
     val merchantName: String = "",       // Nombre del negocio o chofer
     val businessCategory: String = "Transporte / Taxi", // Rubro del comercio
-    val bankCode: String = "0178",        // Código del banco receptor (ej. 0178 Ubii App)
-    val bankName: String = "Ubii App",     // Nombre del banco receptor
+    val bankCode: String = "0102",        // Código del banco receptor (ej. 0102 Banco de Venezuela)
+    val bankName: String = "Banco de Venezuela",     // Nombre del banco receptor
     val phoneNumber: String = "",         // Teléfono registrado en Pago Móvil (ej. 04141234567)
     val idCard: String = "",              // Cédula o RIF (ej. V-18456789)
     val email: String = "",               // Correo electrónico para notificaciones y facturación
@@ -13,7 +13,7 @@ data class UserProfile(
     val soundNotificationEnabled: Boolean = true, // Alarma / voz al recibir pago
     val voiceAnnouncementEnabled: Boolean = true, // Anunciar por altavoz/Bluetooth
     val soundboxMode: String = "VOICE",   // "VOICE", "CHIME", "MUTED"
-    val enabledBankCodes: Set<String> = setOf("0178", "0134", "0102", "0105", "0108", "0191", "0172"), // Bancos a detectar
+    val enabledBankCodes: Set<String> = setOf("0102", "0134", "0105", "0108", "0191", "0172", "0178", "0000"), // Bancos a detectar
     val biometricSecurityEnabled: Boolean = false // Bloqueo de apertura con huella o PIN
 )
 

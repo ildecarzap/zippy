@@ -162,35 +162,13 @@ class PocketNotificationListenerService : NotificationListenerService() {
         val isPro = PlanCapabilityManager.isPro(this)
         val profile = PreferencesHelper.getUserProfile(this)
 
-        // En Plan Básico Gratuito se detecta siempre el banco principal configurado. En PRO se detectan todos los bancos habilitados.
-        val allowedBankCodes = if (isPro) {
-            profile.enabledBankCodes
-        } else {
-            setOf(profile.bankCode)
-        }
-
-        val enabledBankEnums = allowedBankCodes.mapNotNull { code ->
-            com.cobrix.pocket.data.model.BankCode.fromSudeban(code)
-                ?: com.cobrix.pocket.data.model.BankCode.fromCode(code)
-        }.toMutableSet()
-
-        // Si el usuario tiene Binance Pay habilitado en sus ajustes, incluirlo en la detección
-        if (PreferencesHelper.isBinanceEnabled(this)) {
-            enabledBankEnums.add(com.cobrix.pocket.data.model.BankCode.BINANCE)
-        }
-
-        // Si el usuario tiene habilitada la detección de SMS bancarios, incluir BankCode.SMS
-        if (PreferencesHelper.isSmsDetectionEnabled(this)) {
-            enabledBankEnums.add(com.cobrix.pocket.data.model.BankCode.SMS)
-        }
-
-        // 3. Parseo mediante router bancario filtrando bancos permitidos
+        // 3. Parseo mediante router bancario: Detecta cualquier banco o SMS que llegue al dispositivo del usuario
         val parsedPayment = parserRouter.routeAndParse(
             packageName = sbnPackageName,
             title = title,
             text = text,
             postTimeMillis = postTime,
-            enabledBankCodes = enabledBankEnums
+            enabledBankCodes = emptySet()
         ) ?: return false
 
         // 4. Deduplicación profunda en memoria (Banco + Ref 4 dígitos + Monto)
@@ -356,6 +334,33 @@ class PocketNotificationListenerService : NotificationListenerService() {
         extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
             parts.add(it)
         }
+
+        // 6. android.messages & historicMessages (MessagingStyle para Google Messages / Samsung Messages)
+        try {
+            val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+            if (messages != null) {
+                for (msg in messages) {
+                    if (msg is Bundle) {
+                        val msgText = msg.getCharSequence("text")?.toString()?.trim()
+                        if (!msgText.isNullOrEmpty()) {
+                            parts.add(msgText)
+                        }
+                    }
+                }
+            }
+
+            val historic = extras.getParcelableArray(Notification.EXTRA_HISTORIC_MESSAGES)
+            if (historic != null) {
+                for (msg in historic) {
+                    if (msg is Bundle) {
+                        val msgText = msg.getCharSequence("text")?.toString()?.trim()
+                        if (!msgText.isNullOrEmpty()) {
+                            parts.add(msgText)
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) { }
 
         return parts.joinToString("\n")
     }
