@@ -18,15 +18,18 @@ object BiometricHelper {
 
     fun showBiometricPrompt(
         activity: FragmentActivity,
+        title: String = "Zeasy",
+        subtitle: String = "Confirma tu identidad para acceder a la caja",
+        description: String = "Coloca tu huella digital o ingresa el PIN del teléfono",
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
         val executor = ContextCompat.getMainExecutor(activity)
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Zeasy")
-            .setSubtitle("Confirma tu identidad para acceder a la caja")
-            .setDescription("Coloca tu huella digital o ingresa el PIN del teléfono")
+            .setTitle(title)
+            .setSubtitle(subtitle)
+            .setDescription(description)
             .setAllowedAuthenticators(
                 BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
             )

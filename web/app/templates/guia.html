@@ -111,6 +111,7 @@
             En la barra inferior, toca el icono <strong>⚙️ Ajustes</strong>:
           </p>
           <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
+            <li><strong>🔒 Acceso Protegido con Huella / PIN:</strong> Al tocar Ajustes, Zeasy te solicita tu huella dactilar o PIN del teléfono para garantizar que nadie pueda cambiar tus cuentas bancarias ni tus códigos QR si dejas el celular en el mostrador o vehículo.</li>
             <li><strong>Limpieza con un toque:</strong> Al tocar la casilla de <em>Nombre</em>, <em>Cédula</em> o <em>Teléfono</em>, los datos de ejemplo se borran solos al instante. No tienes que borrar letra por letra.</li>
             <li><strong>Nombre del Negocio / Chofer:</strong> Escribe tu nombre o nombre comercial (ej. <em>Taxi 45, Abasto El Triunfo</em>).</li>
             <li><strong>Rubro del Negocio:</strong> Selecciona <em>Transporte / Taxi</em>, <em>Comercio</em>, u <em>Otro</em>.</li>
@@ -274,6 +275,70 @@
           </div>
           <div style="margin-top: 8px; font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600;">
             📱 Pantalla de Jornada y Cierre de Ventas
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PROTOCOLOS DE SEGURIDAD PERSONAL Y ANTI-FRAUDE -->
+    <!-- ========================================================================= -->
+    <div style="background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%); border: 1.5px solid #BFDBFE; border-radius: var(--radius-lg); padding: 26px 24px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+        <span style="font-size: 1.8rem;">🛡️</span>
+        <div>
+          <h2 style="font-size: 1.25rem; font-weight: 800; color: #1E3A8A; margin: 0;">
+            Seguridad Personal y Protección Anti-Fraude
+          </h2>
+          <p style="font-size: 0.9rem; color: #3B82F6; margin-top: 4px; line-height: 1.4;">
+            Cómo Zeasy blinda tus ingresos contra estafas, suplantación y manipulaciones físicas:
+          </p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 16px;">
+        <!-- Tarjeta 1: Bloqueo de Ajustes y QR -->
+        <div style="background: #FFFFFF; border-radius: var(--radius-md); padding: 18px; border: 1px solid #DBEAFE; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: #1E293B; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+              <span>🔐</span> Bloqueo Biométrico en Ajustes
+            </h3>
+            <p style="font-size: 0.85rem; color: #475569; line-height: 1.5; margin: 0;">
+              Tus códigos QR son tus cuentas de ingreso. Si dejas el celular en el mostrador o en el vehículo, <strong>nadie puede modificar tus QR ni números receptores</strong>: la pestaña de Ajustes solicita obligatoriamente tu <strong>Huella Digital o PIN</strong> del teléfono.
+            </p>
+          </div>
+          <div style="margin-top: 10px; font-size: 0.78rem; color: #1D4ED8; font-weight: 700;">
+            ✓ Protección física total
+          </div>
+        </div>
+
+        <!-- Tarjeta 2: Filtro Anti-Spoofing SMS -->
+        <div style="background: #FFFFFF; border-radius: var(--radius-md); padding: 18px; border: 1px solid #DBEAFE; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: #1E293B; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+              <span>🚫</span> Filtro Anti-Estafas por SMS
+            </h3>
+            <p style="font-size: 0.85rem; color: #475569; line-height: 1.5; margin: 0;">
+              Si un cliente malintencionado intenta enviarte un SMS falso desde su celular fingiendo ser un banco, Zeasy <strong>lo descarta automáticamente</strong>. Solo procesa mensajes originados por los códigos cortos oficiales del banco (ej. BDV 2661/2662, Banesco 2846, Mercantil 24024).
+            </p>
+          </div>
+          <div style="margin-top: 10px; font-size: 0.78rem; color: #1D4ED8; font-weight: 700;">
+            ✓ Rechazo a números móviles personales
+          </div>
+        </div>
+
+        <!-- Tarjeta 3: Validación Criptográfica Push -->
+        <div style="background: #FFFFFF; border-radius: var(--radius-md); padding: 18px; border: 1px solid #DBEAFE; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: #1E293B; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+              <span>📲</span> Verificación de Apps Bancarias
+            </h3>
+            <p style="font-size: 0.85rem; color: #475569; line-height: 1.5; margin: 0;">
+              Las notificaciones push solo se aceptan si provienen del paquete oficial y firmado de la entidad bancaria instalada en tu Android. Ninguna aplicación externa ni mensaje falso puede inyectar cobros ficticios en tu libro de jornada.
+            </p>
+          </div>
+          <div style="margin-top: 10px; font-size: 0.78rem; color: #1D4ED8; font-weight: 700;">
+            ✓ Autenticación de origen Android
           </div>
         </div>
       </div>

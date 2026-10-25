@@ -859,6 +859,42 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
+                    <!-- TARJETA: SEGURIDAD PERSONAL Y PROTECCIÓN DE CÓDIGOS QR -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#F59E0B"
+                        app:strokeWidth="1.2dp"
+                        app:cardBackgroundColor="#FFFBEB">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="🛡️ Seguridad Personal • Protege tus Códigos QR"
+                                android:textStyle="bold"
+                                android:textColor="#92400E"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="Tus códigos QR son tus cuentas de ingreso. Para evitar que terceros o extraños reemplacen tus datos de cobro si dejas el celular desatendido en el mostrador o vehículo, el acceso a esta sección de Ajustes está protegido con la Huella Digital o PIN de tu teléfono."
+                                android:textColor="#78350F"
+                                android:textSize="11.5sp"
+                                android:lineSpacingExtra="2dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
                     <!-- TARJETA INFORMATIVA: GUÍA RÁPIDA DE CONFIGURACIÓN -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/cardOnboardingGuide"

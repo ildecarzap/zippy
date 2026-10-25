@@ -92,6 +92,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private var isAuthenticatedThisSession = false
     }
+    private var isSettingsAuthBypassed = false
 
     // Banco activo para cobro en pantalla de Caja (seleccionable con tarjetas o picker)
     private var activeCashierBankCode = "0102"
@@ -514,11 +515,36 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_settings -> {
-                    binding.viewCashier.visibility = View.GONE
-                    binding.viewLedger.visibility = View.GONE
-                    binding.viewSettings.visibility = View.VISIBLE
-                    loadSettings()
-                    true
+                    if (isSettingsAuthBypassed || binding.viewSettings.visibility == View.VISIBLE) {
+                        isSettingsAuthBypassed = false
+                        binding.viewCashier.visibility = View.GONE
+                        binding.viewLedger.visibility = View.GONE
+                        binding.viewSettings.visibility = View.VISIBLE
+                        loadSettings()
+                        return@setOnItemSelectedListener true
+                    }
+                    if (BiometricHelper.isBiometricAvailable(this)) {
+                        BiometricHelper.showBiometricPrompt(
+                            activity = this,
+                            title = "Seguridad de Ajustes",
+                            subtitle = "Protección de Cuentas y Códigos QR",
+                            description = "Coloca tu huella digital o ingresa el PIN del teléfono para ingresar a los ajustes",
+                            onSuccess = {
+                                isSettingsAuthBypassed = true
+                                binding.bottomNavigation.selectedItemId = R.id.nav_settings
+                            },
+                            onError = { _ ->
+                                Toast.makeText(this, "🔒 Acceso a Ajustes cancelado", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                        false
+                    } else {
+                        binding.viewCashier.visibility = View.GONE
+                        binding.viewLedger.visibility = View.GONE
+                        binding.viewSettings.visibility = View.VISIBLE
+                        loadSettings()
+                        true
+                    }
                 }
                 else -> false
             }
