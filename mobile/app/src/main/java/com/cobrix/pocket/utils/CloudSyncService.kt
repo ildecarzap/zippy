@@ -55,7 +55,7 @@ object CloudSyncService {
     }
 
     /**
-     * Sube una instantánea completa a la nube para usuarios Zippy PRO.
+     * Sube una instantánea completa a la nube para usuarios Zeasy PRO.
      * En caso de no contar con servidor remoto activo, genera un paquete local listo
      * y registra la sincronización exitosa de respaldo.
      */
@@ -63,7 +63,7 @@ object CloudSyncService {
         if (!PlanCapabilityManager.canUseCloudBackup(context)) {
             return@withContext CloudSyncResult(
                 success = false,
-                message = "La sincronización en la nube es exclusiva del Plan Zippy PRO."
+                message = "La sincronización en la nube es exclusiva del Plan Zeasy PRO."
             )
         }
 
@@ -99,7 +99,7 @@ object CloudSyncService {
         if (!PlanCapabilityManager.canUseCloudBackup(context)) {
             return@withContext CloudSyncResult(
                 success = false,
-                message = "La restauración desde la nube es exclusiva del Plan Zippy PRO."
+                message = "La restauración desde la nube es exclusiva del Plan Zeasy PRO."
             )
         }
 

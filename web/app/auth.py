@@ -10,7 +10,7 @@ from app.models import AdminUser
 
 serializer = URLSafeTimedSerializer(settings.ADMIN_SESSION_SECRET)
 
-SESSION_COOKIE_NAME = "zippy_admin_session"
+SESSION_COOKIE_NAME = "zeasy_admin_session"
 SESSION_MAX_AGE = 86400 * 7 # 7 días
 
 def hash_password(password: str) -> str:
@@ -44,7 +44,7 @@ def verify_session_token(token: str) -> Optional[dict]:
         return None
 
 def get_current_admin(request: Request, db: Session = Depends(get_db)) -> AdminUser:
-    token = request.cookies.get(SESSION_COOKIE_NAME)
+    token = request.cookies.get(SESSION_COOKIE_NAME) or request.cookies.get("zippy_admin_session")
     if not token:
         raise HTTPException(
             status_code=status.HTTP_307_TEMPORARY_REDIRECT,

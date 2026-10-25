@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import settings
 
-logger = logging.getLogger("zippy.database")
+logger = logging.getLogger("zeasy.database")
 
 # Configurar URL de conexión con soporte explícito para psycopg2
 db_url = settings.DATABASE_URL.strip()
@@ -25,7 +25,7 @@ try:
         logger.info(f"✅ Conexión exitosa a la base de datos PostgreSQL: {engine.url.host}:{engine.url.port or 5432}/{engine.url.database}")
 except Exception as e:
     logger.warning(f"⚠️ No se pudo conectar a PostgreSQL ({e}). Usando SQLite local de contingencia temporal...")
-    engine = create_engine("sqlite:///./zippy_fallback.db", connect_args={"check_same_thread": False})
+    engine = create_engine("sqlite:///./zeasy_fallback.db", connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

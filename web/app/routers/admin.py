@@ -21,7 +21,7 @@ from app.services.cobrixpay import (
     build_whatsapp_direct_url
 )
 
-logger = logging.getLogger("zippy.admin")
+logger = logging.getLogger("zeasy.admin")
 router = APIRouter(prefix=f"/{settings.ADMIN_SECRET_PATH}", tags=["Private Admin Portal"])
 templates = Jinja2Templates(directory="app/templates")
 
@@ -113,7 +113,7 @@ async def admin_dashboard(
     current_admin: AdminUser = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """Panel principal de gestión de licencias Zippy con paginación optimizada."""
+    """Panel principal de gestión de licencias Zeasy con paginación optimizada."""
     try:
         # Barrer automáticamente deudas expiradas para anularlas en CobrixPay
         cleanup_expired_pending_debts(db)
@@ -396,7 +396,7 @@ async def cancel_pending_link_endpoint(
         raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
 
     if device.pending_debt_id:
-        cancel_cobrixpay_debt(device.pending_debt_id, reason="Anulado manualmente por administrador de Zippy")
+        cancel_cobrixpay_debt(device.pending_debt_id, reason="Anulado manualmente por administrador de Zeasy")
 
     device.pending_debt_id = None
     device.pending_payment_token = None

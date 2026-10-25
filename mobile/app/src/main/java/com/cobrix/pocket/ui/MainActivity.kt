@@ -57,7 +57,7 @@ import com.cobrix.pocket.utils.BackupManager
 import com.cobrix.pocket.utils.BcvRateHelper
 import com.cobrix.pocket.utils.CloudSyncService
 import com.cobrix.pocket.utils.PlanCapabilityManager
-import com.cobrix.pocket.utils.ZippySyncManager
+import com.cobrix.pocket.utils.ZeasySyncManager
 import kotlinx.coroutines.launch
 import android.os.Handler
 import android.os.Looper
@@ -125,7 +125,7 @@ class MainActivity : AppCompatActivity() {
                         .setTitle("⚠️ Código QR Incompatible")
                         .setMessage(validation.reason)
                         .setPositiveButton("Entendido", null)
-                        .setNeutralButton("Ver Zippy PRO") { _: android.content.DialogInterface, _: Int ->
+                        .setNeutralButton("Ver Zeasy PRO") { _: android.content.DialogInterface, _: Int ->
                             showProUpgradeDialog("Billeteras Digitales y Cobros en Cripto (Binance Pay)")
                         }
                         .show()
@@ -155,9 +155,9 @@ class MainActivity : AppCompatActivity() {
                 if (isCrypto && !PlanCapabilityManager.canUseWallets(this)) {
                     AlertDialog.Builder(this)
                         .setTitle("⚠️ Código QR Incompatible")
-                        .setMessage("El código QR seleccionado pertenece a una Billetera Digital (Binance Pay) y no corresponde a los datos de Pago Móvil de este banco.\n\nPara aceptar cobros en USDT y Binance Pay, activa la opción exclusiva en Zippy PRO desde Ajustes > Billeteras Digitales.")
+                        .setMessage("El código QR seleccionado pertenece a una Billetera Digital (Binance Pay) y no corresponde a los datos de Pago Móvil de este banco.\n\nPara aceptar cobros en USDT y Binance Pay, activa la opción exclusiva en Zeasy PRO desde Ajustes > Billeteras Digitales.")
                         .setPositiveButton("Entendido", null)
-                        .setNeutralButton("Ver Zippy PRO") { _: android.content.DialogInterface, _: Int ->
+                        .setNeutralButton("Ver Zeasy PRO") { _: android.content.DialogInterface, _: Int ->
                             showProUpgradeDialog("Billeteras Digitales y Cobros en Cripto (Binance Pay)")
                         }
                         .show()
@@ -237,7 +237,7 @@ class MainActivity : AppCompatActivity() {
 
             AlertDialog.Builder(this)
                 .setTitle("⚠️ Reemplazar Banco y QR")
-                .setMessage("Actualmente tienes cargado el código QR de $currentBankName.\n\nEn el Plan Básico puedes tener 1 solo banco activo con QR.\n\n¿Deseas reemplazar $currentBankName por $bankName y cargar su nuevo código QR?\n\n(Para tener múltiples bancos y QRs simultáneos, activa Zippy PRO).")
+                .setMessage("Actualmente tienes cargado el código QR de $currentBankName.\n\nEn el Plan Básico puedes tener 1 solo banco activo con QR.\n\n¿Deseas reemplazar $currentBankName por $bankName y cargar su nuevo código QR?\n\n(Para tener múltiples bancos y QRs simultáneos, activa Zeasy PRO).")
                 .setPositiveButton("Reemplazar y Cargar QR") { _, _ ->
                     PreferencesHelper.replaceBasicPlanBank(this, bankCode, bankName)
                     activeCashierBankCode = bankCode
@@ -247,7 +247,7 @@ class MainActivity : AppCompatActivity() {
                     launchCropForBank(bankCode)
                 }
                 .setNegativeButton("Cancelar", null)
-                .setNeutralButton("Ver Zippy PRO") { _, _ ->
+                .setNeutralButton("Ver Zeasy PRO") { _, _ ->
                     showProUpgradeDialog("Multibanco Simultáneo (Varios bancos a la vez)")
                 }
                 .show()
@@ -2357,9 +2357,9 @@ class MainActivity : AppCompatActivity() {
             updateDisplayAmount()
 
             lifecycleScope.launch {
-                val updatedPro = ZippySyncManager.syncWithBackend(this@MainActivity)
+                val updatedPro = ZeasySyncManager.syncWithBackend(this@MainActivity)
                 runOnUiThread {
-                    Toast.makeText(this@MainActivity, "✅ Configuración guardada y vinculada a Zippy Hub", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "✅ Configuración guardada y vinculada a Zeasy Hub", Toast.LENGTH_SHORT).show()
                     updateLicenseBadge()
                     updateBinanceSettingsCard()
                     renderCashierBankCards()
@@ -2402,7 +2402,7 @@ class MainActivity : AppCompatActivity() {
 
         // Botones Acerca de Ciem tech solutions C.A
         binding.btnAboutWhatsapp.setOnClickListener {
-            val text = Uri.encode("Hola Ciem tech solutions C.A, requiero asistencia con Zippy")
+            val text = Uri.encode("Hola Ciem tech solutions C.A, requiero asistencia con Zeasy")
             val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
             startActivity(Intent(Intent.ACTION_VIEW, uri))
         }
@@ -2410,7 +2410,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnAboutEmail.setOnClickListener {
             val intent = Intent(Intent.ACTION_SENDTO).apply {
                 data = Uri.parse("mailto:${PlanCapabilityManager.SUPPORT_EMAIL}")
-                putExtra(Intent.EXTRA_SUBJECT, "Contacto / Soporte Zippy - Ciem tech solutions C.A")
+                putExtra(Intent.EXTRA_SUBJECT, "Contacto / Soporte Zeasy - Ciem tech solutions C.A")
             }
             try {
                 startActivity(intent)
@@ -2455,7 +2455,7 @@ class MainActivity : AppCompatActivity() {
         setupSettingsWallets()
 
         binding.tvSettingsLegalLink.setOnClickListener {
-            val serverUrl = ZippySyncManager.getServerUrl(this)
+            val serverUrl = ZeasySyncManager.getServerUrl(this)
             val legalUrl = if (serverUrl.isNotEmpty()) "$serverUrl/legal" else "https://zippy.ciemtech.com/legal"
             try {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(legalUrl)))
@@ -2464,7 +2464,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Estado del Plan Zippy PRO y seguimiento de prueba / renovación
+        // Estado del Plan Zeasy PRO y seguimiento de prueba / renovación
         val planType = PlanCapabilityManager.getPlanType(this)
         val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
         val hasUsedTrial = PlanCapabilityManager.hasUsedTrial(this)
@@ -2473,10 +2473,10 @@ class MainActivity : AppCompatActivity() {
         binding.tvSettingsPlanBadge.text = when (planType) {
             PlanType.FREE -> if (hasHadPaidPro) "Plan Básico (PRO Vencido)" else "Plan Básico Gratuito"
             PlanType.PRO_TRIAL -> "Prueba PRO ($daysRemaining días)"
-            PlanType.PRO_ACTIVE -> "Zippy PRO Activo ⭐"
+            PlanType.PRO_ACTIVE -> "Zeasy PRO Activo ⭐"
         }
         binding.tvSettingsPlanDescription.text = when (planType) {
-            PlanType.FREE -> if (hasHadPaidPro) "Tu mes de Zippy PRO culminó. Continúas en modo básico gratuito con 1 banco activo." else "Cobro básico ilimitado gratuito con 1 banco activo."
+            PlanType.FREE -> if (hasHadPaidPro) "Tu mes de Zeasy PRO culminó. Continúas en modo básico gratuito con 1 banco activo." else "Cobro básico ilimitado gratuito con 1 banco activo."
             PlanType.PRO_TRIAL -> "Disfrutas de todas las funciones PRO por cortesía de prueba ($daysRemaining días restantes)."
             PlanType.PRO_ACTIVE -> "Suscripción activa con acceso ilimitado a todas las funciones ($daysRemaining días restantes)."
         }
@@ -2486,8 +2486,8 @@ class MainActivity : AppCompatActivity() {
                 if (daysRemaining <= 3) {
                     // Aviso preventivo para renovar antes de que expire el mes
                     binding.cardTrialPaymentAlert.visibility = View.VISIBLE
-                    binding.tvTrialPaymentAlertMessage.text = "⚠️ Tu suscripción Zippy PRO vence en $daysRemaining día(s). Puedes renovar tu mes con anticipación para continuar sin interrupciones."
-                    binding.btnTrialRequestPaymentLink.text = "💳 Renovar Suscripción Zippy PRO"
+                    binding.tvTrialPaymentAlertMessage.text = "⚠️ Tu suscripción Zeasy PRO vence en $daysRemaining día(s). Puedes renovar tu mes con anticipación para continuar sin interrupciones."
+                    binding.btnTrialRequestPaymentLink.text = "💳 Renovar Suscripción Zeasy PRO"
                     binding.btnManagePlanPro.visibility = View.VISIBLE
                     binding.btnManagePlanPro.text = "💳 Renovar Suscripción PRO"
                 } else {
@@ -2498,35 +2498,35 @@ class MainActivity : AppCompatActivity() {
             PlanType.PRO_TRIAL -> {
                 if (daysRemaining <= 2) {
                     binding.cardTrialPaymentAlert.visibility = View.VISIBLE
-                    binding.tvTrialPaymentAlertMessage.text = "⚠️ Tu prueba Zippy PRO vence en $daysRemaining días. Solicita tu enlace de pago para no perder la sincronización ni el multibanco."
+                    binding.tvTrialPaymentAlertMessage.text = "⚠️ Tu prueba Zeasy PRO vence en $daysRemaining días. Solicita tu enlace de pago para no perder la sincronización ni el multibanco."
                     binding.btnTrialRequestPaymentLink.text = "💳 Solicitar Link de Pago PRO"
                     binding.btnManagePlanPro.visibility = View.VISIBLE
-                    binding.btnManagePlanPro.text = "✨ Activar Zippy PRO"
+                    binding.btnManagePlanPro.text = "✨ Activar Zeasy PRO"
                 } else {
                     binding.cardTrialPaymentAlert.visibility = View.GONE
                     binding.btnManagePlanPro.visibility = View.VISIBLE
-                    binding.btnManagePlanPro.text = "✨ Ver Beneficios o Activar Zippy PRO"
+                    binding.btnManagePlanPro.text = "✨ Ver Beneficios o Activar Zeasy PRO"
                 }
             }
             PlanType.FREE -> {
                 if (hasHadPaidPro) {
                     // Cliente cuya suscripción mensual acaba de expirar
                     binding.cardTrialPaymentAlert.visibility = View.VISIBLE
-                    binding.tvTrialPaymentAlertMessage.text = "⏰ Tu suscripción mensual Zippy PRO ha finalizado. Tu app sigue operando en modo Básico. Solicita tu enlace para reactivar PRO."
-                    binding.btnTrialRequestPaymentLink.text = "💳 Renovar Suscripción Zippy PRO"
+                    binding.tvTrialPaymentAlertMessage.text = "⏰ Tu suscripción mensual Zeasy PRO ha finalizado. Tu app sigue operando en modo Básico. Solicita tu enlace para reactivar PRO."
+                    binding.btnTrialRequestPaymentLink.text = "💳 Renovar Suscripción Zeasy PRO"
                     binding.btnManagePlanPro.visibility = View.VISIBLE
-                    binding.btnManagePlanPro.text = "💳 Renovar Suscripción Zippy PRO"
+                    binding.btnManagePlanPro.text = "💳 Renovar Suscripción Zeasy PRO"
                 } else if (hasUsedTrial) {
                     // Usuario cuya prueba gratis terminó
                     binding.cardTrialPaymentAlert.visibility = View.VISIBLE
-                    binding.tvTrialPaymentAlertMessage.text = "ℹ️ Tu prueba Zippy PRO ha finalizado. Solicita tu enlace de pago para reactivar todas las funciones avanzadas."
-                    binding.btnTrialRequestPaymentLink.text = "💳 Activar Plan Zippy PRO"
+                    binding.tvTrialPaymentAlertMessage.text = "ℹ️ Tu prueba Zeasy PRO ha finalizado. Solicita tu enlace de pago para reactivar todas las funciones avanzadas."
+                    binding.btnTrialRequestPaymentLink.text = "💳 Activar Plan Zeasy PRO"
                     binding.btnManagePlanPro.visibility = View.VISIBLE
-                    binding.btnManagePlanPro.text = "✨ Activar Zippy PRO"
+                    binding.btnManagePlanPro.text = "✨ Activar Zeasy PRO"
                 } else {
                     binding.cardTrialPaymentAlert.visibility = View.GONE
                     binding.btnManagePlanPro.visibility = View.VISIBLE
-                    binding.btnManagePlanPro.text = "✨ Ver Beneficios o Activar Zippy PRO"
+                    binding.btnManagePlanPro.text = "✨ Ver Beneficios o Activar Zeasy PRO"
                 }
             }
         }
@@ -2540,17 +2540,17 @@ class MainActivity : AppCompatActivity() {
         val planType = PlanCapabilityManager.getPlanType(this)
         val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
 
-        binding.tvSubscriptionFooter.text = "Zippy v1.2.0 • Ciem tech solutions C.A • ID: $deviceId ($planType)"
+        binding.tvSubscriptionFooter.text = "Zeasy v1.3.0 • Ciem tech solutions C.A • ID: $deviceId ($planType)"
 
         val subtitleText = when (planType) {
             PlanType.FREE -> "⚡ Plan Básico • Toca para PRO"
             PlanType.PRO_TRIAL -> "⭐ Prueba PRO ($daysRemaining d restantes)"
-            PlanType.PRO_ACTIVE -> "⭐ Zippy PRO Activo"
+            PlanType.PRO_ACTIVE -> "⭐ Zeasy PRO Activo"
         }
         binding.tvHeaderSubtitle.text = subtitleText
         binding.tvHeaderSubtitle.setOnClickListener {
             if (!PlanCapabilityManager.isPro(this)) {
-                showProUpgradeDialog("todas las funciones avanzadas de Zippy PRO")
+                showProUpgradeDialog("todas las funciones avanzadas de Zeasy PRO")
             }
         }
     }
@@ -2559,7 +2559,7 @@ class MainActivity : AppCompatActivity() {
         val planType = PlanCapabilityManager.getPlanType(this)
         val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
         if (planType == PlanType.PRO_ACTIVE && daysRemaining > 3) {
-            Toast.makeText(this, "⭐ Tu plan Zippy PRO está activo ($daysRemaining días restantes). Podrás renovar cuando falten 3 días.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "⭐ Tu plan Zeasy PRO está activo ($daysRemaining días restantes). Podrás renovar cuando falten 3 días.", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -2568,7 +2568,7 @@ class MainActivity : AppCompatActivity() {
             .setView(dialogBinding.root)
             .create()
 
-        dialogBinding.tvProReasonSubtitle.text = "Desbloquea $featureName con Zippy PRO ⚡"
+        dialogBinding.tvProReasonSubtitle.text = "Desbloquea $featureName con Zeasy PRO ⚡"
 
         // Precios dinámicos sincronizados remotamente desde el panel admin
         val p1 = PreferencesHelper.getPrice1m(this)
@@ -2621,7 +2621,7 @@ class MainActivity : AppCompatActivity() {
                 val activated = PlanCapabilityManager.activateTrial(this)
                 if (activated) {
                     lifecycleScope.launch {
-                        val synced = ZippySyncManager.activateTrialOnServer(this@MainActivity)
+                        val synced = ZeasySyncManager.activateTrialOnServer(this@MainActivity)
                         if (synced) {
                             runOnUiThread {
                                 updateLicenseBadge()
@@ -2667,7 +2667,7 @@ class MainActivity : AppCompatActivity() {
             .setMessage("Tienes acceso a todas las funciones PRO (Multibanco, QR simultáneo, Copia de Seguridad y Exportación).\n\nPara brindarte soporte prioritario y enviarte tu enlace de pago cuando finalice tu prueba, registra tu comercio por WhatsApp con Ciem tech solutions C.A.")
             .setPositiveButton("💬 Registrar por WhatsApp") { dialog, _ ->
                 dialog.dismiss()
-                val text = Uri.encode("Hola Ciem tech solutions C.A, acabo de activar mi prueba gratis de 7 días de Zippy PRO. Negocio: '$businessName' (ID Dispositivo: $deviceId). Quedo atento a su soporte y al link de pago al terminar.")
+                val text = Uri.encode("Hola Ciem tech solutions C.A, acabo de activar mi prueba gratis de 7 días de Zeasy PRO. Negocio: '$businessName' (ID Dispositivo: $deviceId). Quedo atento a su soporte y al link de pago al terminar.")
                 val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
                 startActivity(Intent(Intent.ACTION_VIEW, uri))
             }
@@ -2679,7 +2679,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSubscriptionExpiredPrompt() {
         AlertDialog.Builder(this)
-            .setTitle("⏰ Tu período Zippy PRO ha finalizado")
+            .setTitle("⏰ Tu período Zeasy PRO ha finalizado")
             .setMessage("Tu aplicación continúa funcionando con normalidad en el Plan Básico Gratuito (Pago Móvil, tasa BCV y cuadre de caja).\n\nPara reactivar la detección multibanco simultánea, dictado por voz y migración de datos, renueva tu suscripción.")
             .setPositiveButton("💳 Renovar Suscripción") { _, _ ->
                 handleRequestPaymentLinkOption()
@@ -2692,7 +2692,7 @@ class MainActivity : AppCompatActivity() {
         val planType = PlanCapabilityManager.getPlanType(this)
         val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
         if (planType == PlanType.PRO_ACTIVE && daysRemaining > 3) {
-            Toast.makeText(this, "⭐ Tu plan Zippy PRO está activo ($daysRemaining días restantes). Podrás renovar cuando falten 3 días.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "⭐ Tu plan Zeasy PRO está activo ($daysRemaining días restantes). Podrás renovar cuando falten 3 días.", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -2713,7 +2713,7 @@ class MainActivity : AppCompatActivity() {
         }
         val priceStr = String.format(java.util.Locale.US, "$%.2f", priceVal)
 
-        val text = Uri.encode("Hola Ciem tech solutions C.A, deseo activar o renovar el Plan Zippy PRO por $monthsText ($priceStr USD) para mi negocio '$businessName'$rif (ID Dispositivo: $deviceId). Por favor envíenme el link de pago oficial de CobrixPay.")
+        val text = Uri.encode("Hola Ciem tech solutions C.A, deseo activar o renovar el Plan Zeasy PRO por $monthsText ($priceStr USD) para mi negocio '$businessName'$rif (ID Dispositivo: $deviceId). Por favor envíenme el link de pago oficial de CobrixPay.")
         val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
         startActivity(Intent(Intent.ACTION_VIEW, uri))
     }
@@ -2726,7 +2726,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         AlertDialog.Builder(this)
-            .setTitle("🔑 Activar Zippy PRO con Código")
+            .setTitle("🔑 Activar Zeasy PRO con Código")
             .setMessage("Ingresa el código de activación asignado a tu dispositivo por el equipo de soporte de CIEM:")
             .setView(input)
             .setPositiveButton("Activar") { _, _ ->
@@ -2735,7 +2735,7 @@ class MainActivity : AppCompatActivity() {
 
                 Toast.makeText(this, "Validando código de activación...", Toast.LENGTH_SHORT).show()
                 lifecycleScope.launch {
-                    val result = ZippySyncManager.redeemActivationCode(this@MainActivity, code)
+                    val result = ZeasySyncManager.redeemActivationCode(this@MainActivity, code)
                     runOnUiThread {
                         if (result.success) {
                             showProActivatedCelebrationDialog(result.remainingDays)
@@ -2759,7 +2759,7 @@ class MainActivity : AppCompatActivity() {
     private fun syncLicenseStatus(showToastIfNoChange: Boolean = false) {
         lifecycleScope.launch {
             val wasPro = PlanCapabilityManager.isPro(this@MainActivity)
-            val updated = ZippySyncManager.syncWithBackend(this@MainActivity)
+            val updated = ZeasySyncManager.syncWithBackend(this@MainActivity)
             val isProNow = PlanCapabilityManager.isPro(this@MainActivity)
             val daysRemaining = PlanCapabilityManager.getDaysRemaining(this@MainActivity)
 
@@ -2785,7 +2785,7 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {}
 
         AlertDialog.Builder(this)
-            .setTitle("🎉 ¡Plan Zippy PRO Activado! ⚡")
+            .setTitle("🎉 ¡Plan Zeasy PRO Activado! ⚡")
             .setMessage(
                 "¡Tu suscripción ha sido confirmada con éxito!\n\n" +
                 "📅 Vigencia: $daysRemaining día${if (daysRemaining > 1) "s" else ""} restante${if (daysRemaining > 1) "s" else ""}.\n\n" +

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Zippy" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.Zeasy" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Brand Colors -->
         <item name="colorPrimary">@color/accent_green</item>
         <item name="colorPrimaryContainer">@color/accent_green_bg</item>
@@ -17,17 +17,19 @@
         <item name="android:textColor">@color/text_primary</item>
 
         <!-- Components -->
-        <item name="bottomNavigationStyle">@style/Widget.Zippy.BottomNavigationView</item>
+        <item name="bottomNavigationStyle">@style/Widget.Zeasy.BottomNavigationView</item>
     </style>
 
-    <style name="Widget.Zippy.BottomNavigationView" parent="Widget.Material3.BottomNavigationView">
+    <style name="Widget.Zeasy.BottomNavigationView" parent="Widget.Material3.BottomNavigationView">
         <item name="itemRippleColor">@color/accent_green_bg</item>
         <item name="android:background">@color/surface</item>
         <item name="itemIconTint">@color/nav_selector</item>
         <item name="itemTextColor">@color/nav_selector</item>
     </style>
 
-    <!-- Retrocompatibility alias -->
-    <style name="Theme.CobrixPocket" parent="Theme.Zippy" />
-    <style name="Widget.CobrixPocket.BottomNavigationView" parent="Widget.Zippy.BottomNavigationView" />
+    <!-- Retrocompatibility aliases -->
+    <style name="Theme.Zippy" parent="Theme.Zeasy" />
+    <style name="Widget.Zippy.BottomNavigationView" parent="Widget.Zeasy.BottomNavigationView" />
+    <style name="Theme.CobrixPocket" parent="Theme.Zeasy" />
+    <style name="Widget.CobrixPocket.BottomNavigationView" parent="Widget.Zeasy.BottomNavigationView" />
 </resources>

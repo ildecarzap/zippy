@@ -15,7 +15,7 @@ def get_cobrixpay_engine():
     """
     Retorna el engine de base de datos de CobrixPay.
     Si COBRIXPAY_DATABASE_URL está configurado, usa esa conexión dedicada.
-    De lo contrario, usa el engine principal de Zippy.
+    De lo contrario, usa el engine principal de Zeasy.
     """
     global _cobrixpay_engine
     if settings.COBRIXPAY_DATABASE_URL:
@@ -33,13 +33,13 @@ def canonical_python_json(value: Any) -> str:
 
 def generate_activation_code(device_id: str) -> str:
     """
-    Genera un código de activación único para el dispositivo en formato ZIP-XXXX-YYYY.
+    Genera un código de activación único para el dispositivo en formato ZEA-XXXX-YYYY.
     Es fácil de leer, tipear en la app y enviar por WhatsApp.
     """
     clean_id = "".join(c for c in (device_id or "") if c.isalnum()).upper()
     prefix = clean_id[-4:] if len(clean_id) >= 4 else "PRO"
     suffix = secrets.token_hex(2).upper()
-    return f"ZIP-{prefix}-{suffix}"
+    return f"ZEA-{prefix}-{suffix}"
 
 def verify_cobrixpay_signature(payload: Dict[str, Any], signature_header: str) -> bool:
     """Verifica la firma HMAC-SHA256 del webhook recibido de CobrixPay."""
@@ -64,7 +64,7 @@ import logging
 import requests
 from datetime import datetime
 
-logger = logging.getLogger("zippy.cobrixpay")
+logger = logging.getLogger("zeasy.cobrixpay")
 
 _cached_token = None
 _token_expires_at = None
@@ -194,7 +194,7 @@ def cleanup_expired_pending_debts(db: Any) -> int:
     for lic in expired_licenses:
         if lic.pending_debt_id:
             logger.info(f"⌛ Enlace expirado para dispositivo {lic.device_id}. Anulando deuda #{lic.pending_debt_id} en CobrixPay...")
-            cancel_cobrixpay_debt(lic.pending_debt_id, reason="Enlace de pago Zippy expiró sin pago")
+            cancel_cobrixpay_debt(lic.pending_debt_id, reason="Enlace de pago Zeasy expiró sin pago")
             lic.pending_debt_id = None
             lic.pending_payment_token = None
             lic.pending_payment_url = None
@@ -208,7 +208,7 @@ def cleanup_expired_pending_debts(db: Any) -> int:
 
 def get_plan_prices(db: Optional[Any] = None) -> Dict[str, float]:
     """
-    Retorna los precios dinámicos configurados en zippy_system_settings.
+    Retorna los precios dinámicos configurados en la base de datos de Zeasy.
     Valores por defecto si no están en BD: 1m=$2.99, 3m=$7.99 (ahorro 11%), 12m=$29.99 (2 meses gratis).
     """
     from app.models import SystemSetting
@@ -302,7 +302,7 @@ def create_or_get_cobrixpay_payment_url(
         amount = round(plan_prices["1m"] * months, 2)
         meses_txt = f"{months} mes{'es' if months > 1 else ''}"
 
-    description = f"Suscripción Zippy PRO ({meses_txt}) - Dispositivo {device.device_id}"
+    description = f"Suscripción Zeasy PRO ({meses_txt}) - Dispositivo {device.device_id}"
 
     clean_phone = (getattr(device, "phone", "") or "").strip()
     if clean_phone.startswith("0"):
@@ -315,7 +315,7 @@ def create_or_get_cobrixpay_payment_url(
         clean_phone = "+584140000000"
 
     device_email = (getattr(device, "email", "") or "").strip()
-    target_email = device_email if (device_email and "@" in device_email) else f"{device.device_id.lower().replace('-', '')}@zippy.ciemtech.com"
+    target_email = device_email if (device_email and "@" in device_email) else f"{device.device_id.lower().replace('-', '')}@zeasy.ciemtech.com"
 
     # Fecha de expiración estricta
     expires_at = now + timedelta(hours=settings.COBRIXPAY_LINK_EXPIRE_HOURS)
@@ -387,11 +387,11 @@ def build_whatsapp_message_text(merchant_name: str, payment_url: str, months: in
 
     return (
         f"¡Hola {merchant_name}! 👋\n\n"
-        f"⚡ Aquí tienes tu enlace oficial de CobrixPay para activar o renovar tu suscripción de *Zippy PRO* por {meses_txt} (${amount:.2f} USD):\n\n"
+        f"⚡ Aquí tienes tu enlace oficial de CobrixPay para activar o renovar tu suscripción de *Zeasy PRO* por {meses_txt} (${amount:.2f} USD):\n\n"
         f"🔗 {payment_url}\n\n"
         f"⏳ *Nota:* Este enlace es válido por {expire_hours} horas. Pasado este tiempo se anula automáticamente por seguridad.\n\n"
         f"💳 Puedes pagar en Bolívares por Pago Móvil a la tasa oficial del día o con los métodos disponibles.\n"
-        f"✅ Al confirmar el pago, tu aplicación *Zippy* activará todas las funciones PRO automáticamente sin necesidad de canjear códigos.\n\n"
+        f"✅ Al confirmar el pago, tu aplicación *Zeasy* activará todas las funciones PRO automáticamente sin necesidad de canjear códigos.\n\n"
         f"— Soporte CIEM Tech Solutions C.A"
     )
 

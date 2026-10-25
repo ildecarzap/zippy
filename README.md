@@ -1,13 +1,13 @@
-# ⚡ Zippy (Ecosistema Web & Mobile)
+# ⚡ Zeasy (Ecosistema Web & Mobile)
 
-**Zippy** es la solución ágil de cobros presenciales, caja rápida y soundbox digital para comerciantes, taxistas y emprendedores en Venezuela, desarrollado por **Ciem tech solutions C.A**.
+**Zeasy** es la solución ágil de cobros presenciales, caja rápida y soundbox digital para comerciantes, taxistas y emprendedores en Venezuela, desarrollado por **Ciem tech solutions C.A**.
 
 ---
 
 ## 📁 Estructura del Repositorio
 
 ```text
-zippy-app/
+zeasy-app/
 ├── web/                  # Backend FastAPI, Landing Page y Panel Administrativo Central
 │   ├── app/              # Modelos, routers, servicios de autenticación y webhooks
 │   ├── templates/        # Vistas Jinja2 (Landing, Planes, Dashboard Admin con 1-clic)

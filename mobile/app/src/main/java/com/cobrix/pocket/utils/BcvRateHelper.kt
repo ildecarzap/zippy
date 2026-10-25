@@ -35,7 +35,7 @@ object BcvRateHelper {
             connection.connectTimeout = CONNECT_TIMEOUT_MS
             connection.readTimeout = READ_TIMEOUT_MS
             connection.setRequestProperty("Accept", "application/json")
-            connection.setRequestProperty("User-Agent", "Zippy-Android-Client/1.2")
+            connection.setRequestProperty("User-Agent", "Zeasy-Android-Client/1.3")
 
             val responseCode = connection.responseCode
             if (responseCode == HttpURLConnection.HTTP_OK) {

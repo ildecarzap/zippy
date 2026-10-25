@@ -1,4 +1,4 @@
-# Zippy Web & Control Hub ⚡
+# Zeasy Web & Control Hub ⚡
 **Portal Oficial, Instructivo de Usuario y Panel Privado de Licencias CIEM**  
 *Desarrollado para Ciem Tech Solutions C.A (RIF: J-50849495-4)*
 
@@ -10,7 +10,7 @@
    * Paleta suave (verde salvia, pizarra suave, menta pastel, marfil cálido) sin colores chillones ni radioactivos.
    * Totalmente responsivo para móviles y computadoras.
 2. **Homepage Oficial (`/`):**
-   * Landing de presentación de Zippy como la caja registradora inteligente y punto de cobro móvil para Venezuela.
+   * Landing de presentación de Zeasy como la caja registradora inteligente y punto de cobro móvil para Venezuela.
 3. **Instructivo Interactivo (`/guia`):**
    * Manual paso a paso para los usuarios que ingresan desde el botón *"Acerca de"* de la aplicación Android.
    * Explica configuración de bancos (Banesco, Mercantil, BNC, Venezuela), Soundbox con campana y voz, carga por voz, cierre de jornada y copias de seguridad.
@@ -23,7 +23,7 @@
    * **CobrixPay WhatsApp:** Genera el enlace de cobro y abre el chat de WhatsApp con el mensaje pre-armado para el comercio.
 5. **Integración Webhook CobrixPay (`/webhooks/cobrixpay`):**
    * Validación canónica de firma HMAC-SHA256 según la especificación de CobrixPay.
-   * Auto-renovación de Zippy PRO en menos de 10 segundos al confirmarse el pago por Pago Móvil.
+   * Auto-renovación de Zeasy PRO en menos de 10 segundos al confirmarse el pago por Pago Móvil.
 6. **API para la App Android:**
    * `GET /api/v1/license/check?device_id=...`: Valida estado PRO y días restantes.
    * `POST /api/v1/license/register`: Registra nuevos dispositivos al instalar la app.
@@ -39,9 +39,9 @@ El contenedor de PostgreSQL ya está configurado en tu Docker Compose principal:
 docker compose up -d postgres
 ```
 
-### 2. Iniciar el Servidor Zippy Web
+### 2. Iniciar el Servidor Zeasy Web
 ```bash
-cd zippy-web
+cd zeasy-web
 source .venv/bin/activate
 uvicorn app.main:app --host 0.0.0.0 --port 8088 --reload
 ```
@@ -51,13 +51,13 @@ uvicorn app.main:app --host 0.0.0.0 --port 8088 --reload
 * **Planes:** [http://localhost:8088/planes](http://localhost:8088/planes)
 * **Panel Privado:** [http://localhost:8088/portal-seguro-ciem/login](http://localhost:8088/portal-seguro-ciem/login)
   * **Usuario:** `admin_ciem`
-  * **Contraseña:** `Zippy2026#CiemAdmin` *(personalizable en `.env`)*
+  * **Contraseña:** `Zeasy2026#CiemAdmin` *(personalizable en `.env`)*
 
 ---
 
 ## 📚 Documentación Técnica Completa
 Para una explicación exhaustiva de la arquitectura, flujo de identidad de terminales, integración con CobrixPay (Company 5, tokens de checkout y webhooks), y despliegue paso a paso en GCP Cloud Run, consulta:
-👉 **[DOCUMENTACION_ZIPPY.md](../DOCUMENTACION_ZIPPY.md)** en la raíz del repositorio.
+👉 **[DOCUMENTACION_ZEASY.md](../DOCUMENTACION_ZEASY.md)** en la raíz del repositorio.
 
 ---
 
@@ -67,17 +67,17 @@ El contenedor está 100% optimizado para **GCP Cloud Run** mediante el [Dockerfi
 
 ### 1. Construir la imagen con Google Cloud Build:
 ```bash
-gcloud builds submit zippy-web --tag gcr.io/TU_PROYECTO_GCP_ID/zippy-web:latest
+gcloud builds submit zeasy-web --tag gcr.io/TU_PROYECTO_GCP_ID/zeasy-web:latest
 ```
 
 ### 2. Desplegar en Cloud Run con tus variables de entorno:
 ```bash
-gcloud run deploy zippy-web \
-    --image gcr.io/TU_PROYECTO_GCP_ID/zippy-web:latest \
+gcloud run deploy zeasy-web \
+    --image gcr.io/TU_PROYECTO_GCP_ID/zeasy-web:latest \
     --platform managed \
     --region us-central1 \
     --allow-unauthenticated \
-    --set-env-vars "APP_ENV=production,DEBUG=false,PORT=8080,ADMIN_SECRET_PATH=/portal-seguro-ciem,COBRIXPAY_BASE_URL=https://app.cobrix-pay.com,COBRIXPAY_COMPANY_ID=5,ZIPPY_PRICE_USD=2.99" \
+    --set-env-vars "APP_ENV=production,DEBUG=false,PORT=8080,ADMIN_SECRET_PATH=/portal-seguro-ciem,COBRIXPAY_BASE_URL=https://app.cobrix-pay.com,COBRIXPAY_COMPANY_ID=5,ZEASY_PRICE_USD=2.99" \
     --set-env-vars "DATABASE_URL=postgresql://postgres.xxx:TU_PASSWORD@aws-0-sa-east-1.pooler.supabase.com:6543/postgres" \
     --set-env-vars "SECRET_KEY=tu_secreto_generado,COBRIXPAY_WEBHOOK_SECRET=tu_webhook_secret"
 ```
@@ -88,5 +88,5 @@ gcloud run deploy zippy-web \
 1. Crea tu proyecto en [supabase.com](https://supabase.com/).
 2. En **Project Settings → Database → Connection String**, copia el **URI** (modo Session/Transaction pooler).
 3. Configura `DATABASE_URL` con tu URI de Supabase.
-4. Al arrancar `zippy-web`, SQLAlchemy creará automáticamente todas las tablas requeridas (`zippy_device_licenses`, `zippy_payment_transactions`, `zippy_admin_users`).
+4. Al arrancar `zeasy-web`, SQLAlchemy creará automáticamente todas las tablas requeridas (`zeasy_device_licenses`, `zeasy_payment_transactions`, `zeasy_admin_users`).
 

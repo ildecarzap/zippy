@@ -13,7 +13,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
-logger = logging.getLogger("zippy.main")
+logger = logging.getLogger("zeasy.main")
 
 # Inicializar tablas en la Base de Datos
 try:
@@ -38,7 +38,7 @@ try:
         """))
         conn.commit()
     
-    logger.info("✅ Tablas de Zippy creadas/verificadas en la base de datos.")
+    logger.info("✅ Tablas de Zeasy creadas/verificadas en la base de datos.")
     
     # Crear usuario administrador inicial si no existe
     with SessionLocal() as db:
@@ -50,8 +50,8 @@ except Exception as e:
 # Crear aplicación FastAPI
 app = FastAPI(
     title=settings.APP_NAME,
-    description="Portal Web, Instructivo y Panel de Control de Licencias Zippy - CIEM Tech Solutions C.A",
-    version="1.0.0",
+    description="Portal Web, Instructivo y Panel de Control de Licencias Zeasy - CIEM Tech Solutions C.A",
+    version="1.3.0",
     docs_url=None if not settings.DEBUG else "/docs",
     redoc_url=None
 )

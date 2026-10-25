@@ -21,8 +21,8 @@
             <ImageView
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:src="@drawable/ic_zippy_icon"
-                android:contentDescription="Zippy PRO" />
+                android:src="@drawable/ic_zeasy_icon"
+                android:contentDescription="Zeasy PRO" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -40,7 +40,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Zippy"
+                        android:text="Zeasy"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary"
                         android:textSize="22sp" />
@@ -347,7 +347,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Elige tu paquete de activación Zippy PRO:"
+            android:text="Elige tu paquete de activación Zeasy PRO:"
             android:textColor="@color/text_secondary"
             android:textStyle="bold"
             android:textSize="12sp" />
@@ -520,7 +520,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🛡️ Zippy nunca te pedirá claves ni datos bancarios. Cero custodia."
+                android:text="🛡️ Zeasy nunca te pedirá claves ni datos bancarios. Cero custodia."
                 android:textColor="@color/text_muted"
                 android:textSize="11sp"
                 android:gravity="center" />

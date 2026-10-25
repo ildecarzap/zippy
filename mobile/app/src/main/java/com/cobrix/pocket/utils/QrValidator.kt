@@ -122,7 +122,7 @@ object QrValidator {
             if (isCryptoWalletPayload(content)) {
                 return ValidationResult.Rejected(
                     "El código QR seleccionado pertenece a una Billetera Digital (Binance Pay / Cripto) y no corresponde a los datos de Pago Móvil de este banco.\n\n" +
-                    "Para aceptar cobros en USDT y Binance Pay, activa la opción exclusiva en Zippy PRO desde Ajustes > Billeteras Digitales."
+                    "Para aceptar cobros en USDT y Binance Pay, activa la opción exclusiva en Zeasy PRO desde Ajustes > Billeteras Digitales."
                 )
             }
             return ValidationResult.Valid

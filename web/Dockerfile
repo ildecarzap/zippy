@@ -1,5 +1,5 @@
 # ==============================================================================
-# DOCKERFILE ZIPPY WEB & CONTROL HUB (CIEM TECH SOLUTIONS C.A)
+# DOCKERFILE ZEASY WEB & CONTROL HUB (CIEM TECH SOLUTIONS C.A)
 # Optimizado para Google Cloud Platform (Cloud Run / Compute Engine)
 # ==============================================================================
 

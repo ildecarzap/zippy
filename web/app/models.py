@@ -7,7 +7,7 @@ class DeviceLicense(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     device_id = Column(String(100), unique=True, index=True, nullable=False)
-    merchant_name = Column(String(200), default="Comercio Zippy", nullable=False)
+    merchant_name = Column(String(200), default="Comercio Zeasy", nullable=False)
     phone = Column(String(50), default="", nullable=False)
     doc_id = Column(String(50), nullable=True) # Cédula de identidad o RIF
     email = Column(String(150), nullable=True)

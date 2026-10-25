@@ -1,7 +1,7 @@
 # 🚀 Guía Definitiva de Publicación y Despliegue en Google Play Store
-### Zippy POS — Ciem Tech Solutions C.A
+### Zeasy POS — Ciem Tech Solutions C.A
 
-Esta guía detalla paso a paso el proceso estándar para preparar, firmar y publicar la aplicación móvil **Zippy** en Google Play Console con éxito, cumpliendo con las políticas de Google Play de 2026.
+Esta guía detalla paso a paso el proceso estándar para preparar, firmar y publicar la aplicación móvil **Zeasy** en Google Play Console con éxito, cumpliendo con las políticas de Google Play de 2026.
 
 ---
 
@@ -83,7 +83,7 @@ Google Play exige el formato **.aab** (Android App Bundle), no APK directo.
 1. Inicia sesión en [Google Play Console](https://play.google.com/console).
 2. Haz clic en **Crear aplicación** (botón superior derecho).
 3. Completa los datos iniciales:
-   - **Nombre de la aplicación:** `Zippy POS - Cobro Móvil y Caja` (o el nombre comercial preferido).
+   - **Nombre de la aplicación:** `Zeasy POS - Cobro Móvil y Caja` (o el nombre comercial preferido).
    - **Idioma predeterminado:** Español (Latinoamérica) - `es-419`.
    - **Tipo de aplicación:** Aplicación.
    - **Gratis o de pago:** Gratis (con compras/suscripción externa mediante CobrixPay).
@@ -122,12 +122,12 @@ En el menú lateral izquierdo, ve a **Contenido de la aplicación** (App Content
 
 En el menú lateral, ve a **Presencia en Google Play Store** > **Ficha principal de la tienda**:
 
-- **Nombre de la app:** `Zippy POS - Pago Móvil & Caja`
+- **Nombre de la app:** `Zeasy POS - Pago Móvil & Caja`
 - **Descripción corta (80 caracteres):**
   > `Punto de venta móvil con cálculo BCV, QR multibanco, soundbox y control de caja.`
 - **Descripción completa:**
   ```text
-  Zippy es el punto de venta inteligente y caja registradora móvil diseñado para comerciantes, taxistas y profesionales independientes en Venezuela.
+  Zeasy es el punto de venta inteligente y caja registradora móvil diseñado para comerciantes, taxistas y profesionales independientes en Venezuela.
 
   ⚡ CARACTERÍSTICAS PRINCIPALES:
   • Teclado de cobro rápido con conversión inmediata Bolívares / Dólares a la tasa oficial BCV.

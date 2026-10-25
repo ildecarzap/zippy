@@ -24,7 +24,7 @@ object BiometricHelper {
         val executor = ContextCompat.getMainExecutor(activity)
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Zippy")
+            .setTitle("Zeasy")
             .setSubtitle("Confirma tu identidad para acceder a la caja")
             .setDescription("Coloca tu huella digital o ingresa el PIN del teléfono")
             .setAllowedAuthenticators(

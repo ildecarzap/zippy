@@ -118,10 +118,10 @@ class FullScreenQrActivity : AppCompatActivity() {
             try {
                 binding.ivBigQr.setImageURI(Uri.parse(targetQrUri))
             } catch (_: Exception) {
-                binding.ivBigQr.setImageResource(R.drawable.ic_zippy_icon)
+                binding.ivBigQr.setImageResource(R.drawable.ic_zeasy_icon)
             }
         } else {
-            binding.ivBigQr.setImageResource(R.drawable.ic_zippy_icon)
+            binding.ivBigQr.setImageResource(R.drawable.ic_zeasy_icon)
         }
 
         binding.btnDoneFullScreen.setOnClickListener {

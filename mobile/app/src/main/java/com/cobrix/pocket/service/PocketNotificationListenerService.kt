@@ -16,6 +16,7 @@ import com.cobrix.pocket.data.db.PocketDatabaseHelper
 import com.cobrix.pocket.data.model.Transaction
 import com.cobrix.pocket.data.model.TransactionType
 import com.cobrix.pocket.service.parser.MultibankParserRouter
+import com.cobrix.pocket.service.parser.ParserUtils
 import com.cobrix.pocket.service.utils.PaymentDeduplicator
 import com.cobrix.pocket.utils.LicenseManager
 import com.cobrix.pocket.utils.PlanCapabilityManager
@@ -61,7 +62,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
         dbHelper = PocketDatabaseHelper.getInstance(this)
         soundHelper = SoundHelper(this)
         createNotificationChannel()
-        Log.i(TAG, "Servicio de escucha Zippy iniciado.")
+        Log.i(TAG, "Servicio de escucha Zeasy iniciado.")
     }
 
     override fun onListenerConnected() {
@@ -118,9 +119,15 @@ class PocketNotificationListenerService : NotificationListenerService() {
 
     private fun processStatusBarNotification(sbn: StatusBarNotification, playSound: Boolean): Boolean {
         // 0. Filtros de seguridad del sistema Android:
-        // Descartar notificaciones emitidas por Zippy (evita feedback loop y falsos cobros de Binance Pay)
+        // Descartar notificaciones emitidas por Zeasy (evita feedback loop y falsos cobros de Binance Pay)
         val sbnPackageName = sbn.packageName
-        if (sbnPackageName == packageName || sbnPackageName.contains("cobrix")) {
+        if (sbnPackageName == packageName || sbnPackageName.contains("cobrix") || sbnPackageName.contains("zeasy") || sbnPackageName.contains("zippy")) {
+            return false
+        }
+
+        // Si la notificación proviene de un gestor de SMS y el usuario desactivó la detección de SMS en Ajustes, omitir
+        if (ParserUtils.isSmsPackage(sbnPackageName) && !PreferencesHelper.isSmsDetectionEnabled(this)) {
+            Log.d(TAG, "Notificación SMS ignorada porque la detección de SMS está desactivada en Ajustes.")
             return false
         }
 
@@ -170,6 +177,11 @@ class PocketNotificationListenerService : NotificationListenerService() {
         // Si el usuario tiene Binance Pay habilitado en sus ajustes, incluirlo en la detección
         if (PreferencesHelper.isBinanceEnabled(this)) {
             enabledBankEnums.add(com.cobrix.pocket.data.model.BankCode.BINANCE)
+        }
+
+        // Si el usuario tiene habilitada la detección de SMS bancarios, incluir BankCode.SMS
+        if (PreferencesHelper.isSmsDetectionEnabled(this)) {
+            enabledBankEnums.add(com.cobrix.pocket.data.model.BankCode.SMS)
         }
 
         // 3. Parseo mediante router bancario filtrando bancos permitidos
@@ -383,10 +395,10 @@ class PocketNotificationListenerService : NotificationListenerService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Cobros Recibidos Zippy",
+                "Cobros Recibidos Zeasy",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notificaciones de cobros recibidos y confirmados con Zippy"
+                description = "Notificaciones de cobros recibidos y confirmados con Zeasy"
             }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)

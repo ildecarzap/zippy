@@ -1,10 +1,10 @@
-# ⚡ Zippy — Caja Inteligente y Asistente de Cobro Móvil
+# ⚡ Zeasy — Caja Inteligente y Asistente de Cobro Móvil
 
-> **Nombre Oficial:** **Zippy**  
+> **Nombre Oficial:** **Zeasy**  
 > **Versión:** 1.2.0 (Build 4) — Native Android (Kotlin).  
 > **Identidad Visual:** 3D Brand Badge Oficial (Cyan Eléctrico & Deep Navy).
 
-**Zippy** es una aplicación móvil nativa para Android diseñada específicamente para transportistas (taxis, mototaxis), pequeños comercios, bodegas, emprendedores y profesionales independientes en Venezuela y Latinoamérica. Transforma cualquier teléfono inteligente en un **punto de venta / caja registradora inteligente**, automatizando la validación de Pago Móvil, el cobro por WhatsApp con QR y el cuadre financiero de la jornada diaria en tiempo real.
+**Zeasy** es una aplicación móvil nativa para Android diseñada específicamente para transportistas (taxis, mototaxis), pequeños comercios, bodegas, emprendedores y profesionales independientes en Venezuela y Latinoamérica. Transforma cualquier teléfono inteligente en un **punto de venta / caja registradora inteligente**, automatizando la validación de Pago Móvil, el cobro por WhatsApp con QR y el cuadre financiero de la jornada diaria en tiempo real.
 
 ---
 

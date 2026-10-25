@@ -29,7 +29,7 @@ object WhatsAppHelper {
             📱 *Teléfono:* ${profile.phoneNumber}
             🪪 *Cédula/RIF:* ${profile.idCard}
             ---------------------------------
-            ⚡ *Cobro solicitado con Zippy*
+            ⚡ *Cobro solicitado con Zeasy*
         """.trimIndent()
     }
 
@@ -50,7 +50,7 @@ object WhatsAppHelper {
             👉 *$idText*
             ---------------------------------
             📸 *Te adjunto el código QR de Binance Pay para escanearlo directo desde tu App de Binance.*
-            ⚡ *Cobro solicitado con Zippy PRO*
+            ⚡ *Cobro solicitado con Zeasy PRO*
         """.trimIndent()
     }
 
@@ -224,7 +224,7 @@ object WhatsAppHelper {
             🏁 *GANANCIA NETA REAL:*
             👉 *Bs. ${String.format(Locale.US, "%.2f", netVes)} ($${String.format(Locale.US, "%.2f", netUsd)})*
             ---------------------------------
-            _Reporte generado con Zippy_
+            _Reporte generado con Zeasy_
         """.trimIndent()
     }
 }

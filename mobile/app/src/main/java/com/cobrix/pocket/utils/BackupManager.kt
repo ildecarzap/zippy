@@ -50,7 +50,7 @@ object BackupManager {
 
         val root = JSONObject()
         root.put("version", BACKUP_VERSION)
-        root.put("app", "Zippy")
+        root.put("app", "Zeasy")
         root.put("createdAt", System.currentTimeMillis())
         root.put("createdAtFormatted", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()))
         root.put("sourceDeviceId", deviceId)
@@ -135,11 +135,11 @@ object BackupManager {
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/json"
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, "Copia de Seguridad Zippy (${file.name})")
-            putExtra(Intent.EXTRA_TEXT, "Respaldo comercial de Zippy. Conserva este archivo para restaurar tu información en cualquier teléfono nuevo.")
+            putExtra(Intent.EXTRA_SUBJECT, "Copia de Seguridad Zeasy (${file.name})")
+            putExtra(Intent.EXTRA_TEXT, "Respaldo comercial de Zeasy. Conserva este archivo para restaurar tu información en cualquier teléfono nuevo.")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Guardar o compartir copia de seguridad Zippy"))
+        context.startActivity(Intent.createChooser(intent, "Guardar o compartir copia de seguridad Zeasy"))
     }
 
     /**
@@ -149,8 +149,8 @@ object BackupManager {
         return try {
             val root = JSONObject(jsonStr)
             val app = root.optString("app", "")
-            if (!app.equals("Zippy", ignoreCase = true) && !app.equals("Cobrix", ignoreCase = true)) {
-                return BackupRestoreResult(false, "El archivo seleccionado no es un respaldo válido de Zippy.")
+            if (!app.equals("Zeasy", ignoreCase = true) && !app.equals("Zippy", ignoreCase = true) && !app.equals("Cobrix", ignoreCase = true)) {
+                return BackupRestoreResult(false, "El archivo seleccionado no es un respaldo válido de Zeasy.")
             }
 
             // 1. Restaurar Perfil

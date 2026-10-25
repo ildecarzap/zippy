@@ -445,7 +445,7 @@ object ReportHelper {
         canvas.drawText("Firma del Responsable / Cajero", margin + 20f, footerY + 14f, paintLabel)
         canvas.drawText("Firma Administrador / Propietario", margin + contentWidth - 190f, footerY + 14f, paintLabel)
 
-        val bottomText = "Generado por Zippy • Ciem tech solutions C.A • RIF J-50849495-4 • Soporte: +58 4242603112"
+        val bottomText = "Generado por Zeasy • Ciem tech solutions C.A • RIF J-50849495-4 • Soporte: +58 4242603112"
         canvas.drawText(bottomText, margin + 20f, pageHeight - 16f, paintLabel)
 
         document.finishPage(page)
@@ -486,8 +486,8 @@ object ReportHelper {
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, "Cierre de Jornada Zippy")
-            putExtra(Intent.EXTRA_TEXT, "Adjunto reporte formal de cierre de jornada generado con Zippy.")
+            putExtra(Intent.EXTRA_SUBJECT, "Cierre de Jornada Zeasy")
+            putExtra(Intent.EXTRA_TEXT, "Adjunto reporte formal de cierre de jornada generado con Zeasy.")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
 
@@ -581,8 +581,8 @@ object ReportHelper {
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/csv"
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, "Cierre de Jornada Zippy (${csvFile.name})")
-            putExtra(Intent.EXTRA_TEXT, "Adjunto reporte detallado en Excel (.csv) de la jornada generado con Zippy.")
+            putExtra(Intent.EXTRA_SUBJECT, "Cierre de Jornada Zeasy (${csvFile.name})")
+            putExtra(Intent.EXTRA_TEXT, "Adjunto reporte detallado en Excel (.csv) de la jornada generado con Zeasy.")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
 

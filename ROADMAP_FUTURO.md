@@ -1,7 +1,7 @@
-# 🗺️ Roadmap Estratégico y Futuros Desarrollos: Zippy POS
+# 🗺️ Roadmap Estratégico y Futuros Desarrollos: Zeasy POS
 ### Ciem Tech Solutions C.A — Hacia el Siguiente Nivel
 
-Este documento recopila las ideas, mejoras y módulos estratégicos identificados durante la fase de lanzamiento para evolucionar **Zippy** de un punto de venta móvil a una suite comercial integral para comercios en Venezuela y la región.
+Este documento recopila las ideas, mejoras y módulos estratégicos identificados durante la fase de lanzamiento para evolucionar **Zeasy** de un punto de venta móvil a una suite comercial integral para comercios en Venezuela y la región.
 
 ---
 
@@ -14,7 +14,7 @@ Este documento recopila las ideas, mejoras y módulos estratégicos identificado
   - El cajero solo puede: Marcar montos, mostrar el QR y escuchar la confirmación por voz.
   - El cajero **no** puede ver el total recaudado en el día ni transferir o exportar datos.
 - [ ] **Modo Kiosko / Bloqueo de Aplicación:**
-  - Fijar Zippy en primer plano para evitar que el personal use el dispositivo para otros fines en horario laboral.
+  - Fijar Zeasy en primer plano para evitar que el personal use el dispositivo para otros fines en horario laboral.
 
 ---
 
@@ -33,9 +33,9 @@ Este documento recopila las ideas, mejoras y módulos estratégicos identificado
 *Objetivo: Que el dueño pueda monitorear sus ventas desde cualquier lugar sin estar físicamente en el local.*
 
 - [ ] **Panel de Ventas en Vivo (Live Stream de Cobros):**
-  - Visualización en tiempo real desde el teléfono del dueño (o desde la web de Zippy Hub) de cada cobro confirmado en la caja.
+  - Visualización en tiempo real desde el teléfono del dueño (o desde la web de Zeasy Hub) de cada cobro confirmado en la caja.
 - [ ] **Múltiples Cajas / Terminales por Comercio:**
-  - Capacidad para que un negocio con 2 o 3 cajas reporte bajo la misma cuenta corporativa en Zippy Hub.
+  - Capacidad para que un negocio con 2 o 3 cajas reporte bajo la misma cuenta corporativa en Zeasy Hub.
 - [ ] **Alertas Push para el Dueño:**
   - Notificación push al celular del dueño cada vez que la caja de su tienda recibe un pago superior a cierto monto.
 
@@ -49,14 +49,14 @@ Este documento recopila las ideas, mejoras y módulos estratégicos identificado
 - [ ] **Widget de Escritorio de 1 Toque:**
   - Widget para la pantalla de inicio de Android que despliega el QR y teclado de cobro en 1 segundo sin abrir la app completa.
 - [ ] **Comandos de Voz Rápidos:**
-  - Atajo rápido para dictar: *"Cobrar 5 dólares"* y que Zippy abra la pantalla con el cálculo BCV listo.
+  - Atajo rápido para dictar: *"Cobrar 5 dólares"* y que Zeasy abra la pantalla con el cálculo BCV listo.
 
 ---
 
 ## 💼 Fase 5: Expansión de Servicios con CobrixPay
-*Objetivo: Convertir a Zippy en un canal de generación de ingresos para los comercios.*
+*Objetivo: Convertir a Zeasy en un canal de generación de ingresos para los comercios.*
 
 - [ ] **Cobro de Servicios Públicos y Recargas (Movistar, Digitel, Cantv):**
   - Integrar catálogo de recargas a través de la pasarela CobrixPay con comisión para el comercio.
 - [ ] **Microcréditos y Financiamiento a Comercios:**
-  - Utilizar el historial de volumen de ventas verificado por Zippy para otorgar financiamiento o planes especiales de CobrixPay.
+  - Utilizar el historial de volumen de ventas verificado por Zeasy para otorgar financiamiento o planes especiales de CobrixPay.

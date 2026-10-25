@@ -13,7 +13,7 @@ from app.services.cobrixpay import (
     generate_activation_code
 )
 
-logger = logging.getLogger("zippy.api")
+logger = logging.getLogger("zeasy.api")
 router = APIRouter(prefix="/api/v1", tags=["Mobile App API"])
 
 # Cache en memoria para tasa BCV
@@ -21,7 +21,7 @@ _bcv_cache = {"rate": 0.0, "updated_at": None}
 
 class RegisterDeviceRequest(BaseModel):
     device_id: str
-    merchant_name: str = "Comercio Zippy"
+    merchant_name: str = "Comercio Zeasy"
     phone: str = ""
     doc_id: str = ""
     email: str = ""
@@ -34,7 +34,7 @@ def check_license(
 ):
     """
     Verifica de forma remota el estado de licencia del dispositivo.
-    Consumido automáticamente por la app Zippy al iniciar o refrescar.
+    Consumido automáticamente por la app Zeasy al iniciar o refrescar.
     Si hay una deuda pendiente en CobrixPay, consulta proactivamente si ya fue pagada.
     """
     license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == device_id).first()
@@ -132,7 +132,7 @@ def check_license(
                 license_obj.pending_payment_token = None
                 license_obj.pending_payment_url = None
                 license_obj.pending_link_expires_at = None
-                logger.info(f"🎉 [ZIPPY PRO AUTO-ACTIVADO] Deuda #{tx.cobrix_debt_id} ({days_to_add} días) pagada para dispositivo {license_obj.device_id}!")
+                logger.info(f"🎉 [ZEASY PRO AUTO-ACTIVADO] Deuda #{tx.cobrix_debt_id} ({days_to_add} días) pagada para dispositivo {license_obj.device_id}!")
 
     license_obj.last_sync_at = datetime.utcnow()
     db.commit()
@@ -171,7 +171,7 @@ def register_device(
     if not license_obj:
         license_obj = DeviceLicense(
             device_id=payload.device_id,
-            merchant_name=payload.merchant_name or "Comercio Zippy",
+            merchant_name=payload.merchant_name or "Comercio Zeasy",
             phone=payload.phone or "",
             doc_id=payload.doc_id or "",
             email=payload.email or "",
@@ -183,9 +183,9 @@ def register_device(
         db.add(license_obj)
         db.commit()
         db.refresh(license_obj)
-        logger.info(f"📱 Nuevo dispositivo registrado en Zippy Hub: {license_obj.device_id} ({license_obj.merchant_name})")
+        logger.info(f"📱 Nuevo dispositivo registrado en Zeasy Hub: {license_obj.device_id} ({license_obj.merchant_name})")
     else:
-        if payload.merchant_name and payload.merchant_name != "Comercio Zippy":
+        if payload.merchant_name and payload.merchant_name != "Comercio Zeasy":
             license_obj.merchant_name = payload.merchant_name
         if payload.phone:
             license_obj.phone = payload.phone
@@ -215,7 +215,7 @@ def register_device(
 
 class ActivateTrialRequest(BaseModel):
     device_id: str
-    merchant_name: str = "Comercio Zippy"
+    merchant_name: str = "Comercio Zeasy"
     phone: str = ""
     doc_id: str = ""
     email: str = ""
@@ -227,7 +227,7 @@ def activate_trial(
 ):
     """
     Activa o sincroniza de forma remota la prueba gratuita de 7 días (Plan TRIAL).
-    Consumido por la app Zippy al pulsar 'Probar 7 días gratis'.
+    Consumido por la app Zeasy al pulsar 'Probar 7 días gratis'.
     """
     from app.routers.admin import get_system_setting
     trial_days_str = get_system_setting(db, "trial_days", "7")
@@ -243,14 +243,14 @@ def activate_trial(
         trial_ends = now + timedelta(days=trial_days)
         license_obj = DeviceLicense(
             device_id=payload.device_id,
-            merchant_name=payload.merchant_name or "Comercio Zippy",
+            merchant_name=payload.merchant_name or "Comercio Zeasy",
             phone=payload.phone or "",
             doc_id=payload.doc_id or "",
             email=payload.email or "",
             plan_type="TRIAL",
             trial_ends_at=trial_ends,
             is_active=True,
-            app_version="1.2.0",
+            app_version="1.3.0",
             activation_code=generate_activation_code(payload.device_id),
             last_sync_at=now
         )
@@ -286,7 +286,7 @@ def activate_trial(
         license_obj.trial_ends_at = trial_ends
         license_obj.is_active = True
         license_obj.last_sync_at = now
-        if payload.merchant_name and payload.merchant_name != "Comercio Zippy":
+        if payload.merchant_name and payload.merchant_name != "Comercio Zeasy":
             license_obj.merchant_name = payload.merchant_name
         if payload.phone:
             license_obj.phone = payload.phone
@@ -326,7 +326,7 @@ def redeem_license_code(
 
     license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == device_id).first()
     if not license_obj:
-        raise HTTPException(status_code=404, detail="Dispositivo no encontrado en el sistema Zippy")
+        raise HTTPException(status_code=404, detail="Dispositivo no encontrado en el sistema Zeasy")
 
     is_valid = False
     days_to_add = 30
@@ -334,20 +334,20 @@ def redeem_license_code(
     # 1. Código específico asignado al dispositivo en admin
     if license_obj.activation_code and code == license_obj.activation_code.strip().upper():
         is_valid = True
-    # 2. Clave universal o promocional
-    elif code in ("ZIPPYPRO2026", "ZIPPY-PRO-LIFETIME"):
+    # 2. Clave universal o promocional (soporta ZEASY y ZIPPY para retrocompatibilidad)
+    elif code in ("ZEASYPRO2026", "ZEASY-PRO-LIFETIME", "ZIPPYPRO2026", "ZIPPY-PRO-LIFETIME"):
         is_valid = True
         days_to_add = 365
-    elif code in ("ZIPPY30", "ZIPPY-PRO-30"):
+    elif code in ("ZEASY30", "ZEASY-PRO-30", "ZIPPY30", "ZIPPY-PRO-30"):
         is_valid = True
         days_to_add = 30
-    elif code in ("ZIPPY90", "ZIPPY-PRO-90"):
+    elif code in ("ZEASY90", "ZEASY-PRO-90", "ZIPPY90", "ZIPPY-PRO-90"):
         is_valid = True
         days_to_add = 90
-    elif code in ("ZIPPY365", "ZIPPY-PRO-365"):
+    elif code in ("ZEASY365", "ZEASY-PRO-365", "ZIPPY365", "ZIPPY-PRO-365"):
         is_valid = True
         days_to_add = 365
-    elif code.startswith("ZIP-") and code.endswith(device_id[-4:].upper()):
+    elif (code.startswith("ZEA-") or code.startswith("ZIP-")) and (device_id[-4:].upper() in code):
         is_valid = True
         days_to_add = 30
 
@@ -370,7 +370,7 @@ def redeem_license_code(
 
     return {
         "status": "success",
-        "message": f"¡Plan Zippy PRO activado exitosamente por {days_to_add} días!",
+        "message": f"¡Plan Zeasy PRO activado exitosamente por {days_to_add} días!",
         "is_pro": True,
         "plan_type": "PRO",
         "remaining_days": license_obj.remaining_days,
@@ -387,13 +387,13 @@ def request_payment_link(
     db: Session = Depends(get_db)
 ):
     """
-    Permite solicitar un enlace oficial de pago de CobrixPay para activar o renovar Zippy PRO.
+    Permite solicitar un enlace oficial de pago de CobrixPay para activar o renovar Zeasy PRO.
     Anti-Spam: Si ya cuenta con un enlace activo sin vencer, retorna el existente en vez de crear deudas masivas.
     Expiración: Si el anterior venció, lo anula en CobrixPay antes de generar uno nuevo.
     """
     license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == payload.device_id).first()
     if not license_obj:
-        raise HTTPException(status_code=404, detail="Dispositivo no encontrado en el sistema Zippy Hub")
+        raise HTTPException(status_code=404, detail="Dispositivo no encontrado en el sistema Zeasy Hub")
 
     if license_obj.is_pro_active and license_obj.plan_type == "PRO" and license_obj.remaining_days > 7:
         return {

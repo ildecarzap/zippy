@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings(BaseSettings):
-    APP_NAME: str = "Zippy Web & Control Hub"
+    APP_NAME: str = "Zeasy Web & Control Hub"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
 
@@ -20,12 +20,12 @@ class Settings(BaseSettings):
     ADMIN_SECRET_PATH: str = os.getenv("ADMIN_SECRET_PATH", "portal-seguro-ciem")
     ADMIN_SESSION_SECRET: str = os.getenv(
         "ADMIN_SESSION_SECRET",
-        "ciem-super-secret-key-zippy-2026-auth-protection-9921"
+        "ciem-super-secret-key-zeasy-2026-auth-protection-9921"
     )
 
     # Credenciales iniciales de administrador (modificables desde .env)
     INITIAL_ADMIN_USER: str = os.getenv("INITIAL_ADMIN_USER", "admin_ciem")
-    INITIAL_ADMIN_PASSWORD: str = os.getenv("INITIAL_ADMIN_PASSWORD", "Zippy2026#CiemAdmin")
+    INITIAL_ADMIN_PASSWORD: str = os.getenv("INITIAL_ADMIN_PASSWORD", "Zeasy2026#CiemAdmin")
 
     # Integración con Auth0 (Opcional si se habilita)
     AUTH0_DOMAIN: str = os.getenv("AUTH0_DOMAIN", "")
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     # Integración con CobrixPay (Webhooks y Enlaces de Pago)
     COBRIXPAY_BASE_URL: str = os.getenv("COBRIXPAY_BASE_URL", "https://app.cobrix-pay.com")
     COBRIXPAY_API_URL: str = os.getenv("COBRIXPAY_API_URL", "https://cobrix-pay-902301530733.us-central1.run.app")
-    COBRIXPAY_WEBHOOK_SECRET: str = os.getenv("COBRIXPAY_WEBHOOK_SECRET", "zippy_ciem_webhook_secret_key_2026")
+    COBRIXPAY_WEBHOOK_SECRET: str = os.getenv("COBRIXPAY_WEBHOOK_SECRET", "zeasy_ciem_webhook_secret_key_2026")
     COBRIXPAY_COMPANY_ID: str = os.getenv("COBRIXPAY_COMPANY_ID", "5")
     COBRIXPAY_PLAN_PRICE_USD: float = float(os.getenv("COBRIXPAY_PLAN_PRICE_USD", "2.99"))
     COBRIXPAY_DATABASE_URL: Optional[str] = os.getenv("COBRIXPAY_DATABASE_URL", None)

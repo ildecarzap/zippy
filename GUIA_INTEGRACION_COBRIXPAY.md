@@ -11,7 +11,7 @@ Esta guía documenta la arquitectura, endpoints y lecciones prácticas aprendida
 sequenceDiagram
     autonumber
     actor Cliente as Cliente Final
-    participant Comercio as Tu Backend (Zippy / Comercio)
+    participant Comercio as Tu Backend (Zeasy / Comercio)
     participant CobrixPay as CobrixPay API (Cloud Run)
     participant Banco as Pasarela Bancaria / Pago Móvil
 
@@ -69,7 +69,7 @@ COBRIXPAY_WEBHOOK_SECRET=tu_secreto_seguro_para_webhooks
 {
   "amount": 2.99,
   "currency_code": "USD",
-  "description": "Suscripción Zippy PRO (1 mes) - Dispositivo 8a9b2c3d",
+  "description": "Suscripción Zeasy PRO (1 mes) - Dispositivo 8a9b2c3d",
   "due_date": "2026-10-29",
   "expires_at": "2026-10-23T12:00:00Z",
   "allow_partial_payment": false,
@@ -134,7 +134,7 @@ Tu webhook debe ser accesible públicamente por HTTPS:
       "debt_id": 482,
       "debtor_name": "Panadería El Trigal C.A",
       "debtor_phone": "+584141234567",
-      "description": "Suscripción Zippy PRO (1 mes) - Dispositivo 8a9b2c3d",
+      "description": "Suscripción Zeasy PRO (1 mes) - Dispositivo 8a9b2c3d",
       "payment_token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
       "status": "paid"
     }

@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestión de Licencias • CIEM Zippy Hub</title>
+  <title>Gestión de Licencias • CIEM Zeasy Hub</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="/static/css/style.css">
-  <link rel="icon" type="image/jpeg" href="/static/images/zippy-logo.jpg">
+  <link rel="icon" type="image/png" href="/static/images/zeasy-logo.png">
 </head>
 <body style="background-color: var(--color-bg);">
 
@@ -18,8 +18,8 @@
   <nav class="navbar">
     <div class="container nav-inner">
       <div class="brand">
-        <img src="/static/images/zippy-logo.jpg" alt="Zippy Logo" class="brand-logo">
-        <span>Zippy Hub <small style="font-weight: 500; font-size: 0.75rem; color: var(--color-text-muted); background: var(--color-surface-soft); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--color-border);">Control CIEM</small></span>
+        <img src="/static/images/zeasy-logo.png" alt="Zeasy Logo" class="brand-logo">
+        <span>Zeasy Hub <small style="font-weight: 500; font-size: 0.75rem; color: var(--color-text-muted); background: var(--color-surface-soft); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--color-border);">Control CIEM</small></span>
       </div>
 
       <div style="display: flex; align-items: center; gap: 12px;">
@@ -47,7 +47,7 @@
       </div>
 
       <div class="card" style="padding: 20px; border-left: 4px solid var(--badge-pro-text);">
-        <span style="font-size: 0.82rem; font-weight: 600; color: var(--badge-pro-text); text-transform: uppercase;">Zippy PRO Activos</span>
+        <span style="font-size: 0.82rem; font-weight: 600; color: var(--badge-pro-text); text-transform: uppercase;">Zeasy PRO Activos</span>
         <div style="font-size: 1.85rem; font-weight: 800; color: var(--badge-pro-text); margin-top: 6px;">
           {{ pro_devices }}
         </div>
@@ -328,11 +328,11 @@
         <!-- Banner Código de Activación Destacado -->
         <div style="background: linear-gradient(135deg, #1E6091, #184E77); color: #ffffff; padding: 16px 20px; border-radius: var(--radius-md); margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
-            <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85;">Código de Activación Zippy PRO</span>
+            <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85;">Código de Activación Zeasy PRO</span>
             <div style="font-size: 1.65rem; font-weight: 800; font-family: monospace; letter-spacing: 2px; margin-top: 2px;" id="udActivationCode">
               ------
             </div>
-            <small style="font-size: 0.75rem; opacity: 0.85;">El cliente lo introduce en Ajustes > Plan Zippy PRO > Tengo un código</small>
+            <small style="font-size: 0.75rem; opacity: 0.85;">El cliente lo introduce en Ajustes > Plan Zeasy PRO > Tengo un código</small>
           </div>
           <div style="display: flex; gap: 8px;">
             <button type="button" class="btn btn-sm" style="background: #ffffff; color: #1E6091; font-weight: 700;" onclick="copyUdActivationCode()">
@@ -569,7 +569,7 @@
         if (!res.ok) throw new Error('No se pudo cargar la información del dispositivo');
         const d = await res.json();
 
-        document.getElementById('udMerchantName').innerText = d.merchant_name || 'Comercio Zippy';
+        document.getElementById('udMerchantName').innerText = d.merchant_name || 'Comercio Zeasy';
         document.getElementById('udDocId').innerText = d.doc_id ? `Documento / RIF: ${d.doc_id}` : 'Sin documento registrado';
         
         const codeText = d.activation_code || 'SIN CÓDIGO';
@@ -579,7 +579,7 @@
         const waLink = document.getElementById('udWhatsAppCodeLink');
         if (cleanPhone && codeText !== 'SIN CÓDIGO') {
           waLink.style.display = 'inline-block';
-          const msg = encodeURIComponent(`¡Hola ${d.merchant_name}! Tu código de activación Zippy PRO es: *${codeText}*. Ingrésalo en tu app Zippy en Ajustes > Plan Zippy PRO > Tengo un código.`);
+          const msg = encodeURIComponent(`¡Hola ${d.merchant_name}! Tu código de activación Zeasy PRO es: *${codeText}*. Ingrésalo en tu app Zeasy en Ajustes > Plan Zeasy PRO > Tengo un código.`);
           waLink.href = `https://wa.me/${cleanPhone}?text=${msg}`;
         } else {
           waLink.style.display = 'none';
@@ -587,7 +587,7 @@
 
         let badgeHtml = '';
         if (d.plan_type === 'PRO' && d.is_pro_active) {
-          badgeHtml = '<span class="badge badge-pro">⭐ Zippy PRO</span>';
+          badgeHtml = '<span class="badge badge-pro">⭐ Zeasy PRO</span>';
         } else if (d.plan_type === 'TRIAL' && d.is_pro_active) {
           badgeHtml = '<span class="badge badge-trial">⏳ Prueba 7d</span>';
         } else {

@@ -24,8 +24,8 @@
             <ImageView
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:src="@drawable/ic_zippy_icon"
-                android:contentDescription="Zippy Logo" />
+                android:src="@drawable/ic_zeasy_icon"
+                android:contentDescription="Zeasy Logo" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -37,7 +37,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Zippy"
+                    android:text="Zeasy"
                     android:textStyle="bold"
                     android:textColor="@color/white"
                     android:textSize="20sp" />
@@ -842,7 +842,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="Zippy NUNCA te solicitará contraseñas bancarias, coordenadas, claves de cajero, códigos SMS ni acceso a tus cuentas. Todo tu dinero e información permanecen 100% seguros y privados en tu teléfono."
+                                android:text="Zeasy NUNCA te solicitará contraseñas bancarias, coordenadas, claves de cajero, códigos SMS ni acceso a tus cuentas. Todo tu dinero e información permanecen 100% seguros y privados en tu teléfono."
                                 android:textColor="#15803D"
                                 android:textSize="12sp"
                                 android:lineSpacingExtra="2dp" />
@@ -1352,7 +1352,7 @@
                                     <TextView
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="🔒 Función Exclusiva de Zippy PRO"
+                                        android:text="🔒 Función Exclusiva de Zeasy PRO"
                                         android:textStyle="bold"
                                         android:textColor="@color/slate_900"
                                         android:textSize="14sp" />
@@ -1361,7 +1361,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:layout_marginTop="4dp"
-                                        android:text="Muestra tu QR de Binance Pay en pantalla, envía cobros en USDT por WhatsApp y recibe pagos en cripto con tu Soundbox activando Zippy PRO."
+                                        android:text="Muestra tu QR de Binance Pay en pantalla, envía cobros en USDT por WhatsApp y recibe pagos en cripto con tu Soundbox activando Zeasy PRO."
                                         android:textColor="@color/slate_700"
                                         android:textSize="12sp" />
 
@@ -1730,7 +1730,7 @@
                                         android:id="@+id/tvTrialPaymentAlertMessage"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="⏰ Tu prueba Zippy PRO está por finalizar. Solicita tu enlace de pago para continuar sin interrupciones."
+                                        android:text="⏰ Tu prueba Zeasy PRO está por finalizar. Solicita tu enlace de pago para continuar sin interrupciones."
                                         android:textColor="@color/text_primary"
                                         android:textSize="12sp" />
 
@@ -1753,7 +1753,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="44dp"
                                 android:layout_marginTop="10dp"
-                                android:text="✨ Ver Beneficios o Activar Zippy PRO"
+                                android:text="✨ Ver Beneficios o Activar Zeasy PRO"
                                 android:textSize="13sp"
                                 android:textStyle="bold"
                                 app:cornerRadius="10dp" />
@@ -1927,7 +1927,7 @@
                         android:layout_marginTop="4dp"
                         android:layout_marginBottom="24dp"
                         android:gravity="center"
-                        android:text="Zippy v1.2.0 • Ciem tech solutions C.A"
+                        android:text="Zeasy v1.3.0 • Ciem tech solutions C.A"
                         android:textColor="@color/text_muted"
                         android:textSize="13sp" />
 

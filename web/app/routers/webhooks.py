@@ -7,7 +7,7 @@ from app.models import DeviceLicense, PaymentTransaction
 from app.config import settings
 from app.services.cobrixpay import verify_cobrixpay_signature
 
-logger = logging.getLogger("zippy.webhooks")
+logger = logging.getLogger("zeasy.webhooks")
 router = APIRouter(prefix="/webhooks", tags=["CobrixPay Webhooks"])
 
 @router.post("/cobrixpay")
@@ -17,7 +17,7 @@ async def receive_cobrixpay_webhook(
 ):
     """
     Receptor oficial de Webhooks de CobrixPay.
-    Se ejecuta cuando un comercio paga la suscripción de Zippy PRO.
+    Se ejecuta cuando un comercio paga la suscripción de Zeasy PRO.
     """
     try:
         body = await request.json()
@@ -62,7 +62,7 @@ async def receive_cobrixpay_webhook(
         if not license_obj and payment_token:
             license_obj = db.query(DeviceLicense).filter(DeviceLicense.pending_payment_token == payment_token).first()
 
-        # 3. Extraer device_id de la descripción (ej: 'Suscripción Zippy PRO - Dispositivo 8a9b...')
+        # 3. Extraer device_id de la descripción (ej: 'Suscripción Zeasy PRO - Dispositivo 8a9b...')
         if not license_obj and "Dispositivo " in description:
             parts = description.split("Dispositivo ")
             if len(parts) > 1:
@@ -115,7 +115,7 @@ async def receive_cobrixpay_webhook(
             db.add(tx)
             db.commit()
 
-            logger.info(f"⭐ [ZIPPY PRO ACTIVADO] Dispositivo {license_obj.device_id} ({license_obj.merchant_name}) renovado hasta {new_expiry.strftime('%Y-%m-%d')}!")
+            logger.info(f"⭐ [ZEASY PRO ACTIVADO] Dispositivo {license_obj.device_id} ({license_obj.merchant_name}) renovado hasta {new_expiry.strftime('%Y-%m-%d')}!")
             return {
                 "received": True,
                 "event": event_type,
@@ -143,7 +143,7 @@ async def receive_cobrixpay_webhook(
                 lic.pending_payment_url = None
                 lic.pending_link_expires_at = None
                 db.commit()
-                logger.info(f"🗑️ Deuda pendiente #{debt_id} limpiada en Zippy tras evento '{event_type}'")
+                logger.info(f"🗑️ Deuda pendiente #{debt_id} limpiada en Zeasy tras evento '{event_type}'")
                 return {"received": True, "event": event_type, "status": "pending_cleared"}
 
     return {"received": True, "event": event_type}

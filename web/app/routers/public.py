@@ -8,13 +8,13 @@ templates = Jinja2Templates(directory="app/templates")
 
 @router.get("/", response_class=HTMLResponse)
 async def home_page(request: Request):
-    """Página principal (Landing Page) de Zippy."""
+    """Página principal (Landing Page) de Zeasy."""
     return templates.TemplateResponse(
         request=request,
         name="index.html",
         context={
             "settings": settings,
-            "page_title": "Zippy • Tu Caja Registradora Inteligente y Punto de Cobro Móvil"
+            "page_title": "Zeasy • Tu Caja Registradora Inteligente y Punto de Cobro Móvil"
         }
     )
 
@@ -26,7 +26,7 @@ async def manual_page(request: Request):
         name="guia.html",
         context={
             "settings": settings,
-            "page_title": "Instructivo y Manual de Uso • Zippy"
+            "page_title": "Instructivo y Manual de Uso • Zeasy"
         }
     )
 
@@ -38,20 +38,20 @@ async def plans_page(request: Request):
         name="planes.html",
         context={
             "settings": settings,
-            "page_title": "Planes y Precios • Zippy"
+            "page_title": "Planes y Precios • Zeasy"
         }
     )
 
 @router.get("/legal", response_class=HTMLResponse)
 @router.get("/seguridad", response_class=HTMLResponse)
 async def legal_page(request: Request):
-    """Página de Seguridad, Privacidad y Marco Legal de Zippy."""
+    """Página de Seguridad, Privacidad y Marco Legal de Zeasy."""
     return templates.TemplateResponse(
         request=request,
         name="legal.html",
         context={
             "settings": settings,
-            "page_title": "Seguridad, Privacidad y Marco Legal • Zippy"
+            "page_title": "Seguridad, Privacidad y Marco Legal • Zeasy"
         }
     )
 
