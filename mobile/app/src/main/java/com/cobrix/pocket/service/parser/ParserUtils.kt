@@ -39,10 +39,12 @@ object ParserUtils {
         "24024" to "Banco Mercantil",
         "banesco" to "Banesco",
         "2846" to "Banesco",
+        "2661" to "Banesco",
+        "2662" to "Banesco",
         "venezuela" to "Banco de Venezuela",
         "bdv" to "Banco de Venezuela",
-        "2661" to "Banco de Venezuela",
-        "2662" to "Banco de Venezuela",
+        "26371" to "Banco de Venezuela",
+        "772" to "Banco de Venezuela",
         "provincial" to "BBVA Provincial",
         "bbva" to "BBVA Provincial",
         "2282" to "BBVA Provincial",
@@ -123,10 +125,41 @@ object ParserUtils {
         return null
     }
 
+    /**
+     * Extrae el código Sudeban oficial (ej. 0102 BDV, 0134 Banesco) analizando remitente y texto.
+     */
+    fun extractBankSudebanCode(text: String, sender: String? = null): String? {
+        val s = (sender ?: "").trim().lowercase(Locale.ROOT)
+        val lower = text.lowercase(Locale.ROOT)
+        val combined = "$s $lower"
+
+        // 1. Por remitente directo (código corto oficial de SMS o nombre del banco)
+        if (s.contains("26371") || s.contains("772") || s.contains("bdv") || s.contains("venezuela")) return "0102"
+        if (s.contains("2661") || s.contains("2662") || s.contains("2846") || s.contains("banesco")) return "0134"
+        if (s.contains("24024") || s.contains("mercantil")) return "0105"
+        if (s.contains("2282") || s.contains("provincial") || s.contains("bbva")) return "0108"
+        if (s.contains("8234") || s.contains("bancamiga")) return "0172"
+        if (s.contains("2620") || s.contains("2621") || s.contains("bnc")) return "0191"
+        if (s.contains("8244") || s.contains("ubii")) return "0178"
+
+        // 2. Por texto del cuerpo del mensaje
+        if (lower.contains("pagoclave") || lower.contains("pago clave") || lower.contains("banco de venezuela") || lower.contains("bdv")) return "0102"
+        if (lower.contains("pago movil banesco") || lower.contains("pago móvil banesco") || lower.contains("banesco")) return "0134"
+        if (lower.contains("tpago") || lower.contains("t-pago") || lower.contains("mercantil")) return "0105"
+        if (lower.contains("dinero rapido") || lower.contains("dinero rápido") || lower.contains("bbva") || lower.contains("provincial")) return "0108"
+        if (lower.contains("bancamiga")) return "0172"
+        if (lower.contains("banco nacional de credito") || lower.contains("banco nacional de crédito") || lower.contains("bnc")) return "0191"
+        if (lower.contains("ubii") || lower.contains("ubiipagos")) return "0178"
+
+        // 3. Fallback mediante extractBankName
+        val detectedName = extractBankName(combined)
+        return if (detectedName != null) com.cobrix.pocket.data.model.BankCatalog.findByNameOrCode(detectedName)?.code else null
+    }
+
     // Códigos cortos SMS oficiales asignados a la banca en Venezuela
     val OFFICIAL_BANK_SMS_SHORTCODES = setOf(
-        "2661", "2662", "26371", // BDV (Banco de Venezuela)
-        "2846",                  // Banesco
+        "26371", "772",          // BDV (Banco de Venezuela)
+        "2661", "2662", "2846",  // Banesco
         "24024",                 // Banco Mercantil
         "2282",                  // BBVA Provincial
         "8234",                  // Bancamiga

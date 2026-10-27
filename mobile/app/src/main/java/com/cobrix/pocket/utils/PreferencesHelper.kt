@@ -42,7 +42,7 @@ object PreferencesHelper {
     private const val KEY_DETECT_SMS = "pref_detect_sms_enabled"
     private const val KEY_FIRST_LAUNCH = "pref_is_first_launch"
 
-    val DEFAULT_ENABLED_BANKS = setOf("0102", "0134", "0105", "0108", "0191", "0172", "0178", "0000")
+    val DEFAULT_ENABLED_BANKS = emptySet<String>()
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -77,7 +77,7 @@ object PreferencesHelper {
     }
 
     fun getPrimaryBankCode(context: Context): String {
-        return getPrefs(context).getString(KEY_BANK_CODE, "0102") ?: "0102"
+        return getPrefs(context).getString(KEY_BANK_CODE, "") ?: ""
     }
 
     fun setPrimaryBank(context: Context, bankCode: String, bankName: String) {
@@ -106,15 +106,15 @@ object PreferencesHelper {
 
     fun getEnabledBankCodes(context: Context): Set<String> {
         val prefs = getPrefs(context)
-        val primary = prefs.getString(KEY_BANK_CODE, "0102") ?: "0102"
+        val primary = prefs.getString(KEY_BANK_CODE, "") ?: ""
 
         // Si el usuario está en el Plan Básico (gratis), solo tiene acceso a 1 banco activo (el que elija libremente)
         if (!PlanCapabilityManager.canUseMultibank(context)) {
-            return setOf(primary)
+            return if (primary.isNotEmpty()) setOf(primary) else emptySet()
         }
 
         val saved = prefs.getStringSet(KEY_ENABLED_BANKS, null)
-        return saved ?: DEFAULT_ENABLED_BANKS
+        return saved ?: (if (primary.isNotEmpty()) setOf(primary) else DEFAULT_ENABLED_BANKS)
     }
 
     fun setEnabledBankCodes(context: Context, banks: Set<String>) {
@@ -175,15 +175,15 @@ object PreferencesHelper {
         val current = getEnabledBankCodes(context).toMutableSet()
         current.remove(bankCode)
         val editor = prefs.edit().putStringSet(KEY_ENABLED_BANKS, current)
-        // Si se removió el banco principal, asignar el siguiente banco disponible
-        val primary = prefs.getString(KEY_BANK_CODE, "0102")
+        // Si se removió el banco principal, asignar el siguiente banco disponible si existe
+        val primary = prefs.getString(KEY_BANK_CODE, "")
         if (primary == bankCode) {
             val remaining = current.filter { it != "0000" && BankCatalog.findByCode(it) != null }
-            val nextCode = remaining.firstOrNull() ?: "0102"
-            val nextName = BankCatalog.findByCode(nextCode)?.name ?: "Banco de Venezuela"
+            val nextCode = remaining.firstOrNull() ?: ""
+            val nextName = if (nextCode.isNotEmpty()) BankCatalog.findByCode(nextCode)?.name ?: "" else ""
             editor.putString(KEY_BANK_CODE, nextCode)
             editor.putString(KEY_BANK_NAME, nextName)
-            val nextQr = getBankQrUri(context, nextCode)
+            val nextQr = if (nextCode.isNotEmpty()) getBankQrUri(context, nextCode) else null
             if (nextQr != null) {
                 editor.putString(KEY_QR_URI, nextQr)
             } else {
@@ -205,10 +205,49 @@ object PreferencesHelper {
             return enabled
         }
 
-        // Fallback de emergencia: banco principal configurado
+        // Fallback de emergencia: banco principal configurado si existe
         val prefs = getPrefs(context)
-        val primary = prefs.getString(KEY_BANK_CODE, "0102") ?: "0102"
-        return listOf(primary)
+        val primary = prefs.getString(KEY_BANK_CODE, "") ?: ""
+        if (primary.isNotEmpty() && primary in validCatalogCodes) {
+            return listOf(primary)
+        }
+        return emptyList()
+    }
+
+    /**
+     * Obtiene los códigos bancarios y de billeteras que deben ser escuchados activamente por el servicio de notificaciones.
+     * En Plan Básico: Exclusivamente el banco receptor seleccionado por el usuario (ej: 0134 Banesco).
+     * En Plan PRO: Exclusivamente los bancos que el usuario ha configurado y que tienen un QR cargado (o el principal),
+     * más Binance Pay sólo si fue activado explícitamente en Ajustes.
+     */
+    fun getActiveListeningBankCodes(context: Context): Set<String> {
+        val isMultibank = PlanCapabilityManager.canUseMultibank(context)
+        val profile = getUserProfile(context)
+        val result = mutableSetOf<String>()
+
+        if (!isMultibank) {
+            // Plan Básico Gratuito: Sólo 1 banco activo
+            if (profile.bankCode.isNotEmpty()) {
+                result.add(profile.bankCode)
+            }
+        } else {
+            // Plan PRO: Bancos configurados en el panel
+            val configured = getConfiguredBankCodes(context)
+            val withQr = configured.filter { getBankQrUri(context, it) != null }
+            if (withQr.isNotEmpty()) {
+                result.addAll(withQr)
+            } else if (configured.isNotEmpty()) {
+                result.addAll(configured)
+            } else if (profile.bankCode.isNotEmpty()) {
+                result.add(profile.bankCode)
+            }
+
+            // Billetera Binance Pay (solo si el usuario la activó explícitamente)
+            if (isBinanceEnabled(context) && PlanCapabilityManager.canUseWallets(context)) {
+                result.add("BINANCE")
+            }
+        }
+        return result
     }
 
     /**
@@ -224,8 +263,8 @@ object PreferencesHelper {
         val prefs = getPrefs(context)
         val specific = prefs.getString("qr_image_uri_$bankCode", null)
         if (!specific.isNullOrEmpty()) return specific
-        val activeBank = prefs.getString(KEY_BANK_CODE, "0102")
-        if (bankCode == activeBank) {
+        val activeBank = prefs.getString(KEY_BANK_CODE, "")
+        if (bankCode == activeBank && !activeBank.isNullOrEmpty()) {
             return prefs.getString(KEY_QR_URI, null)
         }
         return null
@@ -245,8 +284,8 @@ object PreferencesHelper {
         } else {
             editor.remove("qr_image_uri_$bankCode")
         }
-        val activeBank = prefs.getString(KEY_BANK_CODE, "0102")
-        if (bankCode == activeBank) {
+        val activeBank = prefs.getString(KEY_BANK_CODE, "")
+        if (bankCode == activeBank && !activeBank.isNullOrEmpty()) {
             if (uri != null) {
                 editor.putString(KEY_QR_URI, uri)
             } else {
@@ -402,11 +441,11 @@ object PreferencesHelper {
         } else {
             rawSoundboxMode
         }
-        val bankCode = prefs.getString(KEY_BANK_CODE, "0102") ?: "0102"
-        val bankEntry = BankCatalog.findByCode(bankCode)
-        val defaultBankName = bankEntry?.name ?: "Banco de Venezuela"
+        val bankCode = prefs.getString(KEY_BANK_CODE, "") ?: ""
+        val bankEntry = if (bankCode.isNotEmpty()) BankCatalog.findByCode(bankCode) else null
+        val defaultBankName = bankEntry?.name ?: ""
         val bankName = prefs.getString(KEY_BANK_NAME, defaultBankName) ?: defaultBankName
-        val bankQr = getBankQrUri(context, bankCode)
+        val bankQr = if (bankCode.isNotEmpty()) getBankQrUri(context, bankCode) else null
 
         var merchantName = prefs.getString(KEY_MERCHANT_NAME, "") ?: ""
         if (merchantName == "Mi Negocio / Taxi" || merchantName == "Mi Negocio") {
@@ -457,8 +496,8 @@ object PreferencesHelper {
             .putStringSet(KEY_ENABLED_BANKS, profile.enabledBankCodes)
             .putBoolean(KEY_BIOMETRIC_ENABLED, profile.biometricSecurityEnabled)
 
-        // Sincronizar el QR activo únicamente con el QR que le pertenezca a este banco específico
-        val bankQr = getBankQrUri(context, profile.bankCode)
+        // Sincronizar el QR activo únicamente con el QR que le pertenezca a este banco específico si existe
+        val bankQr = if (profile.bankCode.isNotEmpty()) getBankQrUri(context, profile.bankCode) else null
         if (bankQr != null) {
             editor.putString(KEY_QR_URI, bankQr)
         } else {
@@ -561,6 +600,20 @@ object PreferencesHelper {
         getPrefs(context).edit().putBoolean(KEY_BINANCE_ENABLED, enabled).apply()
     }
 
+    fun hasConfiguredBinance(context: Context): Boolean {
+        val qr = getBinanceQrUri(context)
+        val payId = getBinancePayId(context)
+        return !qr.isNullOrEmpty() || payId.isNotEmpty()
+    }
+
+    fun removeBinancePay(context: Context) {
+        val editor = getPrefs(context).edit()
+        editor.remove(KEY_BINANCE_QR_URI)
+        editor.remove(KEY_BINANCE_PAY_ID)
+        editor.putBoolean(KEY_BINANCE_ENABLED, false)
+        editor.apply()
+    }
+
     fun getZinliEmail(context: Context): String {
         return getPrefs(context).getString(KEY_ZINLI_EMAIL, "") ?: ""
     }
@@ -590,5 +643,60 @@ object PreferencesHelper {
 
     fun setZinliEnabled(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_ZINLI_ENABLED, enabled).apply()
+    }
+
+    // Borrador temporal de Ajustes (evita pérdida de datos cuando el usuario sale a dar permisos)
+    private const val KEY_DRAFT_MERCHANT_NAME = "draft_merchant_name"
+    private const val KEY_DRAFT_BUSINESS_CATEGORY = "draft_business_category"
+    private const val KEY_DRAFT_PHONE = "draft_phone"
+    private const val KEY_DRAFT_ID_CARD = "draft_id_card"
+    private const val KEY_DRAFT_EMAIL = "draft_email"
+    private const val KEY_DRAFT_BCV_RATE = "draft_bcv_rate"
+
+    fun saveSettingsDraft(
+        context: Context,
+        merchantName: String,
+        category: String,
+        phone: String,
+        idCard: String,
+        email: String,
+        bcvRate: String
+    ) {
+        getPrefs(context).edit()
+            .putString(KEY_DRAFT_MERCHANT_NAME, merchantName)
+            .putString(KEY_DRAFT_BUSINESS_CATEGORY, category)
+            .putString(KEY_DRAFT_PHONE, phone)
+            .putString(KEY_DRAFT_ID_CARD, idCard)
+            .putString(KEY_DRAFT_EMAIL, email)
+            .putString(KEY_DRAFT_BCV_RATE, bcvRate)
+            .apply()
+    }
+
+    fun clearSettingsDraft(context: Context) {
+        getPrefs(context).edit()
+            .remove(KEY_DRAFT_MERCHANT_NAME)
+            .remove(KEY_DRAFT_BUSINESS_CATEGORY)
+            .remove(KEY_DRAFT_PHONE)
+            .remove(KEY_DRAFT_ID_CARD)
+            .remove(KEY_DRAFT_EMAIL)
+            .remove(KEY_DRAFT_BCV_RATE)
+            .apply()
+    }
+
+    fun hasSettingsDraft(context: Context): Boolean {
+        val prefs = getPrefs(context)
+        return prefs.contains(KEY_DRAFT_PHONE) || prefs.contains(KEY_DRAFT_ID_CARD) || prefs.contains(KEY_DRAFT_MERCHANT_NAME)
+    }
+
+    fun getSettingsDraft(context: Context): Map<String, String> {
+        val prefs = getPrefs(context)
+        return mapOf(
+            KEY_DRAFT_MERCHANT_NAME to (prefs.getString(KEY_DRAFT_MERCHANT_NAME, "") ?: ""),
+            KEY_DRAFT_BUSINESS_CATEGORY to (prefs.getString(KEY_DRAFT_BUSINESS_CATEGORY, "") ?: ""),
+            KEY_DRAFT_PHONE to (prefs.getString(KEY_DRAFT_PHONE, "") ?: ""),
+            KEY_DRAFT_ID_CARD to (prefs.getString(KEY_DRAFT_ID_CARD, "") ?: ""),
+            KEY_DRAFT_EMAIL to (prefs.getString(KEY_DRAFT_EMAIL, "") ?: ""),
+            KEY_DRAFT_BCV_RATE to (prefs.getString(KEY_DRAFT_BCV_RATE, "") ?: "")
+        )
     }
 }

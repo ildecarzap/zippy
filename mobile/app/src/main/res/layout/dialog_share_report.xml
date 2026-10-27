@@ -180,7 +180,22 @@
             android:textColor="@color/text_primary"
             app:cornerRadius="12dp" />
 
-        <!-- Opción 3: PDF Documento Formal -->
+        <!-- Opción Bloqueada en Plan Básico: + opciones de reporte -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnShareOptionsProLocked"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="8dp"
+            android:text="➕ Opciones de Reporte 🔒 (PDF y Excel)"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_cyan"
+            app:strokeColor="@color/accent_cyan"
+            app:cornerRadius="12dp"
+            android:visibility="gone" />
+
+        <!-- Opción 3: PDF Documento Formal (Plan PRO) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnShareOptionPdf"
             android:layout_width="match_parent"
@@ -193,7 +208,7 @@
             android:backgroundTint="@color/accent_cyan"
             android:textColor="@color/white" />
 
-        <!-- Opción 4: Excel (.csv) para auditoría y contabilidad -->
+        <!-- Opción 4: Excel (.csv) para auditoría y contabilidad (Plan PRO) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnShareOptionCsv"
             style="@style/Widget.Material3.Button.TonalButton"

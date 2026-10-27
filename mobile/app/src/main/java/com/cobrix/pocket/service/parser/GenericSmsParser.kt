@@ -1,5 +1,6 @@
 package com.cobrix.pocket.service.parser
 
+import com.cobrix.pocket.data.model.BankCatalog
 import com.cobrix.pocket.data.model.BankCode
 import com.cobrix.pocket.data.model.ParsedPayment
 import java.util.Locale
@@ -47,7 +48,12 @@ class GenericSmsParser : BankParser {
         val (amount, amountRaw) = ParserUtils.extractAmount(combined) ?: return null
         val reference = ParserUtils.extractReference(combined) ?: return null
         val phone = ParserUtils.extractPhone(combined)
-        val bankDetected = ParserUtils.extractBankName(combined) ?: "SMS Bancario"
+        val detectedSudeban = ParserUtils.extractBankSudebanCode(combined, title)
+        val bankDetected = if (detectedSudeban != null) {
+            BankCatalog.findByCode(detectedSudeban)?.name ?: "SMS Bancario"
+        } else {
+            ParserUtils.extractBankName(combined) ?: "SMS Bancario"
+        }
 
         val last4 = if (reference.length >= 4) reference.takeLast(4) else reference
 

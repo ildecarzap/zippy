@@ -33,8 +33,8 @@ Para subir la app a Google Play, el paquete debe estar firmado criptográficamen
 Ejecuta el siguiente comando en tu máquina (guarda este archivo en un lugar seguro y NUNCA lo subas a un repositorio público):
 
 ```bash
-keytool -genkeypair -v -keystore zippy-release-key.jks \
-  -alias zippy-key-alias \
+keytool -genkeypair -v -keystore zeasy-release-key.jks \
+  -alias zeasy-key-alias \
   -keyalg RSA -keysize 2048 -validity 10000 \
   -dname "CN=Ciem Tech Solutions, OU=Mobile Dev, O=Ciem Tech Solutions C.A, L=Caracas, ST=Miranda, C=VE"
 ```
@@ -44,10 +44,10 @@ keytool -genkeypair -v -keystore zippy-release-key.jks \
 1. Ve a **Build** > **Generate Signed Bundle / APK...**
 2. Selecciona **Android App Bundle (.aab)** y pulsa **Next**.
 3. En *Key store path*, pulsa **Create new...**
-4. Selecciona la carpeta donde guardarás `zippy-release-key.jks`, define contraseñas y completa los datos de la empresa.
+4. Selecciona la carpeta donde guardarás `zeasy-release-key.jks`, define contraseñas y completa los datos de la empresa.
 
 > [!CAUTION]
-> **MUY IMPORTANTE:** Haz una copia de seguridad segura de `zippy-release-key.jks` y de sus contraseñas (en Google Drive seguro, Dropbox o Bitwarden). Si pierdes esta llave, no podrás actualizar la app en Google Play nunca más.
+> **MUY IMPORTANTE:** Haz una copia de seguridad segura de `zeasy-release-key.jks` y de sus contraseñas (en Google Drive seguro, Dropbox o Bitwarden). Si pierdes esta llave, no podrás actualizar la app en Google Play nunca más.
 
 ---
 
@@ -68,13 +68,13 @@ Google Play exige el formato **.aab** (Android App Bundle), no APK directo.
 
 2. Genera el bundle de producción desde la terminal:
    ```bash
-   cd zippy-app/mobile
+   cd zeasy-app/mobile
    ./gradlew bundleRelease
    ```
    *O desde Android Studio:* **Build** > **Generate Signed Bundle / APK** > **Android App Bundle** > Seleccionar tu Keystore > Marcar `release` > **Finish**.
 
 3. El archivo generado estará ubicado en:
-   `zippy-app/mobile/app/build/outputs/bundle/release/app-release.aab`
+   `zeasy-app/mobile/app/build/outputs/bundle/release/app-release.aab`
 
 ---
 
@@ -96,7 +96,7 @@ Google Play exige el formato **.aab** (Android App Bundle), no APK directo.
 En el menú lateral izquierdo, ve a **Contenido de la aplicación** (App Content) y completa cada cuestionario:
 
 1. **Política de Privacidad (Privacy Policy):**
-   - URL de la política: Puedes alojar la política en la web de Zippy (ej: `https://zippy-git-902301530733.europe-west1.run.app/terminos` o una página en Notion / GitHub Pages).
+   - URL de la política: Puedes alojar la política en la web de Zeasy (ej: `https://zeasy-app-902301530733.europe-west1.run.app/terminos` o una página en Notion / GitHub Pages).
 2. **Acceso a funciones / Credenciales de prueba:**
    - Selecciona: *"Todas las funciones están disponibles sin restricciones de inicio de sesión"* (ya que Zippy usa registro automático de dispositivo).
 3. **Anuncios:**

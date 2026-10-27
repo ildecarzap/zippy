@@ -8,22 +8,48 @@ import java.util.regex.Pattern
 class BinancePayParser : BankParser {
     override val bankCode: BankCode = BankCode.BINANCE
 
-    // 1. Campo explícito de monto (común en correos de Binance): "Monto:\n0.5 USDT", "Monto: 0.50 USDT", "Amount: 0.50 USDT"
-    private val fieldAmountPattern = Pattern.compile(
-        """(?i)(?:monto|amount|importe)\s*[:.]?\s*([0-9]+(?:[.,][0-9]{1,8})?|[0-9]*[.,][0-9]+)\s*(?:USDT|USD|BUSD)?"""
-    )
+    companion object {
+        // Frases de mercado, trading, noticias, campañas o publicidad que NUNCA son pagos reales
+        private val MARKETING_NEWS_KEYWORDS = listOf(
+            "sube", "baja", "aumenta", "cae", "alcista", "bajista", "all-time high", "ath",
+            "alerta de precio", "price alert", "alerta de mercado", "market alert",
+            "noticias", "news", "binance square", "top gainer", "volumen",
+            "gana hasta", "earn up to", "fondo de premios", "prize pool", "recompensa",
+            "cupón", "cupon", "voucher", "cashback", "aprende y gana", "learn & earn",
+            "campaña", "campaign", "concurso", "sorteo", "giveaway", "airdrop",
+            "nuevo listado", "new listing", "launchpool", "launchpad", "invita a", "referral",
+            "trading", "futuros", "futures", "liquidación", "liquidacion", "margen", "apalancamiento",
+            "comprar cripto", "compra btc", "invertir", "oportunidad", "criptomoneda", "mercado"
+        )
 
-    // 2. Frase de pago/transferencia recibida: "Recibiste 0.5 USDT", "Payment received of 0.5 USDT", "Pago recibido: 0.50 USDT"
+        // Frases obligatorias que confirman un abono o pago entrante real
+        private val INCOMING_PAYMENT_PHRASES = listOf(
+            "has recibido", "ha recibido", "recibiste",
+            "pago recibido", "payment received",
+            "you have received", "you received",
+            "depósito exitoso", "deposito exitoso",
+            "depósito confirmado", "deposito confirmado",
+            "deposit successful", "deposit confirmed",
+            "abono recibido", "transferencia recibida"
+        )
+    }
+
+    // 1. Frases explícitas de pago/transferencia recibida con monto
+    // Ejemplos reales:
+    // - "Has recibido 10.50 USDT de ..."
+    // - "You have received 5.00 USDT from John"
+    // - "Pago recibido: 15.00 USDT"
+    // - "Depósito exitoso: 100 USDT"
     private val receivedAmountPattern = Pattern.compile(
-        """(?i)(?:received|recibiste|recibido|has recibido|ha recibido|payment of|pago recibido|pago de)\s*(?:un pago de\s*)?(?:approx\.?|aprox\.?)?\s*([0-9]+(?:[.,][0-9]{1,8})?|[0-9]*[.,][0-9]+)\s*(?:USDT|USD|BUSD)?"""
+        """(?i)(?:has recibido|ha recibido|recibiste|you have received|you received|pago recibido(?: de)?|payment received(?: of)?|dep[oó]sito exitoso(?: de)?|dep[oó]sito confirmado(?: de)?|deposit successful(?: of)?|deposit confirmed(?: of)?)\s*(?:un pago de\s*)?(?:approx\.?|aprox\.?)?\s*([0-9]+(?:[.,][0-9]{1,8})?|[0-9]*[.,][0-9]+)\s*(?:USDT|USD|BUSD)?"""
     )
 
-    // 3. Monto seguido de token cripto explícito: "0.5 USDT", ".50 USDT", "0.50 BUSD"
-    private val cryptoTokenAmountPattern = Pattern.compile(
-        """(?i)([0-9]+(?:[.,][0-9]{1,8})?|[0-9]*[.,][0-9]+)\s*(?:USDT|BUSD)"""
+    // 2. Campo explícito de monto (típico en correos oficiales de Binance Pay): "Monto: 0.50 USDT", "Amount: 0.50 USDT"
+    private val fieldAmountPattern = Pattern.compile(
+        """(?i)(?:monto|amount|importe)\s*[:.]?\s*([0-9]+(?:[.,][0-9]{1,8})?|[0-9]*[.,][0-9]+)\s*(?:USDT|USD|BUSD)"""
     )
 
-    // 4. Remitente / Pagador
+    // Remitente / Pagador
     private val explicitSenderPattern = Pattern.compile(
         """(?i)(?:remitente|sender)\s*[:.]?\s*([A-Za-z0-9_.-]+)"""
     )
@@ -34,25 +60,32 @@ class BinancePayParser : BankParser {
         """(?i)(?:de|from)\s+([A-Za-z][A-Za-z0-9_.-]*)"""
     )
 
-    // 5. Referencia / ID de Orden o Pago: "ID de orden: 123456", "Order ID: 123456", "ID de transacción: ..."
+    // Referencia / ID de Orden o Pago: "ID de orden: 123456", "Order ID: 123456", "ID de transacción: ..."
     private val orderPattern = Pattern.compile(
         """(?i)(?:id de orden|order id|id de transacci[oó]n|transaction id|id de pago|pay id|referencia|ref)\s*[:.]?\s*([0-9]{4,24})"""
     )
 
+    private fun isMarketingOrNews(text: String): Boolean {
+        return MARKETING_NEWS_KEYWORDS.any { text.contains(it) }
+    }
+
+    private fun hasIncomingPaymentPhrase(text: String): Boolean {
+        return INCOMING_PAYMENT_PHRASES.any { text.contains(it) }
+    }
+
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
-        if (pkg.contains("binance")) return true
-
         val combined = "$title $text".lowercase(Locale.ROOT)
-        return combined.contains("binance") && (
-            combined.contains("pay") ||
-            combined.contains("usdt") ||
-            combined.contains("busd") ||
-            combined.contains("received") ||
-            combined.contains("recibido") ||
-            combined.contains("recibiste") ||
-            combined.contains("transferencia")
-        )
+
+        val isBinanceApp = pkg.contains("binance")
+        val isBinanceEmail = ParserUtils.isEmailPackage(pkg) && (combined.contains("binance") || combined.contains("do-not-reply@binance.com"))
+        if (!isBinanceApp && !isBinanceEmail) return false
+
+        // Filtro anti noticias, cotizaciones y promociones
+        if (isMarketingOrNews(combined)) return false
+
+        // Obligatorio: debe contener una frase explícita de recepción de fondos
+        return hasIncomingPaymentPhrase(combined)
     }
 
     override fun parse(
@@ -71,13 +104,23 @@ class BinancePayParser : BankParser {
             return null
         }
 
+        // Filtro estricto anti noticias y cotizaciones (ej: "USDT sube 100$")
+        if (isMarketingOrNews(lowerCombined)) {
+            return null
+        }
+
+        // Debe tener frase explícita de pago recibido
+        if (!hasIncomingPaymentPhrase(lowerCombined)) {
+            return null
+        }
+
         var amount: Double? = null
         var amountRaw = ""
 
-        // Intentar primero con el campo explícito de monto (ej: "Monto:\n0.5 USDT")
-        val fieldMatcher = fieldAmountPattern.matcher(combined)
-        if (fieldMatcher.find()) {
-            var raw = fieldMatcher.group(1)?.replace(',', '.') ?: ""
+        // Intentar primero con frase de pago recibido explícita
+        val recMatcher = receivedAmountPattern.matcher(combined)
+        if (recMatcher.find()) {
+            var raw = recMatcher.group(1)?.replace(',', '.') ?: ""
             if (raw.startsWith(".")) raw = "0$raw"
             val parsed = raw.toDoubleOrNull()
             if (parsed != null && parsed > 0.0) {
@@ -86,11 +129,11 @@ class BinancePayParser : BankParser {
             }
         }
 
-        // Intentar con frase de pago recibido (ej: "Recibiste 0.50 USDT")
+        // Intentar con campo explícito de monto (ej: "Monto: 0.50 USDT")
         if (amount == null) {
-            val recMatcher = receivedAmountPattern.matcher(combined)
-            if (recMatcher.find()) {
-                var raw = recMatcher.group(1)?.replace(',', '.') ?: ""
+            val fieldMatcher = fieldAmountPattern.matcher(combined)
+            if (fieldMatcher.find()) {
+                var raw = fieldMatcher.group(1)?.replace(',', '.') ?: ""
                 if (raw.startsWith(".")) raw = "0$raw"
                 val parsed = raw.toDoubleOrNull()
                 if (parsed != null && parsed > 0.0) {
@@ -100,29 +143,7 @@ class BinancePayParser : BankParser {
             }
         }
 
-        // Intentar con patrón de token cripto explícito (ej: "0.5 USDT")
-        if (amount == null) {
-            val tokenMatcher = cryptoTokenAmountPattern.matcher(combined)
-            if (tokenMatcher.find()) {
-                var raw = tokenMatcher.group(1)?.replace(',', '.') ?: ""
-                if (raw.startsWith(".")) raw = "0$raw"
-                val parsed = raw.toDoubleOrNull()
-                if (parsed != null && parsed > 0.0) {
-                    amount = parsed
-                    amountRaw = raw
-                }
-            }
-        }
-
-        // Fallback sólo si el texto contiene indicadores explícitos de token cripto (USDT, BUSD, USD)
-        if (amount == null && (lowerCombined.contains("usdt") || lowerCombined.contains("busd") || lowerCombined.contains("usd"))) {
-            val fallback = ParserUtils.extractAmount(combined)
-            if (fallback != null && fallback.first > 0.0) {
-                amount = fallback.first
-                amountRaw = fallback.second
-            }
-        }
-
+        // Si no se pudo asociar el monto a una recepción explícita, descartar (NUNCA usar fallbacks genéricos de montos)
         if (amount == null || amount <= 0.0) return null
 
         // Extraer remitente evitando capturar montos o números

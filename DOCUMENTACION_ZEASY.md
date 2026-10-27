@@ -61,15 +61,22 @@ El ecosistema **Zeasy** está compuesto por tres piezas clave que interactúan d
 
 ## 2. Arquitectura y Componentes
 
-### A. App Android (`cobrix-pocket`)
-* **Código fuente:** `cobrix-pocket/app/src/main/java/com/cobrix/pocket/`
+### A. App Android (`mobile/`)
+* **Código fuente:** `mobile/app/src/main/java/com/cobrix/pocket/`
 * **Mánager de Licencia:** `utils/ZeasySyncManager.kt`
   * Se ejecuta al iniciar la aplicación (`MainActivity.kt`) y periódicamente en segundo plano.
   * Extrae de forma segura el perfil del comercio (Nombre comercial, Teléfono, Cédula/RIF y Versión).
   * Envía un pulso HTTP POST a `/api/v1/license/register`.
   * Recibe el estado actual de la licencia (`TRIAL`, `ACTIVE`, `EXPIRED`, `GRACE`) y los días de vigencia restantes.
   * Si la licencia está activa o en período de prueba, habilita todas las funciones PRO.
-  * El botón **"Acerca de"** en el menú de la app abre en el navegador la URL del instructivo (`/guia`).
+  * URL de backend configurada a producción: `https://zeasy-app-902301530733.europe-west1.run.app`.
+* **Arquitectura de Seguridad y Experiencia de Usuario:**
+  * **Navegación Fluida:** El ingreso a la pantalla de Ajustes es directo y no bloquea al comerciante con contraseñas para consultas o revisión de estado.
+  * **Autenticación Biométrica / PIN en Puntos Críticos:** Se exige validación de identidad (huella digital o PIN del teléfono) únicamente en dos momentos esenciales para proteger los fondos:
+    1. **Al Cargar o Modificar Códigos QR:** Protege los códigos QR de bancos y Binance Pay para evitar que personas no autorizadas manipulen las cuentas de cobro.
+    2. **Al Guardar Cambios en Ajustes:** Valida la identidad del dueño del teléfono cuando se modifican datos de cobro, números de pago móvil o parámetros del sistema.
+  * **Sistema Anti-Pérdida de Datos (Borrador Reactivo):** La app almacena en segundo plano (`saveSettingsDraft`) todo texto ingresado por el usuario en tiempo real. Si el comerciante sale temporalmente de la app para otorgar permisos de escucha de notificaciones o segundo plano en los ajustes del sistema operativo, sus datos no se borran y se restauran automáticamente al volver.
+  * **Gestión Accesible de Bancos:** Botones de alta visibilidad para `🗑️ Quitar Banco` y `🗑️ Quitar QR` con confirmación explícita para evitar eliminaciones accidentales.
 
 ### B. Servidor Web & Panel de Control (`zeasy-web`)
 * **Tecnología:** Python 3.11, FastAPI, SQLAlchemy ORM, PostgreSQL (o Supabase), Jinja2 con estilos en CSS puro con tonos pasteles profesionales.

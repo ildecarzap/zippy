@@ -17,7 +17,7 @@ class BdvParser : BankParser {
         val combined = "$title $text".lowercase(Locale.ROOT)
         return combined.contains("pagoclave") || combined.contains("pago clave") ||
                 combined.contains("bdv") || combined.contains("banco de venezuela") ||
-                combined.contains("2661") || combined.contains("2662")
+                combined.contains("26371") || combined.contains("772")
     }
 
     override fun parse(

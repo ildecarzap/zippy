@@ -25,7 +25,7 @@ object ZeasySyncManager {
     private const val KEY_SERVER_URL = "custom_server_url"
 
     // URL oficial de producción en GCP Cloud Run
-    const val PRODUCTION_SERVER_URL = "https://zippy-git-902301530733.europe-west1.run.app"
+    const val PRODUCTION_SERVER_URL = "https://zeasy-app-902301530733.europe-west1.run.app"
     const val LOCAL_DEV_LAN_URL = "http://192.168.0.191:8088"
     const val LOCAL_DEV_EMULATOR_URL = "http://10.0.2.2:8088"
 

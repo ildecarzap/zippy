@@ -29,7 +29,7 @@ object PlanCapabilityManager {
     const val SUPPORT_PHONE_CLEAN = "584242603112"
     const val SUPPORT_PHONE_DISPLAY = "+58 4242603112"
     const val SUPPORT_EMAIL = "ildemaro.carrasco@outlook.com"
-    const val OFFICIAL_WEBSITE = "https://zippy-git-902301530733.europe-west1.run.app"
+    const val OFFICIAL_WEBSITE = "https://zeasy-app-902301530733.europe-west1.run.app"
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -88,18 +88,10 @@ object PlanCapabilityManager {
 
     fun hasUsedTrial(context: Context): Boolean {
         val prefs = getPrefs(context)
-        val isUsed = prefs.getBoolean(KEY_TRIAL_USED, false)
         val trialExp = prefs.getLong(KEY_TRIAL_EXPIRATION, 0L)
-        val now = System.currentTimeMillis()
-        // Si la prueba está corriendo actualmente, no mostrar botón para volver a activarla
-        if (trialExp > now) return true
-        // Si fue usada legítimamente en el pasado y ya expiró
-        if (isUsed && trialExp > 0L && trialExp <= now) return true
-        // Si fue confirmada remotamente por el servidor como ya consumida
-        if (isUsed && prefs.getBoolean("trial_consumed_remotely", false)) return true
-        // Si fue marcada como usada pero no tiene fecha de expiración válida ni confirmación remota,
-        // permitir recuperarla/reactivarla
-        return false
+        // Si no se ha activado nunca la prueba (trialExp == 0), el usuario aún tiene sus 7 días disponibles
+        if (trialExp == 0L) return false
+        return true
     }
 
     /**
@@ -109,9 +101,7 @@ object PlanCapabilityManager {
         val editor = getPrefs(context).edit()
         editor.putBoolean(KEY_TRIAL_USED, true)
         editor.putBoolean("trial_consumed_remotely", true)
-        if (trialEndsAtMs > 0L) {
-            editor.putLong(KEY_TRIAL_EXPIRATION, trialEndsAtMs)
-        }
+        editor.putLong(KEY_TRIAL_EXPIRATION, if (trialEndsAtMs > 0L) trialEndsAtMs else 1L)
         editor.apply()
     }
 

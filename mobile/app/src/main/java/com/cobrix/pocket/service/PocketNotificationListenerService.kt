@@ -13,6 +13,8 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.cobrix.pocket.R
 import com.cobrix.pocket.data.db.PocketDatabaseHelper
+import com.cobrix.pocket.data.model.BankCatalog
+import com.cobrix.pocket.data.model.BankCode
 import com.cobrix.pocket.data.model.Transaction
 import com.cobrix.pocket.data.model.TransactionType
 import com.cobrix.pocket.service.parser.MultibankParserRouter
@@ -162,14 +164,54 @@ class PocketNotificationListenerService : NotificationListenerService() {
         val isPro = PlanCapabilityManager.isPro(this)
         val profile = PreferencesHelper.getUserProfile(this)
 
-        // 3. Parseo mediante router bancario: Detecta cualquier banco o SMS que llegue al dispositivo del usuario
+        // 3. Obtener códigos bancarios activos y configurados por el usuario
+        val activeBankCodes = PreferencesHelper.getActiveListeningBankCodes(this)
+
+        // Mapear códigos de bancos activos a BankCode enums para restringir los parsers
+        val enabledBankEnums = mutableSetOf<BankCode>()
+        activeBankCodes.forEach { code ->
+            BankCode.fromSudeban(code)?.let { enabledBankEnums.add(it) }
+        }
+        if (activeBankCodes.contains("BINANCE")) {
+            enabledBankEnums.add(BankCode.BINANCE)
+        }
+        if (PreferencesHelper.isSmsDetectionEnabled(this)) {
+            enabledBankEnums.add(BankCode.SMS)
+        }
+
+        // Si no hay bancos configurados para escuchar, omitir
+        if (enabledBankEnums.isEmpty()) {
+            return false
+        }
+
+        // Parseo mediante router bancario restringido a los bancos activos
         val parsedPayment = parserRouter.routeAndParse(
             packageName = sbnPackageName,
             title = title,
             text = text,
             postTimeMillis = postTime,
-            enabledBankCodes = emptySet()
+            enabledBankCodes = enabledBankEnums
         ) ?: return false
+
+        // 3.1. Validación estricta: Descartar si el banco detectado NO está entre los bancos activos
+        val isBankAllowed = when (parsedPayment.bancoCodigo) {
+            BankCode.BINANCE -> activeBankCodes.contains("BINANCE")
+            BankCode.SMS -> {
+                val detectedSudeban = ParserUtils.extractBankSudebanCode(parsedPayment.textoCrudo, title)
+                    ?: BankCatalog.findByNameOrCode(parsedPayment.bancoEmisor)?.code
+                if (detectedSudeban != null) {
+                    activeBankCodes.contains(detectedSudeban)
+                } else {
+                    false
+                }
+            }
+            else -> activeBankCodes.contains(parsedPayment.bancoCodigo.sudebanCode)
+        }
+
+        if (!isBankAllowed) {
+            Log.d(TAG, "Notificación descartada: El banco ${parsedPayment.bancoCodigo.displayName} (${parsedPayment.bancoCodigo.sudebanCode}) no está en tus bancos activos configurados ($activeBankCodes).")
+            return false
+        }
 
         // 4. Deduplicación profunda en memoria (Banco + Ref 4 dígitos + Monto)
         if (PaymentDeduplicator.isPaymentDuplicate(parsedPayment)) {

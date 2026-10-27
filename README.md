@@ -34,6 +34,8 @@ zeasy-app/
 ### 1. Aplicación Móvil (`mobile/`)
 * **Cobro en Caja Rápida:** Teclado interactivo y conversión dinámica VES/USD a tasa BCV.
 * **QR Bancario Pantalla Completa:** Muestra el QR con brillo al 100% tanto en el plan Básico como en PRO.
+* **Seguridad Biométrica Protegida:** Validación por Huella Digital o PIN al cargar o modificar códigos QR y al guardar cambios de configuración en la cuenta.
+* **Persistencia Reactiva (Anti-Pérdida de Datos):** Respaldo inmediato de datos escritos en Ajustes para evitar que se borren al conceder permisos del sistema.
 * **Celebración con Confetis:** Pantalla animada personalizable al recibir pagos confirmados.
 * **Detección Multibanco en Tiempo Real:** Enrutador con soporte para Banesco, BDV, Mercantil, Provincial, BNC y Bancamiga, además de SMS.
 * **Soundbox Parlante:** Anuncio de cobros por voz o timbre de caja registradora.

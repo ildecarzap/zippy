@@ -59,30 +59,33 @@
                     android:text="Código: 0102"
                     android:textColor="@color/text_secondary"
                     android:textSize="11sp" />
-            </LinearLayout>
 
-            <TextView
-                android:id="@+id/tvBankItemPrimaryBadge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="⭐ PRINCIPAL"
-                android:textColor="@color/accent_cyan"
-                android:textStyle="bold"
-                android:textSize="10sp"
-                android:background="#1500D2C4"
-                android:paddingHorizontal="7dp"
-                android:paddingVertical="3dp"
-                android:visibility="gone" />
+                <TextView
+                    android:id="@+id/tvBankItemPrimaryBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="⭐ PRINCIPAL"
+                    android:textColor="@color/accent_cyan"
+                    android:textStyle="bold"
+                    android:textSize="10sp"
+                    android:background="#1500D2C4"
+                    android:paddingHorizontal="7dp"
+                    android:paddingVertical="2dp"
+                    android:visibility="gone" />
+            </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBankItemDeleteBank"
-                style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_marginStart="4dp"
-                android:text="🗑️"
-                android:textSize="13sp"
-                app:iconTint="@color/expense_red" />
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:text="🗑️ Quitar Banco"
+                android:textColor="@color/expense_red"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="8dp" />
         </LinearLayout>
 
         <View
@@ -138,9 +141,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="44dp"
                 android:layout_marginStart="2dp"
-                android:text="Quitar QR"
+                android:text="🗑️ Quitar QR"
                 android:textColor="@color/expense_red"
-                android:textSize="11sp"
+                android:textSize="12sp"
+                android:textStyle="bold"
                 android:visibility="gone" />
         </LinearLayout>
 
