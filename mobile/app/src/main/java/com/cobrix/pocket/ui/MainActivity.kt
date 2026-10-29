@@ -2352,7 +2352,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        binding.tvSettingsWalletsProBadge.text = "⭐ PRO"
+        if (PlanCapabilityManager.PLAY_STORE_REVIEW_MODE) {
+            binding.tvSettingsWalletsProBadge.visibility = View.GONE
+        } else {
+            binding.tvSettingsWalletsProBadge.visibility = View.VISIBLE
+            binding.tvSettingsWalletsProBadge.text = "⭐ PRO"
+        }
         val hasConfigured = PreferencesHelper.hasConfiguredBinance(this)
 
         if (hasConfigured) {
@@ -2836,6 +2841,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Estado del Plan Zeasy PRO y seguimiento de prueba / renovación
+        if (PlanCapabilityManager.PLAY_STORE_REVIEW_MODE) {
+            binding.tvSettingsPlanBadge.text = "Zeasy Edición Completa ⭐"
+            binding.tvSettingsPlanDescription.text = "Acceso ilimitado a todas las herramientas: Multibanco, Soundbox por voz, Binance Pay y Reportes."
+            binding.cardTrialPaymentAlert.visibility = View.GONE
+            binding.btnManagePlanPro.visibility = View.GONE
+            binding.btnSoundVoice.text = "🗣️ Voz"
+            binding.tvSettingsWalletsProBadge.visibility = View.GONE
+            updateLicenseBadge()
+            return
+        }
+
         val planType = PlanCapabilityManager.getPlanType(this)
         val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
         val hasUsedTrial = PlanCapabilityManager.hasUsedTrial(this)
@@ -2911,6 +2927,14 @@ class MainActivity : AppCompatActivity() {
     // --- LICENCIAS Y PLANES ---
     private fun updateLicenseBadge() {
         val deviceId = PlanCapabilityManager.getDeviceId(this)
+
+        if (PlanCapabilityManager.PLAY_STORE_REVIEW_MODE) {
+            binding.tvSubscriptionFooter.text = "Zeasy v1.3.3 • Ciem tech solutions C.A • ID: $deviceId"
+            binding.tvHeaderSubtitle.text = "⭐ Zeasy Edición Completa"
+            binding.tvHeaderSubtitle.setOnClickListener(null)
+            return
+        }
+
         val planType = PlanCapabilityManager.getPlanType(this)
         val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
 
@@ -2930,6 +2954,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showProUpgradeDialog(featureName: String) {
+        if (PlanCapabilityManager.PLAY_STORE_REVIEW_MODE) {
+            return
+        }
+
         val planType = PlanCapabilityManager.getPlanType(this)
         val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
         if (planType == PlanType.PRO_ACTIVE && daysRemaining > 3) {

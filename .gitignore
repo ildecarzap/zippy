@@ -21,6 +21,7 @@ mobile/*.iml
 mobile/.cxx/
 mobile/captures/
 mobile/app/build/
+mobile/app/release/
 *.apk
 *.aab
 

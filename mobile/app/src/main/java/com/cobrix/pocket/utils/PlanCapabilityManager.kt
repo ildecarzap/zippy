@@ -31,6 +31,16 @@ object PlanCapabilityManager {
     const val SUPPORT_EMAIL = "ildemaro.carrasco@outlook.com"
     const val OFFICIAL_WEBSITE = "https://zeasy-app-902301530733.europe-west1.run.app"
 
+    // ==============================================================================
+    // 🚀 SWITCH MAESTRO DE REVISIÓN GOOGLE PLAY / EDICIÓN ABIERTA
+    // ==============================================================================
+    // true:  Modo Google Play Review (Todas las funciones PRO desbloqueadas, sin
+    //        pantallas ni banners de pago, sin límites de bancos ni vencimiento).
+    // false: Modo Comercial Producción (Planes Free/Trial/PRO, límites de 1 banco,
+    //        avisos de renovación y cobro automatizado con CobrixPay).
+    // ==============================================================================
+    const val PLAY_STORE_REVIEW_MODE = true
+
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -46,8 +56,9 @@ object PlanCapabilityManager {
             }
             val seed = if (!androidId.isNullOrBlank()) androidId else UUID.randomUUID().toString()
             val md5 = try {
-                val digest = MessageDigest.getInstance("MD5").digest(seed.toByteArray())
-                digest.joinToString("") { "%02X".format(it) }
+                MessageDigest.getInstance("MD5").digest(seed.toByteArray()).let { digest ->
+                    digest.joinToString("") { "%02X".format(it) }
+                }
             } catch (_: Exception) {
                 seed.replace("-", "").uppercase(Locale.US)
             }
@@ -59,6 +70,11 @@ object PlanCapabilityManager {
     }
 
     fun getPlanType(context: Context): PlanType {
+        // En modo revisión de Google Play, toda la aplicación se desbloquea en PRO
+        if (PLAY_STORE_REVIEW_MODE) {
+            return PlanType.PRO_ACTIVE
+        }
+
         val prefs = getPrefs(context)
         val now = System.currentTimeMillis()
 
@@ -79,6 +95,7 @@ object PlanCapabilityManager {
     }
 
     fun isPro(context: Context): Boolean {
+        if (PLAY_STORE_REVIEW_MODE) return true
         return getPlanType(context) != PlanType.FREE
     }
 
@@ -106,6 +123,7 @@ object PlanCapabilityManager {
     }
 
     fun getDaysRemaining(context: Context): Int {
+        if (PLAY_STORE_REVIEW_MODE) return 365
         val prefs = getPrefs(context)
         val now = System.currentTimeMillis()
         val exp = when (getPlanType(context)) {

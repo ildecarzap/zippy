@@ -67,7 +67,7 @@ object ZeasySyncManager {
                 put("phone", profile.phoneNumber)
                 put("doc_id", profile.idCard)
                 put("email", profile.email)
-                put("app_version", "1.3.0")
+                put("app_version", "1.3.3")
             }
 
             val writer = OutputStreamWriter(regConn.outputStream)
@@ -107,6 +107,12 @@ object ZeasySyncManager {
                     val p12 = pricingJson.optDouble("price_12m", 29.99)
                     PreferencesHelper.savePricing(context, p1, p3, p12)
                     Log.d(TAG, "💰 Precios remotos Zippy actualizados: 1m=\$$p1, 3m=\$$p3, 12m=\$$p12")
+                }
+
+                // En modo revisión de Google Play, no permitir degradación a plan básico ni marcar vencimiento
+                if (PlanCapabilityManager.PLAY_STORE_REVIEW_MODE) {
+                    Log.i(TAG, "⭐ Modo Revisión Google Play activo: Conservando estado PRO ilimitado sin degradación.")
+                    return@withContext false
                 }
 
                 val isPro = json.optBoolean("is_pro", false)

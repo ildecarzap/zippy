@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace = "com.cobrix.pocket"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.cobrix.pocket"
+        applicationId = "com.ciemtech.zeasy"
         minSdk = 24
-        targetSdk = 34
-        versionCode = 5
-        versionName = "1.3.0"
+        targetSdk = 36
+        versionCode = 8
+        versionName = "1.3.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
