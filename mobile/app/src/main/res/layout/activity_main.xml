@@ -775,62 +775,84 @@
                 </LinearLayout>
             </ScrollView>
 
-            <!-- PANTALLA 3: CONFIGURACIÓN / MI CUENTA (DISEÑO LIMPIO Y MODULAR EN TARJETAS) -->
-            <ScrollView
+            <!-- PANTALLA 3: CONFIGURACIÓN / MI CUENTA (BARRA SUPERIOR FIJA + CONTENIDO DESPLAZABLE) -->
+            <LinearLayout
                 android:id="@+id/viewSettings"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:visibility="gone"
-                android:fillViewport="true">
+                android:orientation="vertical"
+                android:background="@color/background"
+                android:visibility="gone">
 
+                <!-- ENCABEZADO SUPERIOR FIJO SIEMPRE VISIBLE -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    android:background="@color/surface"
+                    android:elevation="4dp">
 
-                    <!-- Encabezado de Sección con Botón Rápido de Guardar -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⚙️ Configuración"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"
+                            android:textSize="18sp" />
+
+                        <TextView
+                            android:id="@+id/tvSettingsHeaderStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Datos de cobro y seguridad"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnQuickSaveSettingsTop"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:text="Guardado ✓"
+                        android:textSize="12.5sp"
+                        android:textStyle="bold"
+                        app:cornerRadius="10dp"
+                        android:enabled="false"
+                        android:alpha="0.6"
+                        android:backgroundTint="@color/surface_variant"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/border_subtle" />
+
+                <!-- CONTENIDO DESPLAZABLE DE AJUSTES -->
+                <ScrollView
+                    android:id="@+id/scrollSettingsContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:fillViewport="true">
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="14dp">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="⚙️ Configuración del Negocio"
-                                android:textStyle="bold"
-                                android:textColor="@color/text_primary"
-                                android:textSize="20sp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="Personaliza tus datos de cobro, bancos y alertas"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
-                        </LinearLayout>
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnQuickSaveSettingsTop"
-                            android:layout_width="wrap_content"
-                            android:layout_height="42dp"
-                            android:text="💾 Guardar"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            app:cornerRadius="10dp"
-                            android:backgroundTint="@color/accent_cyan"
-                            android:textColor="@color/white" />
-                    </LinearLayout>
+                        android:orientation="vertical"
+                        android:padding="16dp">
 
                     <!-- BANNER UNIFICADO DE SEGURIDAD Y PROTECCIÓN DE COBROS -->
                     <com.google.android.material.card.MaterialCardView
@@ -1720,19 +1742,6 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- BOTÓN PRINCIPAL DE GUARDAR CONFIGURACIÓN -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSaveSettings"
-                        android:layout_width="match_parent"
-                        android:layout_height="54dp"
-                        android:layout_marginBottom="20dp"
-                        android:text="💾 Guardar Configuración"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        app:cornerRadius="14dp"
-                        android:backgroundTint="@color/accent_cyan"
-                        android:textColor="@color/white" />
-
                     <!-- TARJETA 4: PLAN ZIPPY & COPIA DE SEGURIDAD -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/cardPlanProStatus"
@@ -2013,8 +2022,9 @@
                         android:textColor="@color/text_muted"
                         android:textSize="13sp" />
 
-                </LinearLayout>
-            </ScrollView>
+                    </LinearLayout>
+                </ScrollView>
+            </LinearLayout>
 
         </FrameLayout>
 

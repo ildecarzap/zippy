@@ -344,6 +344,20 @@ class MainActivity : AppCompatActivity() {
         checkNotificationPermission()
         checkBiometricAuthOnStart()
 
+        // Interceptar botón atrás si hay cambios pendientes en ajustes
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (binding.viewSettings.visibility == View.VISIBLE) {
+                    checkUnsavedSettingsBeforeNavigating {
+                        binding.bottomNavigation.selectedItemId = R.id.nav_cashier
+                    }
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+
         // Sincronización proactiva con Zippy Hub al iniciar
         syncLicenseStatus(showToastIfNoChange = false)
     }
@@ -639,44 +653,142 @@ class MainActivity : AppCompatActivity() {
             loadSettings(forceReload = true)
 
             lifecycleScope.launch {
-                ZeasySyncManager.syncWithBackend(this@MainActivity)
+                val updatedPro = ZeasySyncManager.syncWithBackend(this@MainActivity)
                 runOnUiThread {
                     Toast.makeText(this@MainActivity, "✅ Configuración guardada correctamente", Toast.LENGTH_SHORT).show()
                     updateLicenseBadge()
                     updateBinanceSettingsCard()
                     renderCashierBankCards()
+                    updateSaveButtonState()
                     onSaved?.invoke()
                 }
             }
         }
 
-        val requiresAuth = requireBiometricIfConfigured && (current.biometricSecurityEnabled || binding.switchBiometric.isChecked)
-        if (requiresAuth) {
-            requireSecurityAuth("Guardar Cambios de Configuración") {
-                saveAction()
-            }
+        // --- SEGURIDAD FINANCIERA ANTIFRAUDE ---
+        // Si se cambia el teléfono, cédula/RIF, banco, Binance Pay ID o la seguridad biométrica:
+        val isSensitiveFinancialChange = (phone != current.phoneNumber) ||
+            (idCard != current.idCard) ||
+            (finalBankCode != current.bankCode) ||
+            (PlanCapabilityManager.canUseWallets(this) && newBinancePayId != currentBinancePayId) ||
+            (binding.switchBiometric.isChecked != current.biometricSecurityEnabled)
+
+        val requiresAuth = requireBiometricIfConfigured && (current.biometricSecurityEnabled || binding.switchBiometric.isChecked || isSensitiveFinancialChange)
+
+        if (requiresAuth && BiometricHelper.isBiometricAvailable(this)) {
+            BiometricHelper.showBiometricPrompt(
+                activity = this,
+                title = "🔒 Proteger Datos de Cobro",
+                subtitle = "Confirmación de Identidad Obligatoria",
+                description = "Coloca tu huella digital o ingresa el PIN para autorizar cambios en tus cuentas de cobro",
+                onSuccess = { saveAction() },
+                onError = { _ ->
+                    Toast.makeText(this, "🔒 Modificación cancelada: Se requiere huella o PIN del dueño", Toast.LENGTH_LONG).show()
+                }
+            )
+        } else if (isSensitiveFinancialChange) {
+            // Si el dispositivo no tiene huella o PIN configurado en Android, pedir confirmación explícita
+            AlertDialog.Builder(this)
+                .setTitle("🛡️ Confirmar Cambio de Datos de Pago")
+                .setMessage("Estás modificando los datos donde se recibirán los pagos del negocio:\n\n" +
+                    "• Teléfono Pago Móvil: $phone\n" +
+                    "• Cédula / RIF: $idCard\n" +
+                    (if (finalBankName.isNotEmpty()) "• Banco: $finalBankName\n" else "") +
+                    (if (newBinancePayId.isNotEmpty()) "• Binance Pay ID: $newBinancePayId\n" else "") +
+                    "\n¿Confirmas que estos datos te pertenecen a ti como titular?")
+                .setPositiveButton("Sí, Confirmar") { _, _ -> saveAction() }
+                .setNegativeButton("Cancelar", null)
+                .show()
         } else {
             saveAction()
         }
         return true
     }
 
-    // --- NAVEGACIÓN ENTRE TABS CON AUTO-GUARDADO REACTIVO ---
-    private fun autoPersistSettingsIfChanged() {
-        if (binding.viewSettings.visibility == View.VISIBLE) {
-            val current = PreferencesHelper.getUserProfile(this)
-            val phone = binding.etSettingsPhone.text.toString().trim()
-            val idCard = binding.etSettingsId.text.toString().trim()
-            if (phone.isNotEmpty() && phone !in DUMMY_DEFAULT_VALUES && idCard.isNotEmpty() && idCard !in DUMMY_DEFAULT_VALUES) {
-                // Si la biometría NO está activa, guardamos en silencio para que nunca pierda sus datos
-                if (!current.biometricSecurityEnabled && !binding.switchBiometric.isChecked) {
-                    saveCurrentSettingsFromUi(requireBiometricIfConfigured = false, isExplicitClick = false)
-                } else {
-                    saveCurrentSettingsDraft()
+    // --- DETECCIÓN REACTIVA DE CAMBIOS PENDIENTES EN AJUSTES ---
+    private fun hasPendingSettingsChanges(): Boolean {
+        val current = PreferencesHelper.getUserProfile(this)
+        val merchantName = binding.etSettingsMerchantName.text.toString().trim()
+        val phone = binding.etSettingsPhone.text.toString().trim()
+        val idCard = binding.etSettingsId.text.toString().trim()
+        val email = binding.etSettingsEmail.text.toString().trim()
+        val category = binding.actvSettingsBusinessCategory.text.toString().trim().ifEmpty { "General" }
+        val bcvRateInput = binding.etSettingsBcvRate.text.toString().replace(',', '.').trim()
+        val parsedBcvRate = bcvRateInput.toDoubleOrNull() ?: current.bcvRate
+
+        val selectedSoundMode = when (binding.toggleGroupSoundbox.checkedButtonId) {
+            R.id.btnSoundChime -> "CHIME"
+            R.id.btnSoundMuted -> "MUTED"
+            else -> "VOICE"
+        }
+
+        val currentBinancePayId = PreferencesHelper.getBinancePayId(this)
+        val newBinancePayId = binding.etBinancePayId.text.toString().trim()
+
+        return (merchantName != current.merchantName) ||
+            (category != current.businessCategory) ||
+            (phone != current.phoneNumber) ||
+            (idCard != current.idCard) ||
+            (email != current.email) ||
+            (parsedBcvRate != current.bcvRate) ||
+            (selectedSoundMode != current.soundboxMode) ||
+            (binding.switchBiometric.isChecked != current.biometricSecurityEnabled) ||
+            (PlanCapabilityManager.canUseWallets(this) && newBinancePayId != currentBinancePayId)
+    }
+
+    /**
+     * Actualiza el botón único superior de Guardar:
+     * - Si hay cambios: se activa en color cyan ("💾 Guardar")
+     * - Si está al día: queda en gris sutil desactivado ("Guardado ✓")
+     */
+    private fun updateSaveButtonState() {
+        val hasChanges = hasPendingSettingsChanges()
+        if (hasChanges) {
+            binding.btnQuickSaveSettingsTop.isEnabled = true
+            binding.btnQuickSaveSettingsTop.alpha = 1.0f
+            binding.btnQuickSaveSettingsTop.text = "💾 Guardar"
+            binding.btnQuickSaveSettingsTop.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent_cyan))
+            binding.btnQuickSaveSettingsTop.setTextColor(ContextCompat.getColor(this, R.color.white))
+            binding.tvSettingsHeaderStatus.text = "⚠️ Hay cambios sin guardar"
+            binding.tvSettingsHeaderStatus.setTextColor(ContextCompat.getColor(this, R.color.warning_orange))
+        } else {
+            binding.btnQuickSaveSettingsTop.isEnabled = false
+            binding.btnQuickSaveSettingsTop.alpha = 0.6f
+            binding.btnQuickSaveSettingsTop.text = "Guardado ✓"
+            binding.btnQuickSaveSettingsTop.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.surface_variant))
+            binding.btnQuickSaveSettingsTop.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+            binding.tvSettingsHeaderStatus.text = "Datos de cobro y seguridad"
+            binding.tvSettingsHeaderStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+        }
+    }
+
+    /**
+     * Valida si el usuario modificó datos críticos y alerta antes de salir
+     * para proteger los QR y cuentas de cobro de manipulaciones no deseadas.
+     */
+    private fun checkUnsavedSettingsBeforeNavigating(onProceed: () -> Unit) {
+        if (binding.viewSettings.visibility == View.VISIBLE && hasPendingSettingsChanges()) {
+            AlertDialog.Builder(this)
+                .setTitle("⚠️ Cambios sin Guardar")
+                .setMessage("Modificaste datos de cobro o seguridad en Ajustes.\n\n¿Deseas guardar los cambios antes de salir?")
+                .setPositiveButton("💾 Guardar") { _, _ ->
+                    val saved = saveCurrentSettingsFromUi(requireBiometricIfConfigured = true, isExplicitClick = true) {
+                        onProceed()
+                    }
+                    if (!saved) {
+                        // Si faltaba algún dato obligatorio, permanece en Ajustes
+                    }
                 }
-            } else {
-                saveCurrentSettingsDraft()
-            }
+                .setNegativeButton("Descartar") { _, _ ->
+                    PreferencesHelper.clearSettingsDraft(this)
+                    loadSettings(forceReload = true)
+                    updateSaveButtonState()
+                    onProceed()
+                }
+                .setNeutralButton("Seguir Editando", null)
+                .show()
+        } else {
+            onProceed()
         }
     }
 
@@ -684,22 +796,26 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_cashier -> {
-                    autoPersistSettingsIfChanged()
-                    binding.viewCashier.visibility = View.VISIBLE
-                    binding.viewLedger.visibility = View.GONE
-                    binding.viewSettings.visibility = View.GONE
-                    setupCashierBankSelector()
-                    renderCashierBankCards()
-                    updateCashierHeaderSummary()
-                    true
+                    checkUnsavedSettingsBeforeNavigating {
+                        binding.viewCashier.visibility = View.VISIBLE
+                        binding.viewLedger.visibility = View.GONE
+                        binding.viewSettings.visibility = View.GONE
+                        setupCashierBankSelector()
+                        renderCashierBankCards()
+                        updateCashierHeaderSummary()
+                        binding.bottomNavigation.menu.findItem(R.id.nav_cashier).isChecked = true
+                    }
+                    binding.viewSettings.visibility != View.VISIBLE || !hasPendingSettingsChanges()
                 }
                 R.id.nav_ledger -> {
-                    autoPersistSettingsIfChanged()
-                    binding.viewCashier.visibility = View.GONE
-                    binding.viewLedger.visibility = View.VISIBLE
-                    binding.viewSettings.visibility = View.GONE
-                    loadTodayLedger()
-                    true
+                    checkUnsavedSettingsBeforeNavigating {
+                        binding.viewCashier.visibility = View.GONE
+                        binding.viewLedger.visibility = View.VISIBLE
+                        binding.viewSettings.visibility = View.GONE
+                        loadTodayLedger()
+                        binding.bottomNavigation.menu.findItem(R.id.nav_ledger).isChecked = true
+                    }
+                    binding.viewSettings.visibility != View.VISIBLE || !hasPendingSettingsChanges()
                 }
                 R.id.nav_settings -> {
                     saveCurrentSettingsDraft()
@@ -707,6 +823,7 @@ class MainActivity : AppCompatActivity() {
                     binding.viewLedger.visibility = View.GONE
                     binding.viewSettings.visibility = View.VISIBLE
                     loadSettings(forceReload = false)
+                    updateSaveButtonState()
                     true
                 }
                 else -> false
@@ -2603,11 +2720,14 @@ class MainActivity : AppCompatActivity() {
         setupClearDefaultOnTouch(binding.etSettingsId, DUMMY_DEFAULT_VALUES)
         setupClearDefaultOnTouch(binding.actvSettingsBusinessCategory, DUMMY_DEFAULT_VALUES)
 
-        // Guardado reactivo de borrador para evitar pérdida de datos si el usuario sale a dar permisos
+        // Guardado reactivo de borrador y actualización instantánea del botón de guardar
         val draftWatcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun afterTextChanged(s: Editable?) { saveCurrentSettingsDraft() }
+            override fun afterTextChanged(s: Editable?) {
+                saveCurrentSettingsDraft()
+                updateSaveButtonState()
+            }
         }
         binding.etSettingsMerchantName.addTextChangedListener(draftWatcher)
         binding.actvSettingsBusinessCategory.addTextChangedListener(draftWatcher)
@@ -2615,6 +2735,7 @@ class MainActivity : AppCompatActivity() {
         binding.etSettingsId.addTextChangedListener(draftWatcher)
         binding.etSettingsEmail.addTextChangedListener(draftWatcher)
         binding.etSettingsBcvRate.addTextChangedListener(draftWatcher)
+        binding.etBinancePayId.addTextChangedListener(draftWatcher)
 
         // Botón Guía Web Oficial con Fotos y Ejemplos
         binding.btnOpenWebGuide.setOnClickListener {
@@ -2713,11 +2834,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Selección de modo Soundbox: Permitir probar la voz incluso en plan básico para saber cómo suena
+        // Selección de modo Soundbox
         binding.toggleGroupSoundbox.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked && checkedId == R.id.btnSoundVoice && !PlanCapabilityManager.canUseVoiceSoundbox(this)) {
                 Toast.makeText(this, "🗣️ Modo Voz en prueba. Para activarlo en todos tus cobros, se requiere Plan PRO.", Toast.LENGTH_SHORT).show()
             }
+            updateSaveButtonState()
+        }
+
+        // Listener de switch biométrico para actualizar estado de botón
+        binding.switchBiometric.setOnCheckedChangeListener { _, _ ->
+            updateSaveButtonState()
         }
 
         // Probar Soundbox (dejar sonar la voz para que el usuario conozca la función)
@@ -2732,11 +2859,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Guardar Ajustes (con soporte para botón superior e inferior, y validación flexible)
+        // Botón único superior de Guardar Ajustes
         val handleSaveClick = {
             saveCurrentSettingsFromUi(requireBiometricIfConfigured = true, isExplicitClick = true)
         }
-        binding.btnSaveSettings.setOnClickListener { handleSaveClick() }
         binding.btnQuickSaveSettingsTop.setOnClickListener { handleSaveClick() }
 
         // Plan PRO y Respaldos en Ajustes
@@ -2885,6 +3011,7 @@ class MainActivity : AppCompatActivity() {
         setupCashierBankSelector()
         setupSettingsWallets()
         updatePlanUiInSettings()
+        updateSaveButtonState()
     }
 
     private fun updatePlanUiInSettings() {
