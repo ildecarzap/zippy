@@ -12,6 +12,8 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.cobrix.pocket.databinding.ActivityQrCropBinding
 import java.io.File
 import java.io.FileOutputStream
@@ -46,6 +48,20 @@ class QrCropActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityQrCropBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Respetar la barra de navegación inferior (3 botones o gestos) dinámicamente
+        ViewCompat.setOnApplyWindowInsetsListener(binding.layoutCropActions) { v, insets ->
+            val navBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val density = resources.displayMetrics.density
+            val defaultPaddingPx = (20 * density).toInt()
+            v.setPadding(
+                defaultPaddingPx,
+                defaultPaddingPx,
+                defaultPaddingPx,
+                defaultPaddingPx + navBars.bottom
+            )
+            insets
+        }
 
         val uriString = intent.getStringExtra(EXTRA_SOURCE_URI)
         if (uriString == null) {

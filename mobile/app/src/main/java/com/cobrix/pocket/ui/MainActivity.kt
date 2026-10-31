@@ -356,7 +356,20 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         PreferencesHelper.sanitizeBasicPlanBank(this)
+        val previouslyEnabled = wasNotificationListenerEnabled
         checkNotificationPermission()
+
+        if (!previouslyEnabled && wasNotificationListenerEnabled) {
+            // Acaba de activar el permiso de escucha, sugerir optimización de batería si aún está con restricciones
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+                if (powerManager?.isIgnoringBatteryOptimizations(packageName) != true) {
+                    binding.root.postDelayed({
+                        requestBatteryOptimizationManual()
+                    }, 600)
+                }
+            }
+        }
 
         if (PreferencesHelper.isFirstLaunch(this)) {
             PreferencesHelper.setFirstLaunch(this, false)
@@ -371,6 +384,9 @@ class MainActivity : AppCompatActivity() {
 
         // Sincronización reactiva inmediata al volver a la app (detecta pago de CobrixPay o activación de soporte)
         syncLicenseStatus(showToastIfNoChange = false)
+
+        // Sincronización periódica automática de Tasa BCV Oficial
+        autoSyncBcvRateDaily()
 
         // Verificar si llegó un pago mientras la pantalla estaba apagada o en otra app
         if (PreferencesHelper.isCelebrationScreenEnabled(this)) {
@@ -508,11 +524,167 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // --- NAVEGACIÓN ENTRE TABS ---
+    // --- GESTIÓN CENTRALIZADA Y SEGURA DE GUARDADO DE AJUSTES ---
+    private fun saveCurrentSettingsFromUi(
+        requireBiometricIfConfigured: Boolean,
+        isExplicitClick: Boolean = false,
+        onSaved: (() -> Unit)? = null
+    ): Boolean {
+        val current = PreferencesHelper.getUserProfile(this)
+
+        val merchantName = binding.etSettingsMerchantName.text.toString().trim()
+        val phone = binding.etSettingsPhone.text.toString().trim()
+        val idCard = binding.etSettingsId.text.toString().trim()
+        val email = binding.etSettingsEmail.text.toString().trim()
+        val category = binding.actvSettingsBusinessCategory.text.toString().trim().ifEmpty { "General" }
+
+        val finalBankCode = current.bankCode
+        val finalBankName = current.bankName
+
+        // Tasa BCV: aceptar tanto punto como coma, y si está vacío o inválido, conservar tasa actual
+        val bcvRateInput = binding.etSettingsBcvRate.text.toString().replace(',', '.').trim()
+        val parsedBcvRate = bcvRateInput.toDoubleOrNull() ?: current.bcvRate
+
+        // Modo Soundbox con bloqueo de voz para Plan Básico
+        val selectedSoundMode = when (binding.toggleGroupSoundbox.checkedButtonId) {
+            R.id.btnSoundChime -> "CHIME"
+            R.id.btnSoundMuted -> "MUTED"
+            else -> "VOICE"
+        }
+
+        val isVoicePro = PlanCapabilityManager.canUseVoiceSoundbox(this)
+        val soundboxMode = if (selectedSoundMode == "VOICE" && !isVoicePro) {
+            binding.toggleGroupSoundbox.check(R.id.btnSoundChime)
+            if (isExplicitClick) showProUpgradeDialog("Soundbox Parlante con Síntesis de Voz (Plan PRO)")
+            "CHIME"
+        } else {
+            selectedSoundMode
+        }
+
+        val currentBinancePayId = PreferencesHelper.getBinancePayId(this)
+        val newBinancePayId = binding.etBinancePayId.text.toString().trim()
+
+        val hasChanges = (merchantName != current.merchantName) ||
+            (category != current.businessCategory) ||
+            (phone != current.phoneNumber) ||
+            (idCard != current.idCard) ||
+            (email != current.email) ||
+            (parsedBcvRate != current.bcvRate) ||
+            (soundboxMode != current.soundboxMode) ||
+            (binding.switchBiometric.isChecked != current.biometricSecurityEnabled) ||
+            (PlanCapabilityManager.canUseWallets(this) && newBinancePayId != currentBinancePayId)
+
+        if (!hasChanges) {
+            if (isExplicitClick) {
+                Toast.makeText(this, "No se detectaron cambios en la configuración", Toast.LENGTH_SHORT).show()
+            }
+            onSaved?.invoke()
+            return false
+        }
+
+        // Validación estricta: NO permitir guardar valores por defecto o vacíos
+        if (phone.isEmpty() || phone in DUMMY_DEFAULT_VALUES) {
+            if (isExplicitClick) {
+                Toast.makeText(this, "⚠️ Por favor ingresa tu número de teléfono de Pago Móvil", Toast.LENGTH_LONG).show()
+                binding.etSettingsPhone.requestFocus()
+            }
+            return false
+        }
+
+        if (idCard.isEmpty() || idCard in DUMMY_DEFAULT_VALUES) {
+            if (isExplicitClick) {
+                Toast.makeText(this, "⚠️ Por favor ingresa tu número de Cédula o RIF", Toast.LENGTH_LONG).show()
+                binding.etSettingsId.requestFocus()
+            }
+            return false
+        }
+
+        val saveAction = {
+            val updated = current.copy(
+                merchantName = merchantName,
+                businessCategory = category,
+                bankCode = finalBankCode,
+                bankName = finalBankName,
+                phoneNumber = phone,
+                idCard = idCard,
+                email = email,
+                bcvRate = parsedBcvRate,
+                soundboxMode = soundboxMode,
+                voiceAnnouncementEnabled = soundboxMode == "VOICE",
+                soundNotificationEnabled = soundboxMode != "MUTED",
+                biometricSecurityEnabled = binding.switchBiometric.isChecked
+            )
+
+            if (finalBankCode.isNotEmpty()) {
+                if (!PlanCapabilityManager.canUseMultibank(this)) {
+                    PreferencesHelper.replaceBasicPlanBank(this, finalBankCode, finalBankName)
+                } else {
+                    PreferencesHelper.setPrimaryBank(this, finalBankCode, finalBankName)
+                }
+            }
+            PreferencesHelper.saveUserProfile(this, updated)
+            PreferencesHelper.clearSettingsDraft(this)
+
+            if (PlanCapabilityManager.canUseWallets(this)) {
+                PreferencesHelper.setBinancePayId(this, newBinancePayId)
+            }
+
+            activeCashierBankCode = finalBankCode
+            activeCashierBankName = finalBankName
+            setupCashierBankSelector()
+            renderCashierBankCards()
+            updateCashierHeaderSummary()
+            updateSelectedBankConfigCard()
+            updateDisplayAmount()
+            loadSettings(forceReload = true)
+
+            lifecycleScope.launch {
+                ZeasySyncManager.syncWithBackend(this@MainActivity)
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "✅ Configuración guardada correctamente", Toast.LENGTH_SHORT).show()
+                    updateLicenseBadge()
+                    updateBinanceSettingsCard()
+                    renderCashierBankCards()
+                    onSaved?.invoke()
+                }
+            }
+        }
+
+        val requiresAuth = requireBiometricIfConfigured && (current.biometricSecurityEnabled || binding.switchBiometric.isChecked)
+        if (requiresAuth) {
+            requireSecurityAuth("Guardar Cambios de Configuración") {
+                saveAction()
+            }
+        } else {
+            saveAction()
+        }
+        return true
+    }
+
+    // --- NAVEGACIÓN ENTRE TABS CON AUTO-GUARDADO REACTIVO ---
+    private fun autoPersistSettingsIfChanged() {
+        if (binding.viewSettings.visibility == View.VISIBLE) {
+            val current = PreferencesHelper.getUserProfile(this)
+            val phone = binding.etSettingsPhone.text.toString().trim()
+            val idCard = binding.etSettingsId.text.toString().trim()
+            if (phone.isNotEmpty() && phone !in DUMMY_DEFAULT_VALUES && idCard.isNotEmpty() && idCard !in DUMMY_DEFAULT_VALUES) {
+                // Si la biometría NO está activa, guardamos en silencio para que nunca pierda sus datos
+                if (!current.biometricSecurityEnabled && !binding.switchBiometric.isChecked) {
+                    saveCurrentSettingsFromUi(requireBiometricIfConfigured = false, isExplicitClick = false)
+                } else {
+                    saveCurrentSettingsDraft()
+                }
+            } else {
+                saveCurrentSettingsDraft()
+            }
+        }
+    }
+
     private fun setupNavigation() {
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_cashier -> {
+                    autoPersistSettingsIfChanged()
                     binding.viewCashier.visibility = View.VISIBLE
                     binding.viewLedger.visibility = View.GONE
                     binding.viewSettings.visibility = View.GONE
@@ -522,6 +694,7 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_ledger -> {
+                    autoPersistSettingsIfChanged()
                     binding.viewCashier.visibility = View.GONE
                     binding.viewLedger.visibility = View.VISIBLE
                     binding.viewSettings.visibility = View.GONE
@@ -2559,127 +2732,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Guardar Ajustes (con validación de datos reales y bloqueo de voz si está en Plan Básico)
-        binding.btnSaveSettings.setOnClickListener {
-            val current = PreferencesHelper.getUserProfile(this)
-
-            val merchantName = binding.etSettingsMerchantName.text.toString().trim()
-            val phone = binding.etSettingsPhone.text.toString().trim()
-            val idCard = binding.etSettingsId.text.toString().trim()
-            val email = binding.etSettingsEmail.text.toString().trim()
-            val category = binding.actvSettingsBusinessCategory.text.toString().trim().ifEmpty { "General" }
-
-            val finalBankCode = current.bankCode
-            val finalBankName = current.bankName
-
-            // Tasa BCV: aceptar tanto punto como coma, y si está vacío o inválido, conservar tasa actual
-            val bcvRateInput = binding.etSettingsBcvRate.text.toString().replace(',', '.').trim()
-            val parsedBcvRate = bcvRateInput.toDoubleOrNull() ?: current.bcvRate
-
-            // Modo Soundbox con bloqueo de voz para Plan Básico
-            val selectedSoundMode = when (binding.toggleGroupSoundbox.checkedButtonId) {
-                R.id.btnSoundChime -> "CHIME"
-                R.id.btnSoundMuted -> "MUTED"
-                else -> "VOICE"
-            }
-
-            val isVoicePro = PlanCapabilityManager.canUseVoiceSoundbox(this)
-            val soundboxMode = if (selectedSoundMode == "VOICE" && !isVoicePro) {
-                binding.toggleGroupSoundbox.check(R.id.btnSoundChime)
-                showProUpgradeDialog("Soundbox Parlante con Síntesis de Voz (Plan PRO)")
-                "CHIME"
-            } else {
-                selectedSoundMode
-            }
-
-            val currentBinancePayId = PreferencesHelper.getBinancePayId(this)
-            val newBinancePayId = binding.etBinancePayId.text.toString().trim()
-
-            // Comprobar si realmente hubo cambios antes de pedir contraseña o huella
-            val hasChanges = (merchantName != current.merchantName) ||
-                (category != current.businessCategory) ||
-                (phone != current.phoneNumber) ||
-                (idCard != current.idCard) ||
-                (email != current.email) ||
-                (parsedBcvRate != current.bcvRate) ||
-                (soundboxMode != current.soundboxMode) ||
-                (binding.switchBiometric.isChecked != current.biometricSecurityEnabled) ||
-                (PlanCapabilityManager.canUseWallets(this) && newBinancePayId != currentBinancePayId)
-
-            if (!hasChanges) {
-                Toast.makeText(this, "No se detectaron cambios en la configuración", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            // Validación estricta: NO permitir guardar valores por defecto o vacíos
-            if (phone.isEmpty() || phone in DUMMY_DEFAULT_VALUES) {
-                Toast.makeText(this, "⚠️ Por favor ingresa tu número de teléfono de Pago Móvil", Toast.LENGTH_LONG).show()
-                binding.etSettingsPhone.requestFocus()
-                return@setOnClickListener
-            }
-
-            if (idCard.isEmpty() || idCard in DUMMY_DEFAULT_VALUES) {
-                Toast.makeText(this, "⚠️ Por favor ingresa tu número de Cédula o RIF", Toast.LENGTH_LONG).show()
-                binding.etSettingsId.requestFocus()
-                return@setOnClickListener
-            }
-
-            val saveAction = {
-                val updated = current.copy(
-                    merchantName = merchantName,
-                    businessCategory = category,
-                    bankCode = finalBankCode,
-                    bankName = finalBankName,
-                    phoneNumber = phone,
-                    idCard = idCard,
-                    email = email,
-                    bcvRate = parsedBcvRate,
-                    soundboxMode = soundboxMode,
-                    voiceAnnouncementEnabled = soundboxMode == "VOICE",
-                    soundNotificationEnabled = soundboxMode != "MUTED",
-                    biometricSecurityEnabled = binding.switchBiometric.isChecked
-                )
-
-                if (finalBankCode.isNotEmpty()) {
-                    if (!PlanCapabilityManager.canUseMultibank(this)) {
-                        PreferencesHelper.replaceBasicPlanBank(this, finalBankCode, finalBankName)
-                    } else {
-                        PreferencesHelper.setPrimaryBank(this, finalBankCode, finalBankName)
-                    }
-                }
-                PreferencesHelper.saveUserProfile(this, updated)
-                PreferencesHelper.clearSettingsDraft(this)
-
-                // Guardar Binance Pay ID si PRO está disponible
-                if (PlanCapabilityManager.canUseWallets(this)) {
-                    PreferencesHelper.setBinancePayId(this, newBinancePayId)
-                }
-
-                activeCashierBankCode = finalBankCode
-                activeCashierBankName = finalBankName
-                setupCashierBankSelector()
-                renderCashierBankCards()
-                updateCashierHeaderSummary()
-                updateSelectedBankConfigCard()
-                updateDisplayAmount()
-                loadSettings(forceReload = true)
-
-                lifecycleScope.launch {
-                    val updatedPro = ZeasySyncManager.syncWithBackend(this@MainActivity)
-                    runOnUiThread {
-                        Toast.makeText(this@MainActivity, "✅ Configuración guardada y vinculada a Zeasy Hub", Toast.LENGTH_SHORT).show()
-                        updateLicenseBadge()
-                        updateBinanceSettingsCard()
-                        renderCashierBankCards()
-                    }
-                }
-            }
-
-            // Solo pida contraseña o huella en el botón de guardar cuando se realice algún cambio
-            requireSecurityAuth("Guardar Cambios de Configuración") {
-                saveAction()
-            }
+        // Guardar Ajustes (con soporte para botón superior e inferior, y validación flexible)
+        val handleSaveClick = {
+            saveCurrentSettingsFromUi(requireBiometricIfConfigured = true, isExplicitClick = true)
         }
+        binding.btnSaveSettings.setOnClickListener { handleSaveClick() }
+        binding.btnQuickSaveSettingsTop.setOnClickListener { handleSaveClick() }
 
         // Plan PRO y Respaldos en Ajustes
         binding.btnManagePlanPro.setOnClickListener {
@@ -3184,6 +3242,32 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Sincroniza automáticamente la tasa oficial del BCV si han transcurrido más de 4 horas
+     * o al iniciar una nueva jornada diaria, manteniendo los cálculos al día sin intervención.
+     */
+    private fun autoSyncBcvRateDaily() {
+        val lastSync = PreferencesHelper.getLastBcvSyncTime(this)
+        val fourHoursMs = 4 * 60 * 60 * 1000L
+        if (System.currentTimeMillis() - lastSync >= fourHoursMs) {
+            lifecycleScope.launch {
+                val result = BcvRateHelper.fetchOfficialRate()
+                if (result.isSuccess && result.rate > 0.0) {
+                    val oldRate = PreferencesHelper.getUserProfile(this@MainActivity).bcvRate
+                    BcvRateHelper.applyRateToProfile(this@MainActivity, result.rate)
+                    PreferencesHelper.setLastBcvSyncTime(this@MainActivity, System.currentTimeMillis())
+
+                    updateDisplayAmount()
+                    val formatted = String.format(Locale.US, "%.2f", result.rate)
+                    binding.etSettingsBcvRate.setText(formatted)
+                    if (Math.abs(oldRate - result.rate) > 0.01) {
+                        Toast.makeText(this@MainActivity, "🔄 Tasa BCV del día sincronizada: Bs. $formatted", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+
     private fun showProActivatedCelebrationDialog(daysRemaining: Int) {
         try {
             soundHelper?.playCashRegisterSound()
@@ -3227,8 +3311,15 @@ class MainActivity : AppCompatActivity() {
         val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
         val isListenerEnabled = enabledListeners != null && enabledListeners.contains(packageName)
 
-        // El banner en la pantalla principal se mantiene oculto para no interrumpir al usuario
-        binding.layoutPermissionWarning.visibility = View.GONE
+        // Banner visible y funcional en la pantalla principal si falta el permiso
+        if (!isListenerEnabled) {
+            binding.layoutPermissionWarning.visibility = View.VISIBLE
+            binding.btnFixPermission.setOnClickListener {
+                promptActivateNotificationListener()
+            }
+        } else {
+            binding.layoutPermissionWarning.visibility = View.GONE
+        }
 
         // Actualizar indicador en Ajustes con opción a desactivar/modificar
         if (isListenerEnabled) {
@@ -3325,19 +3416,23 @@ class MainActivity : AppCompatActivity() {
     private fun showWelcomeOnboardingDialog() {
         AlertDialog.Builder(this)
             .setTitle("👋 ¡Bienvenido a Zeasy Cobros!")
-            .setMessage("La herramienta que canta tus pagos en voz alta y te da tu código QR al instante.\n\nPara empezar a recibir pagos en tu taxi o negocio:\n\n1️⃣ Configura tu Teléfono y Cédula de Pago Móvil.\n2️⃣ Agrega tu Banco y sube tu Código QR (¡sin monto fijo!).\n3️⃣ Activa los permisos de notificaciones para escuchar tus cobros.\n\n¿Deseas ver el instructivo con fotos paso a paso?")
-            .setPositiveButton("📖 Ver Instructivo con Fotos") { dialog, _ ->
-                dialog.dismiss()
-                try {
-                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("${PlanCapabilityManager.OFFICIAL_WEBSITE}/guia"))
-                    startActivity(browserIntent)
-                } catch (_: Exception) { }
-            }
-            .setNegativeButton("⚡ Configurar Ahora") { dialog, _ ->
+            .setMessage("La herramienta que canta tus pagos en voz alta y te da tu código QR al instante.\n\nPara dejar tu caja 100% lista para cobrar:\n\n1️⃣ Configura tu Teléfono y Cédula de Pago Móvil.\n2️⃣ Activa los permisos de escucha bancaria y segundo plano.\n\n¿Deseas configurarlo ahora?")
+            .setPositiveButton("⚡ Configurar Ahora (Recomendado)") { dialog, _ ->
                 dialog.dismiss()
                 binding.bottomNavigation.selectedItemId = R.id.nav_settings
                 binding.etSettingsPhone.requestFocus()
+
+                // Invitar a activar los permisos tras ingresar a Ajustes
+                binding.etSettingsPhone.postDelayed({
+                    val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+                    val isListenerEnabled = enabledListeners != null && enabledListeners.contains(packageName)
+                    if (!isListenerEnabled) {
+                        promptActivateNotificationListener()
+                    }
+                }, 800)
             }
+            .setNegativeButton("Explorar primero", null)
+            .setCancelable(false)
             .show()
     }
 

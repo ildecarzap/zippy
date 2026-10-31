@@ -55,3 +55,17 @@ async def legal_page(request: Request):
         }
     )
 
+@router.get("/dashboard", response_class=HTMLResponse)
+@router.get("/visor", response_class=HTMLResponse)
+async def dashboard_page(request: Request):
+    """Dashboard de Autogestión Offline para PC (Procesamiento 100% en el Navegador)."""
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={
+            "settings": settings,
+            "page_title": "Zeasy PC • Panel de Cierre y Autogestión Financiera Offline"
+        }
+    )
+
+

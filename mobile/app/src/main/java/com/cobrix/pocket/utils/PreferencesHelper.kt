@@ -41,11 +41,18 @@ object PreferencesHelper {
     private const val KEY_PRICE_12M = "pricing_pro_12m"
     private const val KEY_DETECT_SMS = "pref_detect_sms_enabled"
     private const val KEY_FIRST_LAUNCH = "pref_is_first_launch"
+    private const val KEY_LAST_BCV_SYNC_TIME = "last_bcv_sync_timestamp"
 
     val DEFAULT_ENABLED_BANKS = emptySet<String>()
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    fun getLastBcvSyncTime(context: Context): Long = getPrefs(context).getLong(KEY_LAST_BCV_SYNC_TIME, 0L)
+
+    fun setLastBcvSyncTime(context: Context, timestamp: Long) {
+        getPrefs(context).edit().putLong(KEY_LAST_BCV_SYNC_TIME, timestamp).apply()
     }
 
     fun getPrice1m(context: Context): Double = getPrefs(context).getFloat(KEY_PRICE_1M, 2.99f).toDouble()

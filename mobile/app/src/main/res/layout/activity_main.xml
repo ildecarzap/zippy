@@ -789,28 +789,47 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Encabezado de Sección -->
+                    <!-- Encabezado de Sección con Botón Rápido de Guardar -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
                         android:layout_marginBottom="14dp">
 
-                        <TextView
-                            android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text="⚙️ Configuración del Negocio"
-                            android:textStyle="bold"
-                            android:textColor="@color/text_primary"
-                            android:textSize="20sp" />
+                            android:layout_weight="1"
+                            android:orientation="vertical">
 
-                        <TextView
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="⚙️ Configuración del Negocio"
+                                android:textStyle="bold"
+                                android:textColor="@color/text_primary"
+                                android:textSize="20sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Personaliza tus datos de cobro, bancos y alertas"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnQuickSaveSettingsTop"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Personaliza tus datos de cobro, bancos y alertas"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:layout_height="42dp"
+                            android:text="💾 Guardar"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="10dp"
+                            android:backgroundTint="@color/accent_cyan"
+                            android:textColor="@color/white" />
                     </LinearLayout>
 
                     <!-- BANNER UNIFICADO DE SEGURIDAD Y PROTECCIÓN DE COBROS -->

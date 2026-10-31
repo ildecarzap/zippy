@@ -1,0 +1,1282 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  /* ==========================================================================
+     ZEASY PC DASHBOARD - STYLES (Local-First Offline Suite)
+     ========================================================================== */
+  .dashboard-wrapper {
+    padding: 32px 0 64px 0;
+  }
+
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .dashboard-title-area h1 {
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: var(--color-text-main);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dashboard-title-area p {
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+    margin-top: 4px;
+  }
+
+  .badge-privacy {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #E8F5E9;
+    color: #1B5E20;
+    border: 1px solid #C8E6C9;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  /* Dropzone & Import Bar */
+  .import-card {
+    background: var(--color-surface);
+    border: 2px dashed var(--color-primary-border);
+    border-radius: var(--radius-lg);
+    padding: 28px 24px;
+    text-align: center;
+    transition: all 0.25s ease;
+    margin-bottom: 24px;
+    cursor: pointer;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .import-card:hover, .import-card.drag-over {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    transform: translateY(-2px);
+  }
+
+  .import-icon {
+    font-size: 2.4rem;
+    margin-bottom: 8px;
+    display: inline-block;
+    animation: bounceSlow 3s infinite ease-in-out;
+  }
+
+  @keyframes bounceSlow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  .import-card h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin-bottom: 6px;
+  }
+
+  .import-card p {
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+    max-width: 620px;
+    margin: 0 auto 14px auto;
+  }
+
+  .import-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* Profile Bar */
+  .profile-bar {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .profile-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .profile-avatar {
+    width: 46px;
+    height: 46px;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: bold;
+    border: 1px solid var(--color-primary-border);
+  }
+
+  .profile-meta h4 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .profile-meta span {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+  }
+
+  .rate-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--color-surface-soft);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+  }
+
+  .rate-box label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+
+  .rate-box input {
+    width: 85px;
+    padding: 4px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--color-text-main);
+    background: #fff;
+    text-align: right;
+  }
+
+  /* KPI Cards Grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+
+  .kpi-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+  }
+
+  .kpi-income::before { background: #2E7D32; }
+  .kpi-expense::before { background: #C62828; }
+  .kpi-net::before { background: var(--color-primary); }
+  .kpi-ticket::before { background: var(--color-accent); }
+
+  .kpi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .kpi-label {
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+  }
+
+  .kpi-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+  }
+
+  .kpi-amount-main {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--color-text-main);
+    line-height: 1.2;
+  }
+
+  .kpi-amount-sub {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-top: 4px;
+  }
+
+  /* Charts Grid */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+
+  @media (max-width: 900px) {
+    .charts-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .chart-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .chart-header h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+  }
+
+  .chart-container {
+    position: relative;
+    height: 280px;
+    width: 100%;
+  }
+
+  /* Filter and Action Bar */
+  .action-bar {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .filters-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .search-input {
+    padding: 8px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    min-width: 220px;
+    background: #fff;
+  }
+
+  .filter-select {
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    background: #fff;
+    color: var(--color-text-main);
+  }
+
+  .btn-group-toggle {
+    display: inline-flex;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .btn-toggle {
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: none;
+    background: var(--color-surface-soft);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-toggle.active {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  .export-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* Transactions Table */
+  .table-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 30px;
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+    max-height: 520px;
+  }
+
+  .tx-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    text-align: left;
+  }
+
+  .tx-table th {
+    background: var(--color-surface-soft);
+    color: var(--color-text-muted);
+    font-weight: 700;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+
+  .tx-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    color: var(--color-text-main);
+  }
+
+  .tx-table tr:hover td {
+    background: var(--color-surface-hover);
+  }
+
+  .tx-badge-type {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .badge-income {
+    background: #E8F5E9;
+    color: #2E7D32;
+  }
+
+  .badge-expense {
+    background: #FFEBEE;
+    color: #C62828;
+  }
+
+  .bank-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
+    color: var(--color-text-main);
+  }
+
+  .ref-copy {
+    font-family: monospace;
+    font-size: 0.85rem;
+    background: var(--color-surface-soft);
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid var(--color-border-subtle);
+  }
+
+  .ref-copy:hover {
+    background: #e2e8f0;
+  }
+
+  /* Empty state */
+  .empty-state {
+    padding: 48px 20px;
+    text-align: center;
+    color: var(--color-text-muted);
+  }
+
+  .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+  }
+
+  /* Print Friendly Stylesheet */
+  @media print {
+    .navbar, .footer, .import-card, .action-bar, .export-buttons, .rate-box label, .badge-privacy {
+      display: none !important;
+    }
+    body, .dashboard-wrapper {
+      background: #fff !important;
+      padding: 0 !important;
+    }
+    .chart-card, .table-card, .profile-bar, .kpi-card {
+      border: 1px solid #ccc !important;
+      box-shadow: none !important;
+    }
+    .tx-table {
+      font-size: 8pt !important;
+    }
+    .tx-table td, .tx-table th {
+      padding: 6px 8px !important;
+    }
+  }
+</style>
+
+<div class="dashboard-wrapper">
+  <div class="container">
+
+    <!-- Header Principal -->
+    <div class="dashboard-header">
+      <div class="dashboard-title-area">
+        <h1>💻 Zeasy PC • Visor de Cierre y Autogestión</h1>
+        <p>Analiza tus ventas, cuadra tu jornada y exporta reportes contables sin enviar tus datos a la nube.</p>
+      </div>
+
+      <div class="badge-privacy">
+        <span>🛡️</span> Modo Seguro Local • Privacidad Garantizada (Cero Servidor)
+      </div>
+    </div>
+
+    <!-- Dropzone de Importación de Archivo -->
+    <div class="import-card" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <input type="file" id="fileInput" accept=".json,.csv" style="display: none;" onchange="handleFileSelect(event)">
+      <div class="import-icon">📂</div>
+      <h3>Arrastra aquí tu respaldo de Zeasy (.json) o reporte de jornada (.csv)</h3>
+      <p>Generado desde la app en <em>Jornada > Compartir Reporte</em> o <em>Ajustes > Respaldos</em>. Todo se procesa exclusivamente en la memoria RAM de tu navegador.</p>
+      
+      <div class="import-actions" onclick="event.stopPropagation()">
+        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('fileInput').click()">
+          📁 Seleccionar Archivo
+        </button>
+        <button type="button" class="btn btn-soft btn-sm" onclick="loadDemoDataset()">
+          ✨ Cargar Datos Demo (Probar ahora)
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" id="btnClearData" onclick="clearDashboardData()" style="display: none;">
+          🗑️ Limpiar Datos
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de Perfil del Comercio -->
+    <div class="profile-bar" id="profileBar" style="display: none;">
+      <div class="profile-info">
+        <div class="profile-avatar" id="profAvatar">🏪</div>
+        <div class="profile-meta">
+          <h4 id="profName">Mi Comercio</h4>
+          <span id="profDetails">RIF: V-00000000 • Rubro: General</span>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+        <div class="rate-box">
+          <label for="inputBcvRate">Tasa BCV Referencial:</label>
+          <span style="font-weight: 700; color: var(--color-primary);">Bs.</span>
+          <input type="number" step="0.01" id="inputBcvRate" value="45.00" onchange="updateBcvRate(this.value)">
+        </div>
+
+        <button id="btnSyncRateWeb" class="btn btn-outline btn-sm" onclick="syncCurrentBcvRateOnline(false)">
+          🔄 Refrescar Tasa
+        </button>
+      </div>
+    </div>
+
+    <!-- Grid de Métricas KPI -->
+    <div class="kpi-grid" id="kpiGrid" style="display: none;">
+      <!-- Total Cobrado (Ingresos) -->
+      <div class="kpi-card kpi-income">
+        <div class="kpi-header">
+          <span class="kpi-label">Cobros Totales (Ingresos)</span>
+          <span class="kpi-badge badge-income" id="kpiIncomeCount">0 ventas</span>
+        </div>
+        <div class="kpi-amount-main" id="kpiTotalIncomeVes">Bs. 0,00</div>
+        <div class="kpi-amount-sub" id="kpiTotalIncomeUsd">≈ $0.00 USD</div>
+      </div>
+
+      <!-- Gastos Operativos -->
+      <div class="kpi-card kpi-expense">
+        <div class="kpi-header">
+          <span class="kpi-label">Gastos Registrados</span>
+          <span class="kpi-badge badge-expense" id="kpiExpenseCount">0 egresos</span>
+        </div>
+        <div class="kpi-amount-main" id="kpiTotalExpenseVes">Bs. 0,00</div>
+        <div class="kpi-amount-sub" id="kpiTotalExpenseUsd">≈ $0.00 USD</div>
+      </div>
+
+      <!-- Utilidad Neta (Net Profit) -->
+      <div class="kpi-card kpi-net">
+        <div class="kpi-header">
+          <span class="kpi-label">Balance Neto en Caja</span>
+          <span class="kpi-badge" id="kpiMarginBadge" style="background: var(--color-primary-soft); color: var(--color-primary);">100% Margen</span>
+        </div>
+        <div class="kpi-amount-main" id="kpiNetVes">Bs. 0,00</div>
+        <div class="kpi-amount-sub" id="kpiNetUsd">≈ $0.00 USD</div>
+      </div>
+
+      <!-- Ticket Promedio -->
+      <div class="kpi-card kpi-ticket">
+        <div class="kpi-header">
+          <span class="kpi-label">Ticket Promedio</span>
+          <span class="kpi-badge" style="background: var(--color-accent-soft); color: var(--color-accent);">Por Cliente</span>
+        </div>
+        <div class="kpi-amount-main" id="kpiAvgTicketVes">Bs. 0,00</div>
+        <div class="kpi-amount-sub" id="kpiAvgTicketUsd">≈ $0.00 USD</div>
+      </div>
+    </div>
+
+    <!-- Visualizaciones Gráficas -->
+    <div class="charts-grid" id="chartsGrid" style="display: none;">
+      <!-- Gráfico de Tendencia Temporal -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>📈 Flujo de Cobros y Gastos (Cronológico)</h3>
+          <span style="font-size: 0.8rem; color: var(--color-text-muted);">Por fecha / hora</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="timelineChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Gráfico de Distribución por Banco / Método -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>🏦 Por Método de Pago</h3>
+          <span style="font-size: 0.8rem; color: var(--color-text-muted);">Bancos y Billeteras</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="methodsChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de Búsqueda, Filtros y Exportaciones -->
+    <div class="action-bar" id="actionBar" style="display: none;">
+      <div class="filters-group">
+        <input type="text" id="tableSearch" class="search-input" placeholder="🔍 Buscar por ref, pagador o nota..." oninput="applyFilters()">
+        
+        <div class="btn-group-toggle">
+          <button type="button" class="btn-toggle active" data-filter="ALL" onclick="setTypeFilter('ALL', this)">Todos</button>
+          <button type="button" class="btn-toggle" data-filter="INCOME" onclick="setTypeFilter('INCOME', this)">Cobros (+)</button>
+          <button type="button" class="btn-toggle" data-filter="EXPENSE" onclick="setTypeFilter('EXPENSE', this)">Gastos (-)</button>
+        </div>
+
+        <select id="bankFilter" class="filter-select" onchange="applyFilters()">
+          <option value="ALL">Todos los Bancos</option>
+        </select>
+      </div>
+
+      <div class="export-buttons">
+        <button type="button" class="btn btn-primary btn-sm" onclick="exportToCsv()">
+          📊 Exportar Excel (.csv)
+        </button>
+        <button type="button" class="btn btn-soft btn-sm" onclick="window.print()">
+          🖨️ Imprimir / PDF
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="copyWhatsAppReport()">
+          💬 Copiar p/ WhatsApp
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabla de Transacciones -->
+    <div class="table-card" id="tableCard" style="display: none;">
+      <div class="table-responsive">
+        <table class="tx-table">
+          <thead>
+            <tr>
+              <th>Fecha y Hora</th>
+              <th>Tipo</th>
+              <th>Categoría</th>
+              <th>Banco / Método</th>
+              <th>Referencia</th>
+              <th>Pagador / Nota</th>
+              <th style="text-align: right;">Monto Bs.</th>
+              <th style="text-align: right;">Equivalente ($)</th>
+            </tr>
+          </thead>
+          <tbody id="txTableBody">
+            <!-- Filas inyectadas por JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Estado Inicial / Vacío -->
+    <div class="empty-state" id="emptyPrompt">
+      <div class="empty-state-icon">📊</div>
+      <h3>Ningún reporte cargado todavía</h3>
+      <p>Carga un archivo de respaldo desde tu teléfono o presiona <strong>"Cargar Datos Demo"</strong> para ver una demostración interactiva en vivo con cobros Pago Móvil y Binance Pay.</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- Chart.js CDN con fallback -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+  // ==========================================================================
+  // ESTADO GLOBAL REACTIVO (100% CLIENT-SIDE)
+  // ==========================================================================
+  let currentProfile = {
+    merchantName: "Mi Negocio",
+    idCard: "J-00000000",
+    businessCategory: "General",
+    bcvRate: 45.00,
+    phoneNumber: "0412-0000000"
+  };
+
+  let allTransactions = [];
+  let filteredTransactions = [];
+  let activeTypeFilter = "ALL";
+  let timelineChartInstance = null;
+  let methodsChartInstance = null;
+
+  // Drag and drop listeners
+  const dropZone = document.getElementById('dropZone');
+  ['dragenter', 'dragover'].forEach(name => {
+    dropZone.addEventListener(name, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('drag-over');
+    }, false);
+  });
+
+  ['dragleave', 'drop'].forEach(name => {
+    dropZone.addEventListener(name, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('drag-over');
+    }, false);
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files.length > 0) {
+      processFile(files[0]);
+    }
+  });
+
+  function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+      processFile(file);
+    }
+  }
+
+  function processFile(file) {
+    const reader = new FileReader();
+    const fileName = file.name.toLowerCase();
+
+    reader.onload = function(e) {
+      const content = e.target.result;
+      if (fileName.endsWith('.json')) {
+        parseJsonBackup(content);
+      } else if (fileName.endsWith('.csv')) {
+        parseCsvReport(content);
+      } else {
+        alert("Formato no compatible. Por favor sube un archivo .json o .csv de Zeasy.");
+      }
+    };
+
+    reader.readAsText(file);
+  }
+
+  // Parsear JSON de Respaldo de Zeasy
+  function parseJsonBackup(jsonStr) {
+    try {
+      const data = JSON.parse(jsonStr);
+      if (data.profile) {
+        currentProfile = {
+          merchantName: data.profile.merchantName || "Mi Negocio",
+          idCard: data.profile.idCard || "",
+          businessCategory: data.profile.businessCategory || "General",
+          bcvRate: parseFloat(data.profile.bcvRate) || 45.0,
+          phoneNumber: data.profile.phoneNumber || ""
+        };
+      }
+
+      if (Array.isArray(data.transactions)) {
+        allTransactions = data.transactions.map(t => ({
+          timestamp: t.timestamp || Date.now(),
+          type: t.type === "EXPENSE" ? "EXPENSE" : "INCOME",
+          category: t.category || "Ventas",
+          bankCode: t.bankCode || "0102",
+          bankName: t.bankName || "Banco",
+          reference: t.reference || "",
+          senderName: t.senderName || "",
+          note: t.note || "",
+          amount: parseFloat(t.amount) || 0.0,
+          amountUsd: parseFloat(t.amountUsd) || (t.amount / (currentProfile.bcvRate || 1))
+        }));
+      }
+
+      saveToLocalCache();
+      renderDashboard();
+    } catch (err) {
+      console.error("Error parseando JSON:", err);
+      alert("El archivo JSON no tiene un formato válido de respaldo de Zeasy.");
+    }
+  }
+
+  // Parsear CSV de Cierre de Zeasy
+  function parseCsvReport(csvStr) {
+    try {
+      const lines = csvStr.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      let txs = [];
+      let rateFound = 45.0;
+
+      for (let line of lines) {
+        if (line.startsWith("Comercio;")) {
+          currentProfile.merchantName = line.split(';')[1]?.replace(/"/g, '') || "Mi Negocio";
+        } else if (line.startsWith("RIF / Cedula;")) {
+          currentProfile.idCard = line.split(';')[1]?.replace(/"/g, '') || "";
+        } else if (line.startsWith("Tasa BCV Referencial;")) {
+          rateFound = parseFloat(line.split(';')[1]?.replace(',', '.')) || 45.0;
+          currentProfile.bcvRate = rateFound;
+        } else if (line.includes(';') && !line.startsWith("Fecha;")) {
+          const parts = line.split(';');
+          if (parts.length >= 7) {
+            // Formato: Fecha;Hora;Tipo;Categoria;Banco;Monto Bs;Monto USD;Ref;Remitente;Nota
+            const dateStr = parts[0];
+            const timeStr = parts[1];
+            const typeStr = parts[2]?.toUpperCase().includes("GASTO") ? "EXPENSE" : "INCOME";
+            const category = parts[3] || "General";
+            const bankName = parts[4] || "Pago Móvil";
+            const amountBs = parseFloat(parts[5]?.replace(',', '.')) || 0.0;
+            const amountUsd = parseFloat(parts[6]?.replace(',', '.')) || (amountBs / rateFound);
+            const reference = parts[7] || "";
+            const sender = parts[8] || "";
+            const note = parts[9] || "";
+
+            txs.push({
+              timestamp: parseDateTime(dateStr, timeStr),
+              type: typeStr,
+              category: category,
+              bankName: bankName,
+              reference: reference,
+              senderName: sender,
+              note: note,
+              amount: amountBs,
+              amountUsd: amountUsd
+            });
+          }
+        }
+      }
+
+      allTransactions = txs;
+      saveToLocalCache();
+      renderDashboard();
+    } catch (err) {
+      console.error("Error parseando CSV:", err);
+      alert("Error leyendo el archivo CSV. Asegúrate de que sea exportado desde Zeasy.");
+    }
+  }
+
+  function parseDateTime(dStr, tStr) {
+    try {
+      // dStr format: dd/MM/yyyy
+      const [day, month, year] = dStr.split('/').map(Number);
+      const [hour, min] = (tStr || "12:00").split(':').map(Number);
+      return new Date(year, month - 1, day, hour, min).getTime();
+    } catch (_) {
+      return Date.now();
+    }
+  }
+
+  // Cargar Dataset de Demostración
+  function loadDemoDataset() {
+    currentProfile = {
+      merchantName: "Inversiones Panadería La Espiga C.A",
+      idCard: "J-50123987-1",
+      businessCategory: "Panadería y Alimentos",
+      bcvRate: 45.50,
+      phoneNumber: "0414-2345678"
+    };
+
+    const now = Date.now();
+    const hourMs = 3600000;
+
+    allTransactions = [
+      { timestamp: now - hourMs * 8, type: "INCOME", category: "Panadería", bankName: "Banesco (0134)", reference: "84729103", senderName: "Carlos Gómez", note: "3 Canillas + Queso", amount: 455.00, amountUsd: 10.00 },
+      { timestamp: now - hourMs * 7.5, type: "INCOME", category: "Charcutería", bankName: "Banco de Venezuela (0102)", reference: "19283746", senderName: "María Rodríguez", note: "Jamón y Tocineta", amount: 682.50, amountUsd: 15.00 },
+      { timestamp: now - hourMs * 7, type: "EXPENSE", category: "Proveedores", bankName: "Banesco (0134)", reference: "44920192", senderName: "Molinos del Centro", note: "Saco Harina Trigo", amount: 1365.00, amountUsd: 30.00 },
+      { timestamp: now - hourMs * 6, type: "INCOME", category: "Panadería", bankName: "Mercantil (0105)", reference: "93820194", senderName: "José Albornoz", note: "Pan Dulce x 10", amount: 318.50, amountUsd: 7.00 },
+      { timestamp: now - hourMs * 5, type: "INCOME", category: "Bebidas", bankName: "Binance Pay", reference: "BP-920192", senderName: "Pedro Páez", note: "2 Refrescos 2L", amount: 227.50, amountUsd: 5.00 },
+      { timestamp: now - hourMs * 4, type: "INCOME", category: "Panadería", bankName: "Banesco (0134)", reference: "77291048", senderName: "Ana Silva", note: "Torta de Piña", amount: 910.00, amountUsd: 20.00 },
+      { timestamp: now - hourMs * 3.5, type: "EXPENSE", category: "Servicios", bankName: "Banco de Venezuela (0102)", reference: "33910294", senderName: "Corpoelec", note: "Recibo Comercial", amount: 455.00, amountUsd: 10.00 },
+      { timestamp: now - hourMs * 2, type: "INCOME", category: "Cafetería", bankName: "BNC (0191)", reference: "55819203", senderName: "Daniela Rivas", note: "3 Cafés Grandes", amount: 273.00, amountUsd: 6.00 },
+      { timestamp: now - hourMs * 1, type: "INCOME", category: "Charcutería", bankName: "Banco de Venezuela (0102)", reference: "66928104", senderName: "Gabriel Morales", note: "Queso Paisa 500g", amount: 546.00, amountUsd: 12.00 },
+      { timestamp: now - hourMs * 0.5, type: "INCOME", category: "Panadería", bankName: "Banesco (0134)", reference: "12849102", senderName: "Luis Méndez", note: "Pan de Jamón", amount: 819.00, amountUsd: 18.00 }
+    ];
+
+    saveToLocalCache();
+    renderDashboard();
+  }
+
+  // Guardar en localStorage para persistencia offline entre recargas
+  function saveToLocalCache() {
+    try {
+      localStorage.setItem('zeasy_pc_profile', JSON.stringify(currentProfile));
+      localStorage.setItem('zeasy_pc_txs', JSON.stringify(allTransactions));
+    } catch (_) {}
+  }
+
+  function loadFromLocalCache() {
+    try {
+      const p = localStorage.getItem('zeasy_pc_profile');
+      const t = localStorage.getItem('zeasy_pc_txs');
+      if (p && t) {
+        currentProfile = JSON.parse(p);
+        allTransactions = JSON.parse(t);
+        if (allTransactions.length > 0) {
+          renderDashboard();
+        }
+      }
+    } catch (_) {}
+  }
+
+  function clearDashboardData() {
+    if (confirm("¿Deseas limpiar todos los registros cargados en esta computadora?")) {
+      localStorage.removeItem('zeasy_pc_profile');
+      localStorage.removeItem('zeasy_pc_txs');
+      allTransactions = [];
+      filteredTransactions = [];
+      document.getElementById('profileBar').style.display = 'none';
+      document.getElementById('kpiGrid').style.display = 'none';
+      document.getElementById('chartsGrid').style.display = 'none';
+      document.getElementById('actionBar').style.display = 'none';
+      document.getElementById('tableCard').style.display = 'none';
+      document.getElementById('emptyPrompt').style.display = 'block';
+      document.getElementById('btnClearData').style.display = 'none';
+    }
+  }
+
+  // Render Principal
+  function renderDashboard() {
+    document.getElementById('emptyPrompt').style.display = 'none';
+    document.getElementById('profileBar').style.display = 'flex';
+    document.getElementById('kpiGrid').style.display = 'grid';
+    document.getElementById('chartsGrid').style.display = 'grid';
+    document.getElementById('actionBar').style.display = 'flex';
+    document.getElementById('tableCard').style.display = 'block';
+    document.getElementById('btnClearData').style.display = 'inline-block';
+
+    // Perfil
+    document.getElementById('profName').textContent = currentProfile.merchantName || "Mi Negocio";
+    document.getElementById('profDetails').textContent = `RIF: ${currentProfile.idCard || "S/R"} • Rubro: ${currentProfile.businessCategory || "General"}`;
+    document.getElementById('profAvatar').textContent = currentProfile.merchantName ? currentProfile.merchantName.charAt(0).toUpperCase() : "🏪";
+    document.getElementById('inputBcvRate').value = currentProfile.bcvRate.toFixed(2);
+
+    // Llenar select de bancos
+    populateBankFilter();
+
+    // Aplicar filtros y recalcular
+    applyFilters();
+  }
+
+  function updateBcvRate(newRate) {
+    const r = parseFloat(newRate);
+    if (!isNaN(r) && r > 0) {
+      currentProfile.bcvRate = r;
+      // Recalcular USD
+      allTransactions.forEach(tx => {
+        tx.amountUsd = tx.amount / r;
+      });
+      saveToLocalCache();
+      applyFilters();
+    }
+  }
+
+  async function syncCurrentBcvRateOnline(silent = false) {
+    const btn = document.getElementById('btnSyncRateWeb');
+    if (btn) btn.textContent = '⏳ ...';
+    try {
+      const res = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.promedio && data.promedio > 0) {
+          updateBcvRate(data.promedio);
+          if (btn) btn.textContent = '🔄 Tasa Actualizada';
+          setTimeout(() => { if (btn) btn.textContent = '🔄 Refrescar Tasa'; }, 2000);
+          if (!silent) {
+            alert(`✅ Tasa Oficial BCV sincronizada automáticamente: Bs. ${data.promedio.toFixed(2)} (Actualizada: ${data.fechaActualizacion || "Hoy"})`);
+          }
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("No se pudo obtener tasa BCV automáticamente vía API:", err);
+    } finally {
+      if (btn) btn.textContent = '🔄 Refrescar Tasa';
+    }
+
+    if (!silent) {
+      const rate = prompt("No se pudo conectar a la API del BCV automáticamente. Ingresa la tasa del día manualmente (Bs / USD):", currentProfile.bcvRate.toString());
+      if (rate !== null) {
+        updateBcvRate(rate.replace(',', '.'));
+      }
+    }
+  }
+
+  function populateBankFilter() {
+    const select = document.getElementById('bankFilter');
+    const banks = new Set();
+    allTransactions.forEach(t => {
+      if (t.bankName) banks.add(t.bankName);
+    });
+
+    select.innerHTML = '<option value="ALL">Todos los Bancos y Métodos</option>';
+    banks.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b;
+      opt.textContent = b;
+      select.appendChild(opt);
+    });
+  }
+
+  function setTypeFilter(type, btn) {
+    activeTypeFilter = type;
+    document.querySelectorAll('.btn-toggle').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const query = document.getElementById('tableSearch').value.toLowerCase().trim();
+    const bankVal = document.getElementById('bankFilter').value;
+
+    filteredTransactions = allTransactions.filter(t => {
+      // Filtro tipo
+      if (activeTypeFilter !== "ALL" && t.type !== activeTypeFilter) return false;
+
+      // Filtro banco
+      if (bankVal !== "ALL" && t.bankName !== bankVal) return false;
+
+      // Búsqueda
+      if (query.length > 0) {
+        const match = (t.reference && t.reference.toLowerCase().includes(query)) ||
+                      (t.senderName && t.senderName.toLowerCase().includes(query)) ||
+                      (t.category && t.category.toLowerCase().includes(query)) ||
+                      (t.note && t.note.toLowerCase().includes(query)) ||
+                      (t.bankName && t.bankName.toLowerCase().includes(query));
+        if (!match) return false;
+      }
+
+      return true;
+    });
+
+    renderMetrics();
+    renderCharts();
+    renderTable();
+  }
+
+  function renderMetrics() {
+    let incomeVes = 0, expenseVes = 0;
+    let incomeCount = 0, expenseCount = 0;
+
+    filteredTransactions.forEach(t => {
+      if (t.type === "INCOME") {
+        incomeVes += t.amount;
+        incomeCount++;
+      } else {
+        expenseVes += t.amount;
+        expenseCount++;
+      }
+    });
+
+    const rate = currentProfile.bcvRate || 1;
+    const incomeUsd = incomeVes / rate;
+    const expenseUsd = expenseVes / rate;
+    const netVes = incomeVes - expenseVes;
+    const netUsd = netVes / rate;
+    const avgTicketVes = incomeCount > 0 ? (incomeVes / incomeCount) : 0;
+    const avgTicketUsd = avgTicketVes / rate;
+
+    // Actualizar DOM
+    document.getElementById('kpiIncomeCount').textContent = `${incomeCount} ventas`;
+    document.getElementById('kpiTotalIncomeVes').textContent = formatVes(incomeVes);
+    document.getElementById('kpiTotalIncomeUsd').textContent = `≈ $${formatUsd(incomeUsd)} USD`;
+
+    document.getElementById('kpiExpenseCount').textContent = `${expenseCount} egresos`;
+    document.getElementById('kpiTotalExpenseVes').textContent = formatVes(expenseVes);
+    document.getElementById('kpiTotalExpenseUsd').textContent = `≈ $${formatUsd(expenseUsd)} USD`;
+
+    document.getElementById('kpiNetVes').textContent = formatVes(netVes);
+    document.getElementById('kpiNetUsd').textContent = `≈ $${formatUsd(netUsd)} USD`;
+
+    const marginPct = incomeVes > 0 ? Math.round((netVes / incomeVes) * 100) : 100;
+    document.getElementById('kpiMarginBadge').textContent = `${marginPct}% Margen`;
+
+    document.getElementById('kpiAvgTicketVes').textContent = formatVes(avgTicketVes);
+    document.getElementById('kpiAvgTicketUsd').textContent = `≈ $${formatUsd(avgTicketUsd)} USD`;
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('txTableBody');
+    tbody.innerHTML = '';
+
+    if (filteredTransactions.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 24px; color: var(--color-text-muted);">No hay movimientos que coincidan con los filtros aplicados.</td></tr>';
+      return;
+    }
+
+    filteredTransactions.slice().reverse().forEach(t => {
+      const tr = document.createElement('tr');
+      const isIncome = t.type === "INCOME";
+      const dateFormatted = new Date(t.timestamp).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+      tr.innerHTML = `
+        <td style="white-space: nowrap; font-size: 0.82rem; color: var(--color-text-muted);">${dateFormatted}</td>
+        <td>
+          <span class="tx-badge-type ${isIncome ? 'badge-income' : 'badge-expense'}">
+            ${isIncome ? '🟢 Cobro' : '🔴 Gasto'}
+          </span>
+        </td>
+        <td style="font-weight: 600;">${escapeHtml(t.category)}</td>
+        <td>
+          <span class="bank-pill">🏦 ${escapeHtml(t.bankName)}</span>
+        </td>
+        <td>
+          ${t.reference ? `<span class="ref-copy" title="Clic para copiar" onclick="copyText('${t.reference}')">${escapeHtml(t.reference)}</span>` : '<span style="color:#aaa;">S/R</span>'}
+        </td>
+        <td>
+          <div style="font-weight: 600;">${escapeHtml(t.senderName || t.note || "General")}</div>
+          ${t.senderName && t.note ? `<div style="font-size: 0.78rem; color: var(--color-text-muted);">${escapeHtml(t.note)}</div>` : ''}
+        </td>
+        <td style="text-align: right; font-weight: 700; color: ${isIncome ? '#2E7D32' : '#C62828'};">
+          ${isIncome ? '+' : '-'} ${formatVes(t.amount)}
+        </td>
+        <td style="text-align: right; font-weight: 600; color: var(--color-text-muted);">
+          $${formatUsd(t.amountUsd)}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderCharts() {
+    if (typeof Chart === 'undefined') return;
+
+    // 1. Timeline Chart (Cobros por fecha)
+    const timeCtx = document.getElementById('timelineChart').getContext('2d');
+    const sorted = [...filteredTransactions].sort((a,b) => a.timestamp - b.timestamp);
+    
+    const labels = sorted.map(t => new Date(t.timestamp).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }));
+    const dataIncome = sorted.map(t => t.type === "INCOME" ? t.amount : 0);
+    const dataExpense = sorted.map(t => t.type === "EXPENSE" ? t.amount : 0);
+
+    if (timelineChartInstance) timelineChartInstance.destroy();
+
+    timelineChartInstance = new Chart(timeCtx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Cobros (Bs)',
+            data: dataIncome,
+            borderColor: '#3D6B69',
+            backgroundColor: 'rgba(61, 107, 105, 0.12)',
+            tension: 0.3,
+            fill: true,
+            pointRadius: 4
+          },
+          {
+            label: 'Gastos (Bs)',
+            data: dataExpense,
+            borderColor: '#C62828',
+            backgroundColor: 'rgba(198, 40, 40, 0.08)',
+            tension: 0.3,
+            fill: true,
+            pointRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top' }
+        },
+        scales: {
+          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    // 2. Methods Doughnut Chart
+    const methodsCtx = document.getElementById('methodsChart').getContext('2d');
+    const methodTotals = {};
+    filteredTransactions.filter(t => t.type === "INCOME").forEach(t => {
+      const b = t.bankName || "Otros";
+      methodTotals[b] = (methodTotals[b] || 0) + t.amount;
+    });
+
+    const methodLabels = Object.keys(methodTotals);
+    const methodValues = Object.values(methodTotals);
+
+    if (methodsChartInstance) methodsChartInstance.destroy();
+
+    methodsChartInstance = new Chart(methodsCtx, {
+      type: 'doughnut',
+      data: {
+        labels: methodLabels.length > 0 ? methodLabels : ['Sin cobros'],
+        datasets: [{
+          data: methodValues.length > 0 ? methodValues : [1],
+          backgroundColor: [
+            '#3D6B69', '#4E8785', '#5B6B8A', '#7A8BA6', '#A1B0C4', '#BCD9D6'
+          ],
+          borderWidth: 2,
+          borderColor: '#FFFFFF'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  // Exportaciones
+  function exportToCsv() {
+    let csv = '\uFEFF'; // UTF-8 BOM
+    csv += `Comercio;\"${currentProfile.merchantName}\"\n`;
+    csv += `RIF / Cedula;\"${currentProfile.idCard}\"\n`;
+    csv += `Tasa BCV;${currentProfile.bcvRate.toFixed(2)}\n`;
+    csv += `Fecha Exportacion;\"${new Date().toLocaleString('es-VE')}\"\n\n`;
+    csv += "Fecha;Hora;Tipo;Categoria;Banco;Referencia;Pagador;Nota;Monto Bs;Monto USD\n";
+
+    filteredTransactions.forEach(t => {
+      const d = new Date(t.timestamp);
+      const dateStr = d.toLocaleDateString('es-VE');
+      const timeStr = d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+      csv += `${dateStr};${timeStr};${t.type};\"${t.category}\";\"${t.bankName}\";\"${t.reference}\";\"${t.senderName}\";\"${t.note}\";${t.amount.toFixed(2)};${t.amountUsd.toFixed(2)}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cierre_zeasy_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function copyWhatsAppReport() {
+    let incomeVes = 0, expenseVes = 0, incomeCount = 0;
+    filteredTransactions.forEach(t => {
+      if (t.type === "INCOME") {
+        incomeVes += t.amount;
+        incomeCount++;
+      } else {
+        expenseVes += t.amount;
+      }
+    });
+    const rate = currentProfile.bcvRate || 1;
+    const netVes = incomeVes - expenseVes;
+
+    const report = 
+`📊 *CIERRE DE JORNADA - ZEASY*
+🏢 *Comercio:* ${currentProfile.merchantName}
+🆔 *RIF:* ${currentProfile.idCard || "S/R"}
+📅 *Fecha:* ${new Date().toLocaleDateString('es-VE')}
+💵 *Tasa BCV:* Bs. ${rate.toFixed(2)}
+────────────────────────
+🟢 *Ventas Cobradas:* Bs. ${formatVes(incomeVes)} ($${formatUsd(incomeVes/rate)})
+🔴 *Gastos Operativos:* Bs. ${formatVes(expenseVes)} ($${formatUsd(expenseVes/rate)})
+💰 *Balance Neto:* Bs. ${formatVes(netVes)} ($${formatUsd(netVes/rate)})
+🧾 *Total de Operaciones:* ${incomeCount} ventas
+────────────────────────
+🔒 _Generado con Zeasy PC • Privacidad Total_`;
+
+    navigator.clipboard.writeText(report).then(() => {
+      alert("✅ Resumen de cierre copiado al portapapeles. ¡Listo para pegar en WhatsApp!");
+    }).catch(() => {
+      prompt("Copia este texto manualmente para WhatsApp:", report);
+    });
+  }
+
+  function copyText(txt) {
+    navigator.clipboard.writeText(txt).then(() => {
+      alert(`Referencia ${txt} copiada al portapapeles.`);
+    });
+  }
+
+  function formatVes(val) {
+    return Number(val || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function formatUsd(val) {
+    return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || "";
+    return div.innerHTML;
+  }
+
+  // Carga automática inicial si hay datos en caché del navegador y consulta oficial de tasa BCV
+  window.addEventListener('DOMContentLoaded', () => {
+    loadFromLocalCache();
+    // Consulta proactiva y silenciosa de la tasa oficial del día
+    syncCurrentBcvRateOnline(true);
+  });
+</script>
+{% endblock %}
