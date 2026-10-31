@@ -483,13 +483,8 @@
         <p>Analiza tus ventas, cuadra tu jornada y exporta reportes contables sin enviar tus datos a la nube.</p>
       </div>
 
-      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <div class="badge-privacy" id="badgeAuthStatus">
-          <span>🛡️</span> Modo Seguro Local • Privacidad Garantizada (Cero Servidor)
-        </div>
-        <button type="button" id="btnAuthTrigger" class="btn btn-outline btn-sm" onclick="showAuthModal(true)" style="display: none; padding: 6px 14px; font-size: 0.8rem; border-radius: 20px; font-weight: 700;">
-          🔑 Vincular PRO
-        </button>
+      <div class="badge-privacy">
+        <span>🛡️</span> Modo Seguro Local • Privacidad Garantizada (Cero Servidor)
       </div>
     </div>
 
@@ -525,7 +520,7 @@
 
         <div style="margin-top: 14px;">
           <button type="button" id="btnCloseAuthModal" onclick="closeAuthModal()" style="display: none; background: transparent; border: none; color: var(--color-text-muted, #627D98); font-size: 0.85rem; cursor: pointer; text-decoration: underline;">
-            Cancelar / Continuar en modo pruebas
+            Cancelar
           </button>
         </div>
       </div>
@@ -1324,21 +1319,9 @@
       if (resp.ok) {
         const data = await resp.json();
         isDashboardAuthRequired = !!data.auth_required;
-        
-        const badge = document.getElementById('badgeAuthStatus');
-        const trigger = document.getElementById('btnAuthTrigger');
 
-        if (!isDashboardAuthRequired) {
-          // Bandera apagada: Acceso libre para pruebas con Google Play
-          if (badge) {
-            badge.innerHTML = '<span>🟢</span> Acceso Libre • Periodo de Pruebas Google Play';
-            badge.style.background = '#ECFDF5';
-            badge.style.color = '#065F46';
-            badge.style.borderColor = '#A7F3D0';
-          }
-          if (trigger) trigger.style.display = 'inline-block';
-        } else {
-          // Bandera encendida: Requiere validación de PIN Zeasy PRO
+        if (isDashboardAuthRequired) {
+          // Bandera encendida en producción: Requiere validación de PIN Zeasy PRO
           const savedToken = localStorage.getItem('zeasy_dashboard_session');
           if (savedToken) {
             verifyExistingSession(savedToken);

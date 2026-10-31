@@ -1904,12 +1904,13 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- TARJETA VINCULAR DASHBOARD PC (EXCLUSIVO ZEASY PRO) -->
+                    <!-- TARJETA VINCULAR DASHBOARD PC (EXCLUSIVO ZEASY PRO - OCULTA HASTA PRODUCCIÓN) -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/cardSettingsDashboardPc"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
+                        android:visibility="gone"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/border"
