@@ -483,8 +483,51 @@
         <p>Analiza tus ventas, cuadra tu jornada y exporta reportes contables sin enviar tus datos a la nube.</p>
       </div>
 
-      <div class="badge-privacy">
-        <span>🛡️</span> Modo Seguro Local • Privacidad Garantizada (Cero Servidor)
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <div class="badge-privacy" id="badgeAuthStatus">
+          <span>🛡️</span> Modo Seguro Local • Privacidad Garantizada (Cero Servidor)
+        </div>
+        <button type="button" id="btnAuthTrigger" class="btn btn-outline btn-sm" onclick="showAuthModal(true)" style="display: none; padding: 6px 14px; font-size: 0.8rem; border-radius: 20px; font-weight: 700;">
+          🔑 Vincular PRO
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal de Vinculación y Autenticación Zeasy PRO (Controlado por Bandera DASHBOARD_PRO_AUTH_REQUIRED) -->
+    <div id="proAuthModal" style="display: none; position: fixed; inset: 0; background: rgba(10, 25, 47, 0.82); backdrop-filter: blur(8px); z-index: 99999; justify-content: center; align-items: center; padding: 20px;">
+      <div style="background: var(--color-surface, #fff); border-radius: 24px; max-width: 480px; width: 100%; padding: 36px 30px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); text-align: center; border: 1px solid var(--color-border, #E2E8F0); position: relative;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: #E0F2FE; color: #0096C7; font-size: 32px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+          💻
+        </div>
+        <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--color-text-main, #0A192F); margin-bottom: 6px;">Vincular con Zeasy PRO</h2>
+        <p style="font-size: 0.92rem; color: var(--color-text-muted, #627D98); line-height: 1.45; margin-bottom: 24px;">
+          El Dashboard PC es exclusivo para usuarios con suscripción activa ($2.99/mes). Ingresa tu teléfono y el PIN de 6 dígitos generado en tu teléfono móvil.
+        </p>
+
+        <div style="text-align: left; margin-bottom: 16px;">
+          <label style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--color-text-muted, #334E68); margin-bottom: 6px; text-transform: uppercase;">Teléfono de Pago Móvil</label>
+          <input type="tel" id="inputAuthPhone" placeholder="Ej: 04141234567" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--color-border, #CFE0F5); font-size: 1rem; outline: none; box-sizing: border-box; background: var(--color-surface-soft, #F8FAFC); color: var(--color-text-main, #0A192F);">
+        </div>
+
+        <div style="text-align: left; margin-bottom: 20px;">
+          <label style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--color-text-muted, #334E68); margin-bottom: 6px; text-transform: uppercase;">Código PIN (6 dígitos)</label>
+          <input type="text" id="inputAuthPin" maxlength="6" placeholder="849201" style="width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--color-border, #CFE0F5); font-size: 1.4rem; letter-spacing: 6px; text-align: center; font-weight: 800; outline: none; box-sizing: border-box; background: var(--color-surface-soft, #F8FAFC); color: var(--color-text-main, #0A192F);">
+          <span style="font-size: 0.8rem; color: var(--color-text-muted, #627D98); display: block; margin-top: 6px;">
+            💡 En tu teléfono abre Zeasy Pocket > <strong>Ajustes > Zeasy Dashboard en PC > Generar Código</strong>.
+          </span>
+        </div>
+
+        <div id="authErrorMsg" style="display: none; padding: 10px 14px; border-radius: 10px; background: #FFEBE6; color: #DE350B; font-size: 0.84rem; font-weight: 600; margin-bottom: 16px; text-align: left;"></div>
+
+        <button type="button" id="btnSubmitAuthPin" class="btn btn-primary" onclick="submitDashboardPin()" style="width: 100%; padding: 14px; font-size: 1rem; font-weight: 800; border-radius: 12px; background: #0096C7; color: #fff; border: none; cursor: pointer; transition: all 0.2s ease;">
+          🔓 Desbloquear Dashboard PC
+        </button>
+
+        <div style="margin-top: 14px;">
+          <button type="button" id="btnCloseAuthModal" onclick="closeAuthModal()" style="display: none; background: transparent; border: none; color: var(--color-text-muted, #627D98); font-size: 0.85rem; cursor: pointer; text-decoration: underline;">
+            Cancelar / Continuar en modo pruebas
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1272,8 +1315,146 @@
     return div.innerHTML;
   }
 
+  // --- VINCULACIÓN Y AUTENTICACIÓN PRO (FLAG DASHBOARD_PRO_AUTH_REQUIRED) ---
+  let isDashboardAuthRequired = false;
+
+  async function checkDashboardAuthStatus() {
+    try {
+      const resp = await fetch('/api/v1/dashboard/auth-status');
+      if (resp.ok) {
+        const data = await resp.json();
+        isDashboardAuthRequired = !!data.auth_required;
+        
+        const badge = document.getElementById('badgeAuthStatus');
+        const trigger = document.getElementById('btnAuthTrigger');
+
+        if (!isDashboardAuthRequired) {
+          // Bandera apagada: Acceso libre para pruebas con Google Play
+          if (badge) {
+            badge.innerHTML = '<span>🟢</span> Acceso Libre • Periodo de Pruebas Google Play';
+            badge.style.background = '#ECFDF5';
+            badge.style.color = '#065F46';
+            badge.style.borderColor = '#A7F3D0';
+          }
+          if (trigger) trigger.style.display = 'inline-block';
+        } else {
+          // Bandera encendida: Requiere validación de PIN Zeasy PRO
+          const savedToken = localStorage.getItem('zeasy_dashboard_session');
+          if (savedToken) {
+            verifyExistingSession(savedToken);
+          } else {
+            showAuthModal(false);
+          }
+        }
+      }
+    } catch (e) {
+      console.log("No se pudo verificar estado de autenticación:", e);
+    }
+  }
+
+  function showAuthModal(canClose = false) {
+    const modal = document.getElementById('proAuthModal');
+    const closeBtn = document.getElementById('btnCloseAuthModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      if (closeBtn) closeBtn.style.display = canClose ? 'inline-block' : 'none';
+    }
+  }
+
+  function closeAuthModal() {
+    const modal = document.getElementById('proAuthModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async function verifyExistingSession(token) {
+    try {
+      const resp = await fetch(`/api/v1/dashboard/verify-session?token=${encodeURIComponent(token)}`);
+      const data = await resp.json();
+      if (data && data.valid) {
+        const badge = document.getElementById('badgeAuthStatus');
+        if (badge) {
+          badge.innerHTML = `<span>⭐</span> ${data.merchant_name || 'Comercio'} • Zeasy PRO Activo`;
+          badge.style.background = '#E0F7FE';
+          badge.style.color = '#0077B6';
+          badge.style.borderColor = '#90E0EF';
+        }
+      } else {
+        localStorage.removeItem('zeasy_dashboard_session');
+        showAuthModal(false);
+      }
+    } catch (e) {
+      console.log("Error verificando sesión previa:", e);
+    }
+  }
+
+  async function submitDashboardPin() {
+    const phoneInput = document.getElementById('inputAuthPhone');
+    const pinInput = document.getElementById('inputAuthPin');
+    const errorBox = document.getElementById('authErrorMsg');
+    const btn = document.getElementById('btnSubmitAuthPin');
+
+    const phone = phoneInput ? phoneInput.value.trim() : "";
+    const pin = pinInput ? pinInput.value.trim() : "";
+
+    if (!phone) {
+      if (errorBox) {
+        errorBox.textContent = "Por favor ingresa tu número de teléfono de Pago Móvil.";
+        errorBox.style.display = 'block';
+      }
+      return;
+    }
+
+    if (pin.length !== 6) {
+      if (errorBox) {
+        errorBox.textContent = "El código PIN debe tener exactamente 6 dígitos.";
+        errorBox.style.display = 'block';
+      }
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Verificando con Zeasy Hub...";
+    if (errorBox) errorBox.style.display = 'none';
+
+    try {
+      const resp = await fetch('/api/v1/dashboard/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, pin })
+      });
+
+      const data = await resp.json();
+      if (resp.ok && data.authenticated) {
+        localStorage.setItem('zeasy_dashboard_session', data.token);
+        closeAuthModal();
+        const badge = document.getElementById('badgeAuthStatus');
+        if (badge) {
+          badge.innerHTML = `<span>⭐</span> ${data.merchant_name || 'Comercio'} • Zeasy PRO Activo`;
+          badge.style.background = '#E0F7FE';
+          badge.style.color = '#0077B6';
+          badge.style.borderColor = '#90E0EF';
+        }
+        alert(data.message || "¡Dashboard PC vinculado exitosamente con Zeasy PRO!");
+      } else {
+        if (errorBox) {
+          errorBox.textContent = data.detail || "Código PIN inválido o expirado.";
+          errorBox.style.display = 'block';
+        }
+      }
+    } catch (e) {
+      if (errorBox) {
+        errorBox.textContent = "Error al conectar con el servidor: " + e.message;
+        errorBox.style.display = 'block';
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "🔓 Desbloquear Dashboard PC";
+    }
+  }
+
   // Carga automática inicial si hay datos en caché del navegador y consulta oficial de tasa BCV
   window.addEventListener('DOMContentLoaded', () => {
+    checkDashboardAuthStatus();
     loadFromLocalCache();
     // Consulta proactiva y silenciosa de la tasa oficial del día
     syncCurrentBcvRateOnline(true);

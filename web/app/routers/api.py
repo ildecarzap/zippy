@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import DeviceLicense, PaymentTransaction
+from app.models import DeviceLicense, PaymentTransaction, DashboardAccessPin
 from app.config import settings
 from app.services.cobrixpay import (
     create_or_get_cobrixpay_payment_url,
@@ -469,3 +469,205 @@ def get_bcv_rate():
         return {"source": "stale_cache", "rate": cached_rate, "currency": "USD/VES"}
 
     return {"source": "fallback", "rate": 200.0, "currency": "USD/VES"}
+
+
+# ==============================================================================
+# 💻 GESTIÓN DE ACCESO Y VINCULACIÓN AL DASHBOARD PC (EXCLUSIVO ZEASY PRO)
+# ==============================================================================
+import hmac
+import hashlib
+import base64
+import json
+import random
+
+def generate_dashboard_session_token(device_id: str, phone: str) -> str:
+    payload = {
+        "device_id": device_id,
+        "phone": phone,
+        "created_at": datetime.utcnow().isoformat(),
+        "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
+    }
+    payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode()
+    signature = hmac.new(
+        settings.ADMIN_SESSION_SECRET.encode(),
+        payload_b64.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return f"{payload_b64}.{signature}"
+
+def verify_dashboard_session_token(token: str) -> dict:
+    try:
+        parts = token.split(".")
+        if len(parts) != 2:
+            return None
+        payload_b64, signature = parts
+        expected = hmac.new(
+            settings.ADMIN_SESSION_SECRET.encode(),
+            payload_b64.encode(),
+            hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            return None
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64.encode()).decode())
+        if datetime.fromisoformat(payload["expires_at"]) < datetime.utcnow():
+            return None
+        return payload
+    except Exception:
+        return None
+
+class GenerateDashboardPinRequest(BaseModel):
+    device_id: str
+    phone: str = ""
+
+class VerifyDashboardPinRequest(BaseModel):
+    phone: str
+    pin: str
+
+@router.get("/dashboard/auth-status")
+def get_dashboard_auth_status():
+    """
+    Retorna si el Dashboard PC exige autenticación de cuenta PRO ($2.99/mes).
+    Controlado por settings.DASHBOARD_PRO_AUTH_REQUIRED (por defecto False).
+    """
+    return {
+        "auth_required": settings.DASHBOARD_PRO_AUTH_REQUIRED,
+        "plan_price_usd": settings.COBRIXPAY_PLAN_PRICE_USD,
+        "company_name": settings.COMPANY_NAME
+    }
+
+@router.post("/dashboard/generate-pin")
+def generate_dashboard_pin(payload: GenerateDashboardPinRequest, db: Session = Depends(get_db)):
+    """
+    Genera un código PIN de 6 dígitos desde la app móvil Zeasy Pocket (Móvil).
+    Solo para dispositivos con plan PRO (o modo de prueba abierto).
+    """
+    license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == payload.device_id).first()
+    is_pro = license_obj.is_pro_active if license_obj else False
+
+    # En producción comercial, si la bandera está prendida y no es PRO, se rechaza
+    if settings.DASHBOARD_PRO_AUTH_REQUIRED and not is_pro:
+        raise HTTPException(
+            status_code=403,
+            detail="Se requiere suscripción activa Zeasy PRO ($2.99/mes) para vincular con Dashboard PC."
+        )
+
+    # Invalidar pines viejos del mismo device_id
+    db.query(DashboardAccessPin).filter(
+        DashboardAccessPin.device_id == payload.device_id,
+        DashboardAccessPin.is_used == False
+    ).update({"is_used": True})
+
+    pin_code = f"{random.randint(100000, 999999)}"
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    phone = payload.phone.strip() or (license_obj.phone if license_obj else "")
+
+    pin_record = DashboardAccessPin(
+        device_id=payload.device_id,
+        phone=phone,
+        pin=pin_code,
+        expires_at=expires_at,
+        is_used=False
+    )
+    db.add(pin_record)
+    db.commit()
+
+    logger.info(f"🔑 PIN de Dashboard PC generado: {pin_code} para dispositivo {payload.device_id} ({phone})")
+
+    return {
+        "success": True,
+        "pin": pin_code,
+        "phone": phone,
+        "expires_in_seconds": 600,
+        "message": "Código generado exitosamente. Válido por 10 minutos."
+    }
+
+@router.post("/dashboard/verify-pin")
+def verify_dashboard_pin(payload: VerifyDashboardPinRequest, db: Session = Depends(get_db)):
+    """
+    Verifica el PIN de 6 dígitos introducido en la web y entrega un token de sesión de 30 días.
+    Si la bandera global está apagada (pruebas), entrega acceso libre.
+    """
+    clean_input_phone = "".join(filter(str.isdigit, payload.phone or ""))
+    clean_pin = payload.pin.strip().replace(" ", "").replace("-", "")
+
+    # Si la bandera está apagada (pruebas actuales), permitir el acceso directo:
+    if not settings.DASHBOARD_PRO_AUTH_REQUIRED:
+        token = generate_dashboard_session_token("DEV-PREVIEW", clean_input_phone or "04140000000")
+        return {
+            "authenticated": True,
+            "mode": "preview_testing",
+            "token": token,
+            "merchant_name": "Modo Pruebas (Acceso Libre)",
+            "message": "Acceso libre habilitado durante el periodo de pruebas."
+        }
+
+    if len(clean_pin) != 6:
+        raise HTTPException(status_code=400, detail="El código PIN debe tener exactamente 6 dígitos.")
+
+    now = datetime.utcnow()
+    candidates = db.query(DashboardAccessPin).filter(
+        DashboardAccessPin.pin == clean_pin,
+        DashboardAccessPin.expires_at > now,
+        DashboardAccessPin.is_used == False
+    ).all()
+
+    valid_pin = None
+    for cand in candidates:
+        cand_phone = "".join(filter(str.isdigit, cand.phone or ""))
+        if not clean_input_phone or cand_phone.endswith(clean_input_phone[-7:]) or clean_input_phone.endswith(cand_phone[-7:]):
+            valid_pin = cand
+            break
+
+    if not valid_pin:
+        raise HTTPException(
+            status_code=401,
+            detail="Código PIN inválido, expirado o ya utilizado. Genera uno nuevo en tu teléfono desde Ajustes > Dashboard PC."
+        )
+
+    # Validar que el dispositivo vinculado continúe en PRO
+    license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == valid_pin.device_id).first()
+    if not license_obj or not license_obj.is_pro_active:
+        raise HTTPException(
+            status_code=403,
+            detail="La suscripción Zeasy PRO ($2.99/mes) de este comercio no se encuentra activa."
+        )
+
+    valid_pin.is_used = True
+    db.commit()
+
+    token = generate_dashboard_session_token(valid_pin.device_id, valid_pin.phone)
+    logger.info(f"✅ Dashboard PC desbloqueado con éxito para {license_obj.merchant_name} ({valid_pin.phone})")
+
+    return {
+        "authenticated": True,
+        "token": token,
+        "device_id": valid_pin.device_id,
+        "merchant_name": license_obj.merchant_name,
+        "phone": valid_pin.phone,
+        "pro_expires_at": license_obj.pro_expires_at.isoformat() if license_obj.pro_expires_at else None,
+        "message": f"¡Bienvenido {license_obj.merchant_name}! Acceso PRO a Dashboard PC concedido."
+    }
+
+@router.get("/dashboard/verify-session")
+def verify_dashboard_session(token: str = Query(...), db: Session = Depends(get_db)):
+    """
+    Verifica si un token de sesión guardado en localStorage sigue siendo válido.
+    """
+    if not settings.DASHBOARD_PRO_AUTH_REQUIRED:
+        return {"valid": True, "mode": "preview_testing"}
+
+    payload = verify_dashboard_session_token(token)
+    if not payload:
+        return {"valid": False, "reason": "Token expirado o inválido"}
+
+    device_id = payload.get("device_id")
+    license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == device_id).first()
+    if not license_obj or not license_obj.is_pro_active:
+        return {"valid": False, "reason": "Suscripción PRO vencida"}
+
+    return {
+        "valid": True,
+        "device_id": device_id,
+        "merchant_name": license_obj.merchant_name,
+        "phone": payload.get("phone")
+    }

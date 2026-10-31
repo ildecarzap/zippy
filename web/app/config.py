@@ -55,4 +55,9 @@ class Settings(BaseSettings):
     COMPANY_PHONE: str = "+58 4242603112"
     COMPANY_WHATSAPP: str = "584242603112"
 
+    # Control de Acceso al Dashboard Web para Usuarios Zeasy PRO ($2.99/mes)
+    # BANDERA (FLAG): Por defecto False durante periodo de pruebas con Google Play.
+    # En producción comercial: cambiar a True o setear DASHBOARD_PRO_AUTH_REQUIRED=true en .env
+    DASHBOARD_PRO_AUTH_REQUIRED: bool = os.getenv("DASHBOARD_PRO_AUTH_REQUIRED", "false").lower() == "true"
+
 settings = Settings()

@@ -408,4 +408,57 @@ object ZeasySyncManager {
         }
         return System.currentTimeMillis() + (remainingDays.toLong() * 24 * 60 * 60 * 1000)
     }
+
+    /**
+     * Solicita al backend un código PIN de 6 dígitos para autorizar el acceso
+     * al Dashboard PC desde una computadora.
+     */
+    suspend fun generateDashboardPin(context: Context): Result<Pair<String, Int>> = withContext(Dispatchers.IO) {
+        val deviceId = PlanCapabilityManager.getDeviceId(context)
+        val profile = PreferencesHelper.getUserProfile(context)
+        val baseUrl = getServerUrl(context)
+
+        try {
+            val url = URL("$baseUrl/api/v1/dashboard/generate-pin")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("Accept", "application/json")
+            conn.connectTimeout = 5000
+            conn.readTimeout = 5000
+            conn.doOutput = true
+
+            val payload = JSONObject().apply {
+                put("device_id", deviceId)
+                put("phone", profile.phoneNumber)
+            }
+
+            val writer = OutputStreamWriter(conn.outputStream)
+            writer.write(payload.toString())
+            writer.flush()
+            writer.close()
+
+            val responseCode = conn.responseCode
+            val reader = BufferedReader(InputStreamReader(if (responseCode == HttpURLConnection.HTTP_OK) conn.inputStream else conn.errorStream))
+            val sb = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                sb.append(line)
+            }
+            reader.close()
+            conn.disconnect()
+
+            val json = JSONObject(sb.toString())
+            if (responseCode == HttpURLConnection.HTTP_OK && json.optBoolean("success", false)) {
+                val pin = json.optString("pin")
+                val expiresSeconds = json.optInt("expires_in_seconds", 600)
+                return@withContext Result.success(Pair(pin, expiresSeconds))
+            } else {
+                val errorMsg = json.optString("detail", "No se pudo generar el código PIN")
+                return@withContext Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            return@withContext Result.failure(Exception(e.localizedMessage ?: "Error de conexión"))
+        }
+    }
 }

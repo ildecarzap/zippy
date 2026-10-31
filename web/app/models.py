@@ -85,3 +85,15 @@ class SystemSetting(Base):
     value = Column(String(500), nullable=False)
     description = Column(String(255), nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class DashboardAccessPin(Base):
+    __tablename__ = "zippy_dashboard_pins"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(String(100), index=True, nullable=False)
+    phone = Column(String(50), index=True, nullable=False)
+    pin = Column(String(10), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    is_used = Column(Boolean, default=False, nullable=False)

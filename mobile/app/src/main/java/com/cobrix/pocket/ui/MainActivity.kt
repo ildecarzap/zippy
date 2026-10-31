@@ -2899,6 +2899,52 @@ class MainActivity : AppCompatActivity() {
             restoreBackupLauncher.launch("*/*")
         }
 
+        // Botón Generar Código de Acceso para Zeasy Dashboard PC
+        binding.btnGenerateDashboardPin.setOnClickListener {
+            val plan = PlanCapabilityManager.getPlanType(this)
+            val isPro = (plan != PlanType.FREE) || PlanCapabilityManager.PLAY_STORE_REVIEW_MODE
+
+            if (!isPro) {
+                showProUpgradeDialog("Zeasy Dashboard PC y Auditoría Contable ($2.99/mes)")
+                return@setOnClickListener
+            }
+
+            binding.btnGenerateDashboardPin.isEnabled = false
+            binding.btnGenerateDashboardPin.text = "⏳ Generando PIN..."
+
+            lifecycleScope.launch {
+                val result = ZeasySyncManager.generateDashboardPin(this@MainActivity)
+                binding.btnGenerateDashboardPin.isEnabled = true
+                binding.btnGenerateDashboardPin.text = "🔑 Generar Código de Acceso PC"
+
+                if (result.isSuccess) {
+                    val (pin, _) = result.getOrThrow()
+                    val profile = PreferencesHelper.getUserProfile(this@MainActivity)
+                    val phone = profile.phoneNumber.ifEmpty { "tu teléfono registrado" }
+                    val formattedPin = if (pin.length == 6) "${pin.substring(0, 3)} - ${pin.substring(3)}" else pin
+
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("💻 Tu Código de Acceso PC")
+                        .setMessage("Ingresa a dashboard.zeasy.app desde tu computadora e introduce tu teléfono y este código:\n\n" +
+                            "👉  $formattedPin  👈\n\n" +
+                            "• Teléfono: $phone\n" +
+                            "• Válido por: 10 minutos\n\n" +
+                            "Una vez vinculado, tu computadora quedará autorizada automáticamente por 30 días.")
+                        .setPositiveButton("Copiar Código") { _, _ ->
+                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val clip = android.content.ClipData.newPlainText("Zeasy PC PIN", pin)
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(this@MainActivity, "📋 Código $pin copiado al portapapeles", Toast.LENGTH_SHORT).show()
+                        }
+                        .setNegativeButton("Cerrar", null)
+                        .show()
+                } else {
+                    val error = result.exceptionOrNull()?.message ?: "Error al conectar con el servidor"
+                    Toast.makeText(this@MainActivity, "⚠️ $error", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
         // Hipervínculo Web Oficial
         binding.tvAboutWebsite.setOnClickListener {
             try {
