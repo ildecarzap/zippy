@@ -31,6 +31,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.cobrix.pocket.BuildConfig
 import com.cobrix.pocket.R
 import com.cobrix.pocket.data.db.PocketDatabaseHelper
 import com.cobrix.pocket.data.model.BankCatalog
@@ -3131,7 +3132,7 @@ class MainActivity : AppCompatActivity() {
         val deviceId = PlanCapabilityManager.getDeviceId(this)
 
         if (PlanCapabilityManager.PLAY_STORE_REVIEW_MODE) {
-            binding.tvSubscriptionFooter.text = "Zeasy v1.3.3 • Ciem tech solutions C.A • ID: $deviceId"
+            binding.tvSubscriptionFooter.text = "Zeasy v${BuildConfig.VERSION_NAME} • Ciem tech solutions C.A • ID: $deviceId"
             binding.tvHeaderSubtitle.text = "⭐ Zeasy Edición Completa"
             binding.tvHeaderSubtitle.setOnClickListener(null)
             return
@@ -3140,7 +3141,7 @@ class MainActivity : AppCompatActivity() {
         val planType = PlanCapabilityManager.getPlanType(this)
         val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
 
-        binding.tvSubscriptionFooter.text = "Zeasy v1.3.0 • Ciem tech solutions C.A • ID: $deviceId ($planType)"
+        binding.tvSubscriptionFooter.text = "Zeasy v${BuildConfig.VERSION_NAME} • Ciem tech solutions C.A • ID: $deviceId ($planType)"
 
         val subtitleText = when (planType) {
             PlanType.FREE -> "⚡ Plan Básico • Toca para PRO"

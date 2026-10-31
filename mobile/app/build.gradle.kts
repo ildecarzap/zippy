@@ -11,8 +11,8 @@ android {
         applicationId = "com.ciemtech.zeasy"
         minSdk = 24
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.3.3"
+        versionCode = 9
+        versionName = "1.3.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
