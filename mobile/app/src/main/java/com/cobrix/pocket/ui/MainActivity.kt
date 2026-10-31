@@ -116,6 +116,7 @@ class MainActivity : AppCompatActivity() {
     private var selectedBankConfigName = ""
     private var targetCropBankCode: String? = null
     private var wasNotificationListenerEnabled: Boolean = false
+    private var isBindingSettingsData: Boolean = false
 
     private val DUMMY_DEFAULT_VALUES = setOf(
         "Mi Negocio / Taxi", "Mi Negocio", "Taxi",
@@ -707,43 +708,57 @@ class MainActivity : AppCompatActivity() {
 
     // --- DETECCIÓN REACTIVA DE CAMBIOS PENDIENTES EN AJUSTES ---
     private fun hasPendingSettingsChanges(): Boolean {
+        if (isBindingSettingsData) return false
+        if (binding.viewSettings.visibility != View.VISIBLE) return false
+
         val current = PreferencesHelper.getUserProfile(this)
-        val merchantName = binding.etSettingsMerchantName.text.toString().trim()
-        val phone = binding.etSettingsPhone.text.toString().trim()
-        val idCard = binding.etSettingsId.text.toString().trim()
-        val email = binding.etSettingsEmail.text.toString().trim()
-        val category = binding.actvSettingsBusinessCategory.text.toString().trim().ifEmpty { "General" }
-        val bcvRateInput = binding.etSettingsBcvRate.text.toString().replace(',', '.').trim()
+        val merchantName = binding.etSettingsMerchantName.text?.toString()?.trim() ?: ""
+        val phone = binding.etSettingsPhone.text?.toString()?.trim() ?: ""
+        val idCard = binding.etSettingsId.text?.toString()?.trim() ?: ""
+        val email = binding.etSettingsEmail.text?.toString()?.trim() ?: ""
+        val category = binding.actvSettingsBusinessCategory.text?.toString()?.trim()?.ifEmpty { "General" } ?: "General"
+        
+        val bcvRateInput = binding.etSettingsBcvRate.text?.toString()?.replace(',', '.')?.trim() ?: ""
         val parsedBcvRate = bcvRateInput.toDoubleOrNull() ?: current.bcvRate
+        val bcvChanged = Math.abs(parsedBcvRate - current.bcvRate) > 0.005
 
         val selectedSoundMode = when (binding.toggleGroupSoundbox.checkedButtonId) {
             R.id.btnSoundChime -> "CHIME"
             R.id.btnSoundMuted -> "MUTED"
-            else -> "VOICE"
+            R.id.btnSoundVoice -> "VOICE"
+            else -> current.soundboxMode
         }
 
         val currentBinancePayId = PreferencesHelper.getBinancePayId(this)
-        val newBinancePayId = binding.etBinancePayId.text.toString().trim()
+        val newBinancePayId = binding.etBinancePayId.text?.toString()?.trim() ?: ""
+
+        val isBiometricChanged = binding.switchBiometric.isChecked != current.biometricSecurityEnabled
 
         return (merchantName != current.merchantName) ||
             (category != current.businessCategory) ||
             (phone != current.phoneNumber) ||
             (idCard != current.idCard) ||
             (email != current.email) ||
-            (parsedBcvRate != current.bcvRate) ||
+            bcvChanged ||
             (selectedSoundMode != current.soundboxMode) ||
-            (binding.switchBiometric.isChecked != current.biometricSecurityEnabled) ||
+            isBiometricChanged ||
             (PlanCapabilityManager.canUseWallets(this) && newBinancePayId != currentBinancePayId)
     }
 
     /**
      * Actualiza el botón único superior de Guardar:
-     * - Si hay cambios: se activa en color cyan ("💾 Guardar")
-     * - Si está al día: queda en gris sutil desactivado ("Guardado ✓")
+     * - Si hay cambios: se hace visible en color cyan ("💾 Guardar") y se mantiene fijo arriba
+     * - Si no hay cambios: desaparece (GONE) para una vista limpia sin alertas ni ruidos visuales
      */
     private fun updateSaveButtonState() {
+        if (isBindingSettingsData) {
+            binding.btnQuickSaveSettingsTop.visibility = View.GONE
+            return
+        }
+
         val hasChanges = hasPendingSettingsChanges()
         if (hasChanges) {
+            binding.btnQuickSaveSettingsTop.visibility = View.VISIBLE
             binding.btnQuickSaveSettingsTop.isEnabled = true
             binding.btnQuickSaveSettingsTop.alpha = 1.0f
             binding.btnQuickSaveSettingsTop.text = "💾 Guardar"
@@ -752,12 +767,8 @@ class MainActivity : AppCompatActivity() {
             binding.tvSettingsHeaderStatus.text = "⚠️ Hay cambios sin guardar"
             binding.tvSettingsHeaderStatus.setTextColor(ContextCompat.getColor(this, R.color.warning_orange))
         } else {
-            binding.btnQuickSaveSettingsTop.isEnabled = false
-            binding.btnQuickSaveSettingsTop.alpha = 0.6f
-            binding.btnQuickSaveSettingsTop.text = "Guardado ✓"
-            binding.btnQuickSaveSettingsTop.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.surface_variant))
-            binding.btnQuickSaveSettingsTop.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
-            binding.tvSettingsHeaderStatus.text = "Datos de cobro y seguridad"
+            binding.btnQuickSaveSettingsTop.visibility = View.GONE
+            binding.tvSettingsHeaderStatus.text = "Personaliza tus datos de cobro, bancos y alertas"
             binding.tvSettingsHeaderStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
         }
     }
@@ -818,12 +829,10 @@ class MainActivity : AppCompatActivity() {
                     binding.viewSettings.visibility != View.VISIBLE || !hasPendingSettingsChanges()
                 }
                 R.id.nav_settings -> {
-                    saveCurrentSettingsDraft()
                     binding.viewCashier.visibility = View.GONE
                     binding.viewLedger.visibility = View.GONE
                     binding.viewSettings.visibility = View.VISIBLE
                     loadSettings(forceReload = false)
-                    updateSaveButtonState()
                     true
                 }
                 else -> false
@@ -2725,8 +2734,10 @@ class MainActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                saveCurrentSettingsDraft()
-                updateSaveButtonState()
+                if (!isBindingSettingsData) {
+                    saveCurrentSettingsDraft()
+                    updateSaveButtonState()
+                }
             }
         }
         binding.etSettingsMerchantName.addTextChangedListener(draftWatcher)
@@ -2839,12 +2850,16 @@ class MainActivity : AppCompatActivity() {
             if (isChecked && checkedId == R.id.btnSoundVoice && !PlanCapabilityManager.canUseVoiceSoundbox(this)) {
                 Toast.makeText(this, "🗣️ Modo Voz en prueba. Para activarlo en todos tus cobros, se requiere Plan PRO.", Toast.LENGTH_SHORT).show()
             }
-            updateSaveButtonState()
+            if (!isBindingSettingsData) {
+                updateSaveButtonState()
+            }
         }
 
         // Listener de switch biométrico para actualizar estado de botón
         binding.switchBiometric.setOnCheckedChangeListener { _, _ ->
-            updateSaveButtonState()
+            if (!isBindingSettingsData) {
+                updateSaveButtonState()
+            }
         }
 
         // Probar Soundbox (dejar sonar la voz para que el usuario conozca la función)
@@ -2953,49 +2968,49 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadSettings(forceReload: Boolean = false) {
-        val themeMode = PreferencesHelper.getThemeMode(this)
-        if (themeMode == "DARK") {
-            binding.toggleGroupTheme.check(R.id.btnThemeDark)
-        } else {
-            binding.toggleGroupTheme.check(R.id.btnThemeLight)
-        }
+        isBindingSettingsData = true
+        try {
+            val themeMode = PreferencesHelper.getThemeMode(this)
+            if (themeMode == "DARK") {
+                binding.toggleGroupTheme.check(R.id.btnThemeDark)
+            } else {
+                binding.toggleGroupTheme.check(R.id.btnThemeLight)
+            }
 
-        val profile = PreferencesHelper.getUserProfile(this)
-        val draft = if (!forceReload && PreferencesHelper.hasSettingsDraft(this)) {
-            PreferencesHelper.getSettingsDraft(this)
-        } else emptyMap()
+            val profile = PreferencesHelper.getUserProfile(this)
+            val draft = if (!forceReload && PreferencesHelper.hasSettingsDraft(this)) {
+                PreferencesHelper.getSettingsDraft(this)
+            } else emptyMap()
 
-        val initialName = draft["draft_merchant_name"]?.takeIf { it.isNotEmpty() } ?: profile.merchantName
-        val initialCategory = draft["draft_business_category"]?.takeIf { it.isNotEmpty() } ?: profile.businessCategory
-        val initialPhone = draft["draft_phone"]?.takeIf { it.isNotEmpty() } ?: profile.phoneNumber
-        val initialId = draft["draft_id_card"]?.takeIf { it.isNotEmpty() } ?: profile.idCard
-        val initialEmail = draft["draft_email"]?.takeIf { it.isNotEmpty() } ?: profile.email
-        val initialBcv = draft["draft_bcv_rate"]?.takeIf { it.isNotEmpty() } ?: String.format(Locale.US, "%.2f", profile.bcvRate)
+            val initialName = draft["draft_merchant_name"]?.takeIf { it.isNotEmpty() } ?: profile.merchantName
+            val initialCategory = draft["draft_business_category"]?.takeIf { it.isNotEmpty() } ?: profile.businessCategory
+            val initialPhone = draft["draft_phone"]?.takeIf { it.isNotEmpty() } ?: profile.phoneNumber
+            val initialId = draft["draft_id_card"]?.takeIf { it.isNotEmpty() } ?: profile.idCard
+            val initialEmail = draft["draft_email"]?.takeIf { it.isNotEmpty() } ?: profile.email
+            val initialBcv = draft["draft_bcv_rate"]?.takeIf { it.isNotEmpty() } ?: String.format(Locale.US, "%.2f", profile.bcvRate)
 
-        // Conservar datos anotados por el usuario para no borrarlos al entrar a dar permisos
-        if (forceReload || binding.etSettingsMerchantName.text.isNullOrBlank()) {
-            binding.etSettingsMerchantName.setText(initialName)
-        }
-        if (forceReload || binding.actvSettingsBusinessCategory.text.isNullOrBlank()) {
-            binding.actvSettingsBusinessCategory.setText(initialCategory, false)
-        }
+            if (forceReload || binding.etSettingsMerchantName.text.isNullOrBlank() || draft.isNotEmpty()) {
+                binding.etSettingsMerchantName.setText(initialName)
+            }
+            if (forceReload || binding.actvSettingsBusinessCategory.text.isNullOrBlank() || draft.isNotEmpty()) {
+                binding.actvSettingsBusinessCategory.setText(initialCategory, false)
+            }
 
-        syncSelectedBank(profile.bankCode, profile.bankName)
+            syncSelectedBank(profile.bankCode, profile.bankName)
 
-        if (forceReload || binding.etSettingsPhone.text.isNullOrBlank()) {
-            binding.etSettingsPhone.setText(initialPhone)
-        }
-        if (forceReload || binding.etSettingsId.text.isNullOrBlank()) {
-            binding.etSettingsId.setText(initialId)
-        }
-        if (forceReload || binding.etSettingsEmail.text.isNullOrBlank()) {
-            binding.etSettingsEmail.setText(initialEmail)
-        }
-        if (forceReload || binding.etSettingsBcvRate.text.isNullOrBlank()) {
-            binding.etSettingsBcvRate.setText(initialBcv)
-        }
+            if (forceReload || binding.etSettingsPhone.text.isNullOrBlank() || draft.isNotEmpty()) {
+                binding.etSettingsPhone.setText(initialPhone)
+            }
+            if (forceReload || binding.etSettingsId.text.isNullOrBlank() || draft.isNotEmpty()) {
+                binding.etSettingsId.setText(initialId)
+            }
+            if (forceReload || binding.etSettingsEmail.text.isNullOrBlank() || draft.isNotEmpty()) {
+                binding.etSettingsEmail.setText(initialEmail)
+            }
+            if (forceReload || binding.etSettingsBcvRate.text.isNullOrBlank() || draft.isNotEmpty()) {
+                binding.etSettingsBcvRate.setText(initialBcv)
+            }
 
-        if (forceReload) {
             when (profile.soundboxMode) {
                 "CHIME" -> binding.toggleGroupSoundbox.check(R.id.btnSoundChime)
                 "MUTED" -> binding.toggleGroupSoundbox.check(R.id.btnSoundMuted)
@@ -3004,14 +3019,16 @@ class MainActivity : AppCompatActivity() {
             binding.switchDetectSms.isChecked = PreferencesHelper.isSmsDetectionEnabled(this)
             binding.switchCelebrationScreen.isChecked = PreferencesHelper.isCelebrationScreenEnabled(this)
             binding.switchBiometric.isChecked = profile.biometricSecurityEnabled
-        }
 
-        updateNotificationPermissionUI()
-        setupSettingsBankManager()
-        setupCashierBankSelector()
-        setupSettingsWallets()
-        updatePlanUiInSettings()
-        updateSaveButtonState()
+            updateNotificationPermissionUI()
+            setupSettingsBankManager()
+            setupCashierBankSelector()
+            setupSettingsWallets()
+            updatePlanUiInSettings()
+        } finally {
+            isBindingSettingsData = false
+            updateSaveButtonState()
+        }
     }
 
     private fun updatePlanUiInSettings() {

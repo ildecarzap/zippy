@@ -825,14 +825,13 @@
                         android:id="@+id/btnQuickSaveSettingsTop"
                         android:layout_width="wrap_content"
                         android:layout_height="40dp"
-                        android:text="Guardado ✓"
+                        android:text="💾 Guardar"
                         android:textSize="12.5sp"
                         android:textStyle="bold"
                         app:cornerRadius="10dp"
-                        android:enabled="false"
-                        android:alpha="0.6"
-                        android:backgroundTint="@color/surface_variant"
-                        android:textColor="@color/text_secondary" />
+                        android:visibility="gone"
+                        android:backgroundTint="@color/accent_cyan"
+                        android:textColor="@color/white" />
                 </LinearLayout>
 
                 <View
