@@ -55,6 +55,20 @@ async def legal_page(request: Request):
         }
     )
 
+@router.get("/privacidad", response_class=HTMLResponse)
+@router.get("/politica-de-privacidad", response_class=HTMLResponse)
+@router.get("/privacy-policy", response_class=HTMLResponse)
+async def privacy_page(request: Request):
+    """Página oficial de Política de Privacidad de Zeasy para Google Play Console."""
+    return templates.TemplateResponse(
+        request=request,
+        name="privacidad.html",
+        context={
+            "settings": settings,
+            "page_title": "Política de Privacidad Oficial • Zeasy"
+        }
+    )
+
 @router.get("/dashboard", response_class=HTMLResponse)
 @router.get("/visor", response_class=HTMLResponse)
 async def dashboard_page(request: Request):

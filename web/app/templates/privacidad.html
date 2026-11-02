@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero" style="padding: 48px 0 32px 0;">
+  <div class="container">
+    <div class="hero-pill">
+      <span>🛡️</span> Google Play Compliance & Zero-Knowledge
+    </div>
+    <h1 class="hero-title" style="font-size: 2.2rem; margin-top: 12px;">
+      Política de <span>Privacidad de Zeasy</span>
+    </h1>
+    <p class="hero-subtitle" style="max-width: 740px; margin: 12px auto 0 auto; font-size: 1.05rem;">
+      Esta Política de Privacidad describe el tratamiento de datos y los permisos utilizados por la aplicación móvil <strong>Zeasy</strong>, desarrollada y operada por <strong>{{ settings.COMPANY_NAME }}</strong>.
+      <br><span style="font-size: 0.9rem; color: var(--color-text-muted);">Última actualización: Noviembre 2026 • Versión 1.0</span>
+    </p>
+  </div>
+</section>
+
+<section style="padding: 10px 0 60px 0;">
+  <div class="container" style="max-width: 900px;">
+
+    <!-- Resumen Destacado de Privacidad -->
+    <div class="card" style="background: linear-gradient(135deg, #FAFDFB 0%, #F1F8F6 100%); border: 2px solid var(--color-primary-border); padding: 28px; margin-bottom: 30px;">
+      <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--color-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+        🔒 Compromiso Fundamental de Privacidad
+      </h2>
+      <p style="font-size: 0.95rem; color: var(--color-text-main); line-height: 1.6; margin-bottom: 0;">
+        <strong>"Tus datos contables se quedan en tu teléfono, tu dinero va directo a tu cuenta."</strong><br>
+        Zeasy opera bajo un modelo de <strong>procesamiento 100% local (On-Device)</strong>. No recopilamos, no transferimos a servidores externos, ni vendemos información personal, balances bancarios ni registros de cobro a terceros.
+      </p>
+    </div>
+
+    <!-- Artículos de la Política -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+
+      <!-- 1. Identificación del Responsable -->
+      <div class="card" style="padding: 26px;">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 10px;">
+          1. Responsable del Tratamiento de Datos
+        </h3>
+        <p style="font-size: 0.93rem; color: var(--color-text-muted); line-height: 1.6;">
+          La aplicación móvil <strong>Zeasy</strong> (incluyendo sus versiones para puntos de cobro y caja registradora móvil) es propiedad exclusiva de:
+        </p>
+        <ul style="margin: 10px 0 10px 20px; font-size: 0.92rem; color: var(--color-text-main); line-height: 1.7;">
+          <li><strong>Razón Social:</strong> {{ settings.COMPANY_NAME }}</li>
+          <li><strong>Registro de Información Fiscal (RIF):</strong> {{ settings.COMPANY_RIF }}</li>
+          <li><strong>Correo de Contacto y Privacidad:</strong> <a href="mailto:{{ settings.COMPANY_EMAIL }}">{{ settings.COMPANY_EMAIL }}</a></li>
+          <li><strong>Atención al Usuario / WhatsApp:</strong> <a href="https://wa.me/{{ settings.COMPANY_WHATSAPP }}" target="_blank">+{{ settings.COMPANY_WHATSAPP }}</a></li>
+        </ul>
+      </div>
+
+      <!-- 2. Permisos Sensibles y Acceso a Funciones del Dispositivo (Crítico para Google Play) -->
+      <div class="card" style="padding: 26px;">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 12px;">
+          2. Permisos del Sistema Operativo Android y su Justificación
+        </h3>
+        <p style="font-size: 0.93rem; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 16px;">
+          Para prestar sus funciones esenciales de mostrador comercial, Zeasy solicita los siguientes permisos en Android. Cada uno está limitado a una función técnica concreta:
+        </p>
+
+        <!-- A. Acceso a Notificaciones -->
+        <div style="background: var(--color-surface-soft); padding: 18px; border-radius: var(--radius-md); border-left: 4px solid var(--color-primary); margin-bottom: 16px;">
+          <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 6px;">
+            🔔 Acceso a Notificaciones (NotificationListenerService)
+          </h4>
+          <p style="font-size: 0.9rem; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 8px;">
+            <strong>Propósito:</strong> Permitir que la función de Soundbox / Bocina de confirmación detecte de forma automática e inmediata cuando una aplicación bancaria autorizada o billetera digital (Banesco, Banco de Venezuela, Mercantil, Bancamiga, BNC, Binance Pay, etc.) emite un aviso de acreditación de fondos (Pago Móvil o transferencia).
+          </p>
+          <p style="font-size: 0.9rem; color: var(--color-text-main); line-height: 1.6; margin-bottom: 0;">
+            <strong>Garantía estricta de privacidad:</strong> La lectura e interpretación de estas notificaciones ocurre <strong>íntegra y exclusivamente en la memoria volátil del dispositivo móvil</strong>. Zeasy <strong>no almacena</strong> mensajes de mensajería privada (como SMS familiares o chats personales) y <strong>jamás transmite el contenido de las notificaciones hacia internet, servidores propios ni servidores de terceros</strong>.
+          </p>
+        </div>
+
+        <!-- B. Cámara -->
+        <div style="background: var(--color-surface-soft); padding: 18px; border-radius: var(--radius-md); border-left: 4px solid var(--color-primary); margin-bottom: 16px;">
+          <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 6px;">
+            📷 Cámara (android.permission.CAMERA)
+          </h4>
+          <p style="font-size: 0.9rem; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 0;">
+            <strong>Propósito:</strong> Escanear códigos QR estándar de pago móvil y billeteras electrónicas para configurar los canales de cobro del comercio o verificar comprobantes. Las imágenes capturadas por el lente óptico se analizan en tiempo real para extraer el texto del código QR y <strong>no se guardan fotos ni se envían flujos de video a ningún servidor</strong>.
+          </p>
+        </div>
+
+        <!-- C. Reconocimiento de Voz / Micrófono -->
+        <div style="background: var(--color-surface-soft); padding: 18px; border-radius: var(--radius-md); border-left: 4px solid var(--color-primary); margin-bottom: 16px;">
+          <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 6px;">
+            🎙️ Micrófono y Dictado de Voz (Opcional)
+          </h4>
+          <p style="font-size: 0.9rem; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 0;">
+            <strong>Propósito:</strong> Permitir al cajero registrar montos y descripciones de venta por comando de voz en el mostrador. El reconocimiento de voz hace uso del motor estándar de Android; Zeasy no graba, no conserva ni comercializa grabaciones de voz.
+          </p>
+        </div>
+
+        <!-- D. Almacenamiento Local -->
+        <div style="background: var(--color-surface-soft); padding: 18px; border-radius: var(--radius-md); border-left: 4px solid var(--color-primary);">
+          <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 6px;">
+            💾 Almacenamiento Local y Respaldos
+          </h4>
+          <p style="font-size: 0.9rem; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 0;">
+            <strong>Propósito:</strong> Permitir la generación y exportación de archivos de respaldo (.json o .csv) que el propio comerciante decide guardar o compartir voluntariamente en su propio almacenamiento (Google Drive, WhatsApp o correo personal) para salvaguardar sus jornadas de caja.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- 3. Naturaleza Zero-Knowledge y No Custodia Financiera -->
+      <div class="card" style="padding: 26px;">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 10px;">
+          3. Datos Financieros y Cero Custodia de Dinero
+        </h3>
+        <p style="font-size: 0.93rem; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 10px;">
+          Zeasy es una aplicación de asistencia para punto de venta y control de caja, <strong>no es un procesador de pagos, banco ni intermediario financiero</strong>:
+        </p>
+        <ul style="margin: 0 0 10px 20px; font-size: 0.92rem; color: var(--color-text-main); line-height: 1.7;">
+          <li><strong>No tocamos tu dinero:</strong> Todos los pagos realizados por tus clientes van directamente de la cuenta bancaria o billetera del cliente hacia la cuenta bancaria o billetera del comerciante.</li>
+          <li><strong>No solicitamos credenciales sensibles:</strong> Zeasy jamás solicita usuarios bancarios, contraseñas, códigos de autenticación SMS, tarjetas de coordenadas, CVV ni claves privadas de criptomonedas.</li>
+        </ul>
+      </div>
+
+      <!-- 4. Servicios de Terceros y Analíticas -->
+      <div class="card" style="padding: 26px;">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 10px;">
+          4. Proveedores y Servicios de Terceros
+        </h3>
+        <p style="font-size: 0.93rem; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 12px;">
+          La aplicación se apoya exclusivamente en los siguientes servicios técnicos:
+        </p>
+        <ul style="margin: 0 0 10px 20px; font-size: 0.92rem; color: var(--color-text-main); line-height: 1.7;">
+          <li><strong>Google Play Services:</strong> Utilizado para la distribución segura de la aplicación, diagnósticos de estabilidad del sistema operativo y prevención de fraudes según las políticas de Google.</li>
+          <li><strong>Servidor de Licencias Zeasy (Ciem Tech Solutions):</strong> Verifica periódicamente el estado de la suscripción (Plan Básico o PRO) mediante un identificador pseudoanónimo del dispositivo (Device ID), sin vincular datos personales bancarios.</li>
+        </ul>
+      </div>
+
+      <!-- 5. Retención y Eliminación de Datos (Requisito Crítico de Google Play) -->
+      <div class="card" style="padding: 26px; border: 2px solid var(--color-primary-soft);">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--color-primary); margin-bottom: 10px;">
+          5. Retención y Política de Eliminación de Datos (Data Deletion)
+        </h3>
+        <p style="font-size: 0.93rem; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 12px;">
+          De conformidad con las políticas de datos del usuario de Google Play:
+        </p>
+        <div style="background: #ffffff; padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: 12px;">
+          <h4 style="font-size: 0.98rem; font-weight: 700; margin-bottom: 6px;">¿Cómo puede el usuario eliminar sus datos?</h4>
+          <p style="font-size: 0.9rem; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 8px;">
+            Dado que la base de datos de ventas, cierres de jornada y canales de cobro reside exclusivamente de forma local en tu teléfono inteligente:
+          </p>
+          <ol style="margin-left: 20px; font-size: 0.88rem; color: var(--color-text-main); line-height: 1.6;">
+            <li><strong>Eliminación directa e inmediata:</strong> Puedes borrar todos tus datos y registros en cualquier momento desde Android en: <em>Ajustes > Aplicaciones > Zeasy > Almacenamiento > "Borrar Datos"</em>.</li>
+            <li><strong>Desinstalación:</strong> Al desinstalar la aplicación Zeasy de tu dispositivo, la totalidad de los datos locales se elimina de manera permanente y automática por el sistema operativo.</li>
+            <li><strong>Solicitud asistida:</strong> Si deseas solicitar la desvinculación o baja de cualquier registro de licencia o soporte asociado a tu dispositivo, puedes enviar una solicitud a <a href="mailto:{{ settings.COMPANY_EMAIL }}">{{ settings.COMPANY_EMAIL }}</a> indicando tu número de comercio o dispositivo, y será procesada en un plazo máximo de 48 horas laborables.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- 6. Privacidad de Menores -->
+      <div class="card" style="padding: 26px;">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 10px;">
+          6. Privacidad de Menores
+        </h3>
+        <p style="font-size: 0.93rem; color: var(--color-text-muted); line-height: 1.6;">
+          Zeasy es una herramienta de productividad dirigida a comerciantes y personas con capacidad legal para ejercer el comercio. No está diseñada ni dirigida a menores de 13 años (o la edad mínima legal en su jurisdicción). No recopilamos conscientemente información de menores de edad.
+        </p>
+      </div>
+
+      <!-- 7. Modificaciones a la Política -->
+      <div class="card" style="padding: 26px;">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 10px;">
+          7. Actualizaciones de esta Política
+        </h3>
+        <p style="font-size: 0.93rem; color: var(--color-text-muted); line-height: 1.6;">
+          Podemos actualizar nuestra Política de Privacidad periódicamente para reflejar mejoras operativas o exigencias legales. Notificaremos cualquier cambio sustancial publicando la nueva versión directamente en esta página (<a href="/privacidad">/privacidad</a>) e indicando la fecha de última actualización.
+        </p>
+      </div>
+
+      <!-- 8. Canales de Contacto Oficial -->
+      <div class="card" style="padding: 26px; background-color: var(--color-surface-soft);">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 10px;">
+          8. Dudas, Consultas y Contacto Oficial
+        </h3>
+        <p style="font-size: 0.93rem; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 14px;">
+          Para cualquier consulta, aclaratoria o ejercicio de derechos sobre tu privacidad y el uso de Zeasy, comunícate con nuestro equipo:
+        </p>
+        <div style="font-size: 0.92rem; line-height: 1.8; color: var(--color-text-main);">
+          <strong>Empresa:</strong> {{ settings.COMPANY_NAME }}<br>
+          <strong>RIF:</strong> {{ settings.COMPANY_RIF }}<br>
+          <strong>Correo de Privacidad:</strong> <a href="mailto:{{ settings.COMPANY_EMAIL }}">{{ settings.COMPANY_EMAIL }}</a><br>
+          <strong>Soporte WhatsApp:</strong> <a href="https://wa.me/{{ settings.COMPANY_WHATSAPP }}" target="_blank">+{{ settings.COMPANY_WHATSAPP }}</a><br>
+          <strong>Sitio Web Oficial:</strong> <a href="/">https://zeasy.ciemtech.com</a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Navegación inferior -->
+    <div style="text-align: center; margin-top: 36px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+      <a href="/" class="btn btn-primary">← Volver al Inicio</a>
+      <a href="/legal" class="btn btn-soft">🛡️ Seguridad & Marco Legal</a>
+      <a href="/guia" class="btn btn-soft">📖 Instructivo de Uso</a>
+    </div>
+
+  </div>
+</section>
+{% endblock %}
