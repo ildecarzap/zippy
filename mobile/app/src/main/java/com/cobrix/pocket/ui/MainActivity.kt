@@ -80,6 +80,19 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import android.widget.TextView
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.cobrix.pocket.data.model.Debtor
+import com.cobrix.pocket.data.model.LedgerEntry
+import com.cobrix.pocket.data.model.LedgerEntryType
+import com.cobrix.pocket.databinding.DialogAddDebtorBinding
+import com.cobrix.pocket.databinding.DialogAddChargeBinding
+import com.cobrix.pocket.databinding.DialogAddPaymentBinding
+import com.cobrix.pocket.databinding.DialogDebtorDetailBinding
+import com.cobrix.pocket.databinding.DialogQuickFiarSelectBinding
+import com.cobrix.pocket.databinding.ItemDebtorBinding
+import com.cobrix.pocket.databinding.ItemLedgerEntryBinding
+import com.cobrix.pocket.ui.DebtorsAdapter
 
 class MainActivity : AppCompatActivity() {
 
@@ -89,6 +102,11 @@ class MainActivity : AppCompatActivity() {
 
     private var currentInput = "0"
     private var isVesMode = true // Por defecto: Bolívares (VES)
+
+    // Estado para Libreta de Clientes y Fiados
+    private lateinit var debtorsAdapter: DebtorsAdapter
+    private var allDebtorsList: List<Debtor> = emptyList()
+    private var activeDebtorFilter: String = "ALL"
 
     companion object {
         private var isAuthenticatedThisSession = false
@@ -105,6 +123,7 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "✅ ${result.message} (${result.transactionsRestored} movimientos)", Toast.LENGTH_LONG).show()
                 loadSettings()
                 loadTodayLedger()
+                loadDebtors()
                 updateDisplayAmount()
             } else {
                 Toast.makeText(this, "❌ ${result.message}", Toast.LENGTH_LONG).show()
@@ -344,6 +363,7 @@ class MainActivity : AppCompatActivity() {
         setupCashierActions()
         setupSettings()
         setupLedgerActions()
+        setupDebtorsModule()
         updateLicenseBadge()
         checkNotificationPermission()
         checkBiometricAuthOnStart()
@@ -813,6 +833,7 @@ class MainActivity : AppCompatActivity() {
                     checkUnsavedSettingsBeforeNavigating {
                         binding.viewCashier.visibility = View.VISIBLE
                         binding.viewLedger.visibility = View.GONE
+                        binding.viewDebtors.visibility = View.GONE
                         binding.viewSettings.visibility = View.GONE
                         setupCashierBankSelector()
                         renderCashierBankCards()
@@ -825,15 +846,28 @@ class MainActivity : AppCompatActivity() {
                     checkUnsavedSettingsBeforeNavigating {
                         binding.viewCashier.visibility = View.GONE
                         binding.viewLedger.visibility = View.VISIBLE
+                        binding.viewDebtors.visibility = View.GONE
                         binding.viewSettings.visibility = View.GONE
                         loadTodayLedger()
                         binding.bottomNavigation.menu.findItem(R.id.nav_ledger).isChecked = true
                     }
                     binding.viewSettings.visibility != View.VISIBLE || !hasPendingSettingsChanges()
                 }
+                R.id.nav_debtors -> {
+                    checkUnsavedSettingsBeforeNavigating {
+                        binding.viewCashier.visibility = View.GONE
+                        binding.viewLedger.visibility = View.GONE
+                        binding.viewDebtors.visibility = View.VISIBLE
+                        binding.viewSettings.visibility = View.GONE
+                        loadDebtors()
+                        binding.bottomNavigation.menu.findItem(R.id.nav_debtors).isChecked = true
+                    }
+                    binding.viewSettings.visibility != View.VISIBLE || !hasPendingSettingsChanges()
+                }
                 R.id.nav_settings -> {
                     binding.viewCashier.visibility = View.GONE
                     binding.viewLedger.visibility = View.GONE
+                    binding.viewDebtors.visibility = View.GONE
                     binding.viewSettings.visibility = View.VISIBLE
                     loadSettings(forceReload = false)
                     true
@@ -1620,6 +1654,462 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // =========================================================================
+    // MÓDULO LIBRETA DE CLIENTES / CUENTAS POR COBRAR Y SALDOS A FAVOR
+    // =========================================================================
+
+    private fun setupDebtorsModule() {
+        debtorsAdapter = DebtorsAdapter(
+            items = emptyList(),
+            bcvRate = PreferencesHelper.getUserProfile(this).bcvRate,
+            onChargeClick = { debtor -> showAddChargeDialog(debtor) },
+            onPaymentClick = { debtor -> showAddPaymentDialog(debtor) },
+            onWhatsAppClick = { debtor -> sendWhatsAppReminderToDebtor(debtor) },
+            onItemClick = { debtor -> showDebtorDetailDialog(debtor) }
+        )
+
+        binding.rvDebtors.layoutManager = LinearLayoutManager(this)
+        binding.rvDebtors.adapter = debtorsAdapter
+
+        binding.btnAddNewDebtor.setOnClickListener {
+            showAddDebtorDialog()
+        }
+
+        binding.btnQuickFiar.setOnClickListener {
+            onQuickFiarClicked()
+        }
+
+        binding.etDebtorSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                filterAndDisplayDebtors()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        binding.chipGroupDebtorsFilter.setOnCheckedStateChangeListener { _, checkedIds ->
+            val checkedId = checkedIds.firstOrNull() ?: R.id.chipFilterAll
+            activeDebtorFilter = when (checkedId) {
+                R.id.chipFilterDebt -> "DEBT"
+                R.id.chipFilterCredit -> "CREDIT"
+                R.id.chipFilterClear -> "CLEAR"
+                else -> "ALL"
+            }
+            filterAndDisplayDebtors()
+        }
+    }
+
+    private fun loadDebtors() {
+        allDebtorsList = dbHelper.getAllDebtors()
+        val summary = dbHelper.getDebtorsSummary()
+        val profile = PreferencesHelper.getUserProfile(this)
+        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+
+        binding.tvDebtorsTotalStreetUsd.text = String.format(Locale.US, "$ %.2f", summary.totalDebtUsd)
+        binding.tvDebtorsTotalStreetVes.text = String.format(Locale.US, "≈ Bs. %.2f", summary.totalDebtUsd * rate)
+
+        binding.tvDebtorsTotalCreditUsd.text = String.format(Locale.US, "$ %.2f", summary.totalCreditUsd)
+        binding.tvDebtorsTotalCreditVes.text = String.format(Locale.US, "≈ Bs. %.2f", summary.totalCreditUsd * rate)
+
+        filterAndDisplayDebtors()
+    }
+
+    private fun filterAndDisplayDebtors() {
+        val query = binding.etDebtorSearch.text.toString().trim().lowercase(Locale.ROOT)
+        val profile = PreferencesHelper.getUserProfile(this)
+
+        val filtered = allDebtorsList.filter { debtor ->
+            // Filtro por estado
+            val matchesStatus = when (activeDebtorFilter) {
+                "DEBT" -> debtor.isDebtor
+                "CREDIT" -> debtor.hasCredit
+                "CLEAR" -> debtor.isClear
+                else -> true
+            }
+            if (!matchesStatus) return@filter false
+
+            // Filtro por búsqueda
+            if (query.isNotEmpty()) {
+                val matchName = debtor.name.lowercase(Locale.ROOT).contains(query)
+                val matchPhone = debtor.phone?.lowercase(Locale.ROOT)?.contains(query) == true
+                val matchId = debtor.identification?.lowercase(Locale.ROOT)?.contains(query) == true
+                if (!matchName && !matchPhone && !matchId) return@filter false
+            }
+            true
+        }
+
+        if (filtered.isEmpty()) {
+            binding.rvDebtors.visibility = View.GONE
+            binding.layoutEmptyDebtors.visibility = View.VISIBLE
+        } else {
+            binding.rvDebtors.visibility = View.VISIBLE
+            binding.layoutEmptyDebtors.visibility = View.GONE
+            debtorsAdapter.updateData(filtered, profile.bcvRate)
+        }
+    }
+
+    private fun showAddDebtorDialog() {
+        val dialog = Dialog(this)
+        val dBinding = DialogAddDebtorBinding.inflate(layoutInflater)
+        dialog.setContentView(dBinding.root)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        dBinding.btnSaveNewDebtor.setOnClickListener {
+            val name = dBinding.etNewDebtorName.text.toString().trim()
+            val phone = dBinding.etNewDebtorPhone.text.toString().trim().ifBlank { null }
+            val idDoc = dBinding.etNewDebtorId.text.toString().trim().ifBlank { null }
+
+            if (name.isEmpty()) {
+                dBinding.etNewDebtorName.error = "Ingresa el nombre del cliente"
+                return@setOnClickListener
+            }
+
+            val newDebtor = Debtor(
+                name = name,
+                phone = phone,
+                identification = idDoc
+            )
+            val newId = dbHelper.insertDebtor(newDebtor)
+            if (newId > 0) {
+                Toast.makeText(this, "✅ Cliente registrado en la libreta", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+                loadDebtors()
+            } else {
+                Toast.makeText(this, "Error guardando cliente", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun showAddChargeDialog(debtor: Debtor) {
+        val dialog = Dialog(this)
+        val dBinding = DialogAddChargeBinding.inflate(layoutInflater)
+        dialog.setContentView(dBinding.root)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        val profile = PreferencesHelper.getUserProfile(this)
+        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+
+        dBinding.tvChargeClientName.text = "Cliente: ${debtor.name}"
+
+        if (debtor.hasCredit) {
+            dBinding.layoutCreditNoticeBanner.visibility = View.VISIBLE
+            dBinding.tvCreditNoticeText.text = String.format(
+                Locale.US,
+                "🟢 Este cliente tiene $%.2f USD de saldo a favor. Al fiar, se descontará de este saldo.",
+                debtor.creditAmountUsd
+            )
+        } else {
+            dBinding.layoutCreditNoticeBanner.visibility = View.GONE
+        }
+
+        dBinding.etChargeAmountUsd.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val inputUsd = s?.toString()?.toDoubleOrNull() ?: 0.0
+                val equivBs = inputUsd * rate
+                dBinding.tvChargeEquivBs.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa BCV: %.2f)", equivBs, rate)
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        dBinding.btnConfirmCharge.setOnClickListener {
+            val amountUsd = dBinding.etChargeAmountUsd.text.toString().toDoubleOrNull() ?: 0.0
+            val concept = dBinding.etChargeConcept.text.toString().trim()
+
+            if (amountUsd <= 0.0) {
+                dBinding.etChargeAmountUsd.error = "Ingresa un monto válido"
+                return@setOnClickListener
+            }
+
+            val amountVes = amountUsd * rate
+            dbHelper.addCharge(
+                debtorId = debtor.id,
+                amountUsd = amountUsd,
+                amountVes = amountVes,
+                bcvRate = rate,
+                notes = concept.ifBlank { "Compra fiada" }
+            )
+
+            Toast.makeText(this, "✅ Cargo registrado a ${debtor.name}", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+            loadDebtors()
+        }
+
+        dialog.show()
+    }
+
+    private fun showAddPaymentDialog(debtor: Debtor) {
+        val dialog = Dialog(this)
+        val dBinding = DialogAddPaymentBinding.inflate(layoutInflater)
+        dialog.setContentView(dBinding.root)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        val profile = PreferencesHelper.getUserProfile(this)
+        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+
+        dBinding.tvPaymentClientName.text = "Cliente: ${debtor.name}"
+
+        if (debtor.isDebtor) {
+            dBinding.tvPaymentCurrentDebt.text = String.format(
+                Locale.US,
+                "Deuda actual: $%.2f USD (≈ Bs. %.2f)",
+                debtor.debtAmountUsd,
+                debtor.debtAmountUsd * rate
+            )
+            dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#C62828"))
+        } else if (debtor.hasCredit) {
+            dBinding.tvPaymentCurrentDebt.text = String.format(
+                Locale.US,
+                "Saldo a favor actual: $%.2f USD",
+                debtor.creditAmountUsd
+            )
+            dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#2E7D32"))
+        } else {
+            dBinding.tvPaymentCurrentDebt.text = "Cuenta al día ($0.00)"
+            dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#5E6C84"))
+        }
+
+        dBinding.etPaymentAmountUsd.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val inputUsd = s?.toString()?.toDoubleOrNull() ?: 0.0
+                val equivBs = inputUsd * rate
+                dBinding.tvPaymentEquivBs.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa BCV: %.2f)", equivBs, rate)
+
+                if (debtor.isDebtor && inputUsd > debtor.debtAmountUsd) {
+                    val excess = inputUsd - debtor.debtAmountUsd
+                    dBinding.tvPaymentExcessHint.visibility = View.VISIBLE
+                    dBinding.tvPaymentExcessHint.text = String.format(
+                        Locale.US,
+                        "💡 El excedente de $%.2f USD quedará guardado como Saldo a Favor del cliente.",
+                        excess
+                    )
+                }
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        dBinding.btnConfirmPayment.setOnClickListener {
+            val amountUsd = dBinding.etPaymentAmountUsd.text.toString().toDoubleOrNull() ?: 0.0
+            val note = dBinding.etPaymentNote.text.toString().trim()
+
+            if (amountUsd <= 0.0) {
+                dBinding.etPaymentAmountUsd.error = "Ingresa un monto válido"
+                return@setOnClickListener
+            }
+
+            val amountVes = amountUsd * rate
+            dbHelper.addPayment(
+                debtorId = debtor.id,
+                amountUsd = amountUsd,
+                amountVes = amountVes,
+                bcvRate = rate,
+                notes = note.ifBlank { "Abono a cuenta" }
+            )
+
+            Toast.makeText(this, "✅ Abono registrado a ${debtor.name}", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+            loadDebtors()
+        }
+
+        dialog.show()
+    }
+
+    private fun sendWhatsAppReminderToDebtor(debtor: Debtor) {
+        val profile = PreferencesHelper.getUserProfile(this)
+        val phone = debtor.phone
+
+        if (phone.isNullOrBlank()) {
+            Toast.makeText(this, "Este cliente no tiene número de teléfono registrado", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+        val qrUri = profile.qrImageUri?.let { Uri.parse(it) }
+
+        if (debtor.isDebtor) {
+            val msg = WhatsAppHelper.generateDebtReminderMessage(
+                profile = profile,
+                debtorName = debtor.name,
+                balanceUsd = debtor.debtAmountUsd,
+                bcvRate = rate,
+                bankName = activeCashierBankName.ifBlank { profile.bankName },
+                bankCode = activeCashierBankCode.ifBlank { profile.bankCode }
+            )
+            WhatsAppHelper.sendViaWhatsApp(this, phone, msg, qrUri)
+        } else if (debtor.hasCredit) {
+            val msg = WhatsAppHelper.generateCreditNoticeMessage(
+                profile = profile,
+                debtorName = debtor.name,
+                creditUsd = debtor.creditAmountUsd,
+                bcvRate = rate
+            )
+            WhatsAppHelper.sendViaWhatsApp(this, phone, msg, null)
+        } else {
+            Toast.makeText(this, "El cliente está al día ($0.00)", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showDebtorDetailDialog(debtor: Debtor) {
+        val dialog = Dialog(this)
+        val dBinding = DialogDebtorDetailBinding.inflate(layoutInflater)
+        dialog.setContentView(dBinding.root)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        val profile = PreferencesHelper.getUserProfile(this)
+        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+
+        dBinding.tvDetailDebtorName.text = debtor.name
+        val phone = debtor.phone ?: "Sin WhatsApp"
+        val idDoc = if (!debtor.identification.isNullOrBlank()) " • ${debtor.identification}" else ""
+        dBinding.tvDetailDebtorMeta.text = "$phone$idDoc"
+
+        when {
+            debtor.isDebtor -> {
+                dBinding.tvDetailBalanceBadge.text = String.format(Locale.US, "🔴 Debe $%.2f", debtor.debtAmountUsd)
+                dBinding.tvDetailBalanceBadge.setTextColor(Color.parseColor("#C62828"))
+                dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFEBEE"))
+                dBinding.btnDetailShareWhatsApp.text = "💬 Cobrar con QR"
+            }
+            debtor.hasCredit -> {
+                dBinding.tvDetailBalanceBadge.text = String.format(Locale.US, "🟢 A favor $%.2f", debtor.creditAmountUsd)
+                dBinding.tvDetailBalanceBadge.setTextColor(Color.parseColor("#2E7D32"))
+                dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E8F5E9"))
+                dBinding.btnDetailShareWhatsApp.text = "💬 Avisar por WhatsApp"
+            }
+            else -> {
+                dBinding.tvDetailBalanceBadge.text = "⚪ Al Día ($0.00)"
+                dBinding.tvDetailBalanceBadge.setTextColor(Color.parseColor("#5E6C84"))
+                dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F4F5F7"))
+                dBinding.btnDetailShareWhatsApp.visibility = View.GONE
+            }
+        }
+
+        // Cargar movimientos cronológicos
+        val entries = dbHelper.getLedgerEntries(debtor.id)
+        dBinding.layoutLedgerEntriesContainer.removeAllViews()
+
+        if (entries.isEmpty()) {
+            val emptyTv = TextView(this).apply {
+                text = "Sin movimientos registrados aún"
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_muted))
+                textSize = 13f
+                setPadding(0, 20, 0, 20)
+            }
+            dBinding.layoutLedgerEntriesContainer.addView(emptyTv)
+        } else {
+            val dateFormat = SimpleDateFormat("dd/MM/yy HH:mm", Locale.US)
+            entries.forEach { entry ->
+                val rowBinding = ItemLedgerEntryBinding.inflate(layoutInflater, dBinding.layoutLedgerEntriesContainer, false)
+                val isCharge = entry.type == LedgerEntryType.CHARGE
+
+                rowBinding.tvEntryTypeIcon.text = if (isCharge) "📦" else "💵"
+                rowBinding.tvEntryConcept.text = entry.notes ?: if (isCharge) "Compra fiada" else "Abono / Pago"
+                rowBinding.tvEntryDate.text = dateFormat.format(Date(entry.timestamp))
+
+                if (isCharge) {
+                    rowBinding.tvEntryAmountUsd.text = String.format(Locale.US, "-$%.2f", entry.amountUsd)
+                    rowBinding.tvEntryAmountUsd.setTextColor(Color.parseColor("#DE350B"))
+                    rowBinding.tvEntryAmountBs.text = String.format(Locale.US, "Bs. %.2f", entry.amountVes)
+                } else {
+                    rowBinding.tvEntryAmountUsd.text = String.format(Locale.US, "+$%.2f", entry.amountUsd)
+                    rowBinding.tvEntryAmountUsd.setTextColor(Color.parseColor("#00875A"))
+                    rowBinding.tvEntryAmountBs.text = String.format(Locale.US, "Bs. %.2f", entry.amountVes)
+                }
+                dBinding.layoutLedgerEntriesContainer.addView(rowBinding.root)
+            }
+        }
+
+        dBinding.btnDetailClose.setOnClickListener { dialog.dismiss() }
+        dBinding.btnDetailShareWhatsApp.setOnClickListener {
+            dialog.dismiss()
+            sendWhatsAppReminderToDebtor(debtor)
+        }
+
+        dialog.show()
+    }
+
+    private fun onQuickFiarClicked() {
+        val amount = currentInput.toDoubleOrNull() ?: 0.0
+        val actualAmount = amount / 100.0
+
+        if (actualAmount <= 0.0) {
+            Toast.makeText(this, "Ingresa un monto en la caja primero", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val profile = PreferencesHelper.getUserProfile(this)
+        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+
+        // Calcular equivalencias según modo VES / USD actual
+        val (amountUsd, amountVes) = if (isVesMode) {
+            Pair(actualAmount / rate, actualAmount)
+        } else {
+            Pair(actualAmount, actualAmount * rate)
+        }
+
+        val dialog = Dialog(this)
+        val dBinding = DialogQuickFiarSelectBinding.inflate(layoutInflater)
+        dialog.setContentView(dBinding.root)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        dBinding.tvQuickFiarAmountSummary.text = String.format(
+            Locale.US,
+            "Monto a fiar: $%.2f USD (Bs. %.2f)",
+            amountUsd,
+            amountVes
+        )
+
+        // Configurar autocompletado de clientes existentes
+        val existingDebtors = dbHelper.getAllDebtors()
+        val names = existingDebtors.map { it.name }
+        val nameAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, names)
+        dBinding.actvQuickFiarClientName.setAdapter(nameAdapter)
+
+        dBinding.btnConfirmQuickFiar.setOnClickListener {
+            val enteredName = dBinding.actvQuickFiarClientName.text.toString().trim()
+            val concept = dBinding.etQuickFiarConcept.text.toString().trim()
+
+            if (enteredName.isEmpty()) {
+                dBinding.actvQuickFiarClientName.error = "Ingresa el nombre del cliente"
+                return@setOnClickListener
+            }
+
+            // Buscar si ya existe cliente con este nombre
+            var targetDebtor = existingDebtors.find { it.name.equals(enteredName, ignoreCase = true) }
+            if (targetDebtor == null) {
+                val newId = dbHelper.insertDebtor(Debtor(name = enteredName))
+                targetDebtor = dbHelper.getDebtorById(newId)
+            }
+
+            if (targetDebtor != null) {
+                dbHelper.addCharge(
+                    debtorId = targetDebtor.id,
+                    amountUsd = amountUsd,
+                    amountVes = amountVes,
+                    bcvRate = rate,
+                    notes = concept.ifBlank { "Fiado desde caja" }
+                )
+                Toast.makeText(this, "✅ Fiado anotado a ${targetDebtor.name}", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+                currentInput = "0"
+                updateDisplayAmount()
+                loadDebtors()
+            } else {
+                Toast.makeText(this, "Error registrando cliente", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        dialog.show()
+    }
+
     private fun getYesterdayTimeRange(): Pair<Long, Long> {
         val cal = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_YEAR, -1)
@@ -2052,13 +2542,15 @@ class MainActivity : AppCompatActivity() {
 
         dialogBinding.btnShareOptionWhatsApp.setOnClickListener {
             dialog.dismiss()
-            val fullTextReport = ReportHelper.generateDetailedTextReport(profile, currentFilteredTransactions, filterPeriodLabel)
+            val debtorsSummary = dbHelper.getDebtorsSummary()
+            val fullTextReport = ReportHelper.generateDetailedTextReport(profile, currentFilteredTransactions, filterPeriodLabel, debtorsSummary)
             WhatsAppHelper.sendViaWhatsApp(this, "", fullTextReport)
         }
 
         dialogBinding.btnShareOptionEmail.setOnClickListener {
             dialog.dismiss()
-            val fullTextReport = ReportHelper.generateDetailedTextReport(profile, currentFilteredTransactions, filterPeriodLabel)
+            val debtorsSummary = dbHelper.getDebtorsSummary()
+            val fullTextReport = ReportHelper.generateDetailedTextReport(profile, currentFilteredTransactions, filterPeriodLabel, debtorsSummary)
             ReportHelper.shareViaEmail(this, profile, fullTextReport, filterPeriodLabel)
         }
 
@@ -2087,7 +2579,8 @@ class MainActivity : AppCompatActivity() {
 
             dialogBinding.btnShareOptionCsv.setOnClickListener {
                 dialog.dismiss()
-                val csvFile = ReportHelper.generateCsvReport(this, profile, currentFilteredTransactions, filterPeriodLabel)
+                val allDebtors = dbHelper.getAllDebtors()
+                val csvFile = ReportHelper.generateCsvReport(this, profile, currentFilteredTransactions, filterPeriodLabel, allDebtors)
                 if (csvFile != null) {
                     ReportHelper.shareCsv(this, csvFile)
                 } else {

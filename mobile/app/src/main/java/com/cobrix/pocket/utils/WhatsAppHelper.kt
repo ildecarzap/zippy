@@ -55,6 +55,69 @@ object WhatsAppHelper {
     }
 
     /**
+     * Mensaje de cobro cordial para cuentas por cobrar / fiados pendientes.
+     * Incluye datos bancarios y especifica que se adjunta el QR.
+     */
+    fun generateDebtReminderMessage(
+        profile: UserProfile,
+        debtorName: String,
+        balanceUsd: Double,
+        bcvRate: Double,
+        recentConcept: String = "",
+        bankName: String = profile.bankName,
+        bankCode: String = profile.bankCode
+    ): String {
+        val absUsd = Math.abs(balanceUsd)
+        val rate = if (bcvRate > 0) bcvRate else 1.0
+        val vesFormatted = String.format(Locale.US, "%.2f", absUsd * rate)
+        val usdFormatted = String.format(Locale.US, "%.2f", absUsd)
+        val noteSection = if (recentConcept.isNotBlank()) "📝 *Concepto:* $recentConcept\n" else ""
+        val merchant = if (profile.merchantName.isNotBlank()) profile.merchantName else "tu comercio amigo"
+
+        return """
+            👋 Hola *$debtorName*, un cordial saludo de *$merchant*.
+            
+            Le recordamos con todo aprecio su estado de cuenta pendiente:
+            💵 *Saldo adeudado:* $$usdFormatted USD
+            👉 *Equivalente en Bs (Tasa BCV):* Bs. $vesFormatted
+            $noteSection
+            🏦 *Datos para Pago Móvil:*
+            • *Banco:* $bankName ($bankCode)
+            • *Teléfono:* ${profile.phoneNumber}
+            • *Cédula/RIF:* ${profile.idCard}
+            
+            📸 _Le adjuntamos nuestro código QR para su comodidad al transferir._
+            🙏 ¡Muchas gracias por su preferencia!
+            ⚡ *Enviado vía Zeasy*
+        """.trimIndent()
+    }
+
+    /**
+     * Notificación informativa cordial para clientes con saldo a favor.
+     */
+    fun generateCreditNoticeMessage(
+        profile: UserProfile,
+        debtorName: String,
+        creditUsd: Double,
+        bcvRate: Double
+    ): String {
+        val rate = if (bcvRate > 0) bcvRate else 1.0
+        val vesFormatted = String.format(Locale.US, "%.2f", creditUsd * rate)
+        val usdFormatted = String.format(Locale.US, "%.2f", creditUsd)
+        val merchant = if (profile.merchantName.isNotBlank()) profile.merchantName else "tu comercio amigo"
+
+        return """
+            👋 Hola *$debtorName*, un saludo de *$merchant*.
+            
+            Le informamos amablemente que cuenta con un *saldo a su favor* disponible para sus compras:
+            🟢 *Monto a su favor:* $$usdFormatted USD (≈ Bs. $vesFormatted)
+            
+            ¡Puede consumirlo cuando guste en nuestro establecimiento!
+            ⚡ *Zeasy*
+        """.trimIndent()
+    }
+
+    /**
      * Detecta si WhatsApp estándar o WhatsApp Business está instalado en el dispositivo.
      */
     fun getWhatsAppPackage(context: Context): String? {

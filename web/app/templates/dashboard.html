@@ -210,6 +210,60 @@
   .kpi-expense::before { background: #C62828; }
   .kpi-net::before { background: var(--color-primary); }
   .kpi-ticket::before { background: var(--color-accent); }
+  .kpi-debt::before { background: #DE350B; }
+  .kpi-credit::before { background: #00875A; }
+
+  .badge-debt {
+    background: #FFEBE6;
+    color: #DE350B;
+    border: 1px solid #FFBDAD;
+  }
+  .badge-credit {
+    background: #E3FCEF;
+    color: #00875A;
+    border: 1px solid #ABF5D1;
+  }
+  .badge-clear {
+    background: #F4F5F7;
+    color: #5E6C84;
+    border: 1px solid #DFE1E6;
+  }
+
+  .view-tabs-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--color-border);
+    padding-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .btn-view-tab {
+    padding: 10px 22px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-view-tab:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text-main);
+  }
+
+  .btn-view-tab.active {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-sm);
+  }
 
   .kpi-header {
     display: flex;
@@ -610,82 +664,194 @@
         <div class="kpi-amount-main" id="kpiAvgTicketVes">Bs. 0,00</div>
         <div class="kpi-amount-sub" id="kpiAvgTicketUsd">≈ $0.00 USD</div>
       </div>
-    </div>
 
-    <!-- Visualizaciones Gráficas -->
-    <div class="charts-grid" id="chartsGrid" style="display: none;">
-      <!-- Gráfico de Tendencia Temporal -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>📈 Flujo de Cobros y Gastos (Cronológico)</h3>
-          <span style="font-size: 0.8rem; color: var(--color-text-muted);">Por fecha / hora</span>
+      <!-- Total en la Calle (Por Cobrar / Fiados) -->
+      <div class="kpi-card kpi-debt">
+        <div class="kpi-header">
+          <span class="kpi-label">Fiados (Por Cobrar)</span>
+          <span class="kpi-badge badge-debt" id="kpiDebtCount">0 deudores</span>
         </div>
-        <div class="chart-container">
-          <canvas id="timelineChart"></canvas>
-        </div>
+        <div class="kpi-amount-main" id="kpiDebtTotalUsd" style="color: #DE350B;">$ 0.00 USD</div>
+        <div class="kpi-amount-sub" id="kpiDebtTotalVes">≈ Bs. 0,00</div>
       </div>
 
-      <!-- Gráfico de Distribución por Banco / Método -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>🏦 Por Método de Pago</h3>
-          <span style="font-size: 0.8rem; color: var(--color-text-muted);">Bancos y Billeteras</span>
+      <!-- Saldos a Favor de Clientes -->
+      <div class="kpi-card kpi-credit">
+        <div class="kpi-header">
+          <span class="kpi-label">Saldos a Favor (Clientes)</span>
+          <span class="kpi-badge badge-credit" id="kpiCreditCount">0 clientes</span>
         </div>
-        <div class="chart-container">
-          <canvas id="methodsChart"></canvas>
-        </div>
+        <div class="kpi-amount-main" id="kpiCreditTotalUsd" style="color: #00875A;">$ 0.00 USD</div>
+        <div class="kpi-amount-sub" id="kpiCreditTotalVes">≈ Bs. 0,00</div>
       </div>
     </div>
 
-    <!-- Barra de Búsqueda, Filtros y Exportaciones -->
-    <div class="action-bar" id="actionBar" style="display: none;">
-      <div class="filters-group">
-        <input type="text" id="tableSearch" class="search-input" placeholder="🔍 Buscar por ref, pagador o nota..." oninput="applyFilters()">
-        
-        <div class="btn-group-toggle">
-          <button type="button" class="btn-toggle active" data-filter="ALL" onclick="setTypeFilter('ALL', this)">Todos</button>
-          <button type="button" class="btn-toggle" data-filter="INCOME" onclick="setTypeFilter('INCOME', this)">Cobros (+)</button>
-          <button type="button" class="btn-toggle" data-filter="EXPENSE" onclick="setTypeFilter('EXPENSE', this)">Gastos (-)</button>
+    <!-- Switch de Pestañas de Vista en PC -->
+    <div class="view-tabs-bar" id="viewTabsBar" style="display: none;">
+      <button type="button" class="btn-view-tab active" id="tabBtnTransactions" onclick="switchDashboardTab('transactions')">
+        📦 Ventas & Jornada Diaria
+      </button>
+      <button type="button" class="btn-view-tab" id="tabBtnDebtors" onclick="switchDashboardTab('debtors')">
+        📒 Libreta de Clientes (Fiados & Saldos a Favor)
+        <span id="badgeDebtorsCountPill" style="background: #DE350B; color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 800;">0</span>
+      </button>
+    </div>
+
+    <!-- SECCIÓN 1: Ventas y Jornada Diaria -->
+    <div id="viewSectionTransactions" style="display: block;">
+      <!-- Visualizaciones Gráficas -->
+      <div class="charts-grid" id="chartsGrid" style="display: none;">
+        <!-- Gráfico de Tendencia Temporal -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>📈 Flujo de Cobros y Gastos (Cronológico)</h3>
+            <span style="font-size: 0.8rem; color: var(--color-text-muted);">Por fecha / hora</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="timelineChart"></canvas>
+          </div>
         </div>
 
-        <select id="bankFilter" class="filter-select" onchange="applyFilters()">
-          <option value="ALL">Todos los Bancos</option>
-        </select>
+        <!-- Gráfico de Distribución por Banco / Método -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>🏦 Por Método de Pago</h3>
+            <span style="font-size: 0.8rem; color: var(--color-text-muted);">Bancos y Billeteras</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="methodsChart"></canvas>
+          </div>
+        </div>
       </div>
 
-      <div class="export-buttons">
-        <button type="button" class="btn btn-primary btn-sm" onclick="exportToCsv()">
-          📊 Exportar Excel (.csv)
-        </button>
-        <button type="button" class="btn btn-soft btn-sm" onclick="window.print()">
-          🖨️ Imprimir / PDF
-        </button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="copyWhatsAppReport()">
-          💬 Copiar p/ WhatsApp
-        </button>
+      <!-- Barra de Búsqueda, Filtros y Exportaciones -->
+      <div class="action-bar" id="actionBar" style="display: none;">
+        <div class="filters-group">
+          <input type="text" id="tableSearch" class="search-input" placeholder="🔍 Buscar por ref, pagador o nota..." oninput="applyFilters()">
+          
+          <div class="btn-group-toggle">
+            <button type="button" class="btn-toggle active" data-filter="ALL" onclick="setTypeFilter('ALL', this)">Todos</button>
+            <button type="button" class="btn-toggle" data-filter="INCOME" onclick="setTypeFilter('INCOME', this)">Cobros (+)</button>
+            <button type="button" class="btn-toggle" data-filter="EXPENSE" onclick="setTypeFilter('EXPENSE', this)">Gastos (-)</button>
+          </div>
+
+          <select id="bankFilter" class="filter-select" onchange="applyFilters()">
+            <option value="ALL">Todos los Bancos</option>
+          </select>
+        </div>
+
+        <div class="export-buttons">
+          <button type="button" class="btn btn-primary btn-sm" onclick="exportToCsv()">
+            📊 Exportar Excel (.csv)
+          </button>
+          <button type="button" class="btn btn-soft btn-sm" onclick="window.print()">
+            🖨️ Imprimir / PDF
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="copyWhatsAppReport()">
+            💬 Copiar p/ WhatsApp
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabla de Transacciones -->
+      <div class="table-card" id="tableCard" style="display: none;">
+        <div class="table-responsive">
+          <table class="tx-table">
+            <thead>
+              <tr>
+                <th>Fecha y Hora</th>
+                <th>Tipo</th>
+                <th>Categoría</th>
+                <th>Banco / Método</th>
+                <th>Referencia</th>
+                <th>Pagador / Nota</th>
+                <th style="text-align: right;">Monto Bs.</th>
+                <th style="text-align: right;">Equivalente ($)</th>
+              </tr>
+            </thead>
+            <tbody id="txTableBody">
+              <!-- Filas inyectadas por JS -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- Tabla de Transacciones -->
-    <div class="table-card" id="tableCard" style="display: none;">
-      <div class="table-responsive">
-        <table class="tx-table">
-          <thead>
-            <tr>
-              <th>Fecha y Hora</th>
-              <th>Tipo</th>
-              <th>Categoría</th>
-              <th>Banco / Método</th>
-              <th>Referencia</th>
-              <th>Pagador / Nota</th>
-              <th style="text-align: right;">Monto Bs.</th>
-              <th style="text-align: right;">Equivalente ($)</th>
-            </tr>
-          </thead>
-          <tbody id="txTableBody">
-            <!-- Filas inyectadas por JS -->
-          </tbody>
-        </table>
+    <!-- SECCIÓN 2: Libreta de Clientes (Fiados & Saldos a Favor) -->
+    <div id="viewSectionDebtors" style="display: none;">
+      <div class="action-bar" style="margin-bottom: 20px;">
+        <div class="filters-group">
+          <input type="text" id="debtorSearchInput" class="search-input" placeholder="🔍 Buscar cliente por nombre, teléfono o cédula..." oninput="applyDebtorFilters()">
+          
+          <div class="btn-group-toggle">
+            <button type="button" class="btn-toggle active" data-debtor-filter="ALL" onclick="setDebtorFilter('ALL', this)">Todos</button>
+            <button type="button" class="btn-toggle" data-debtor-filter="DEBT" onclick="setDebtorFilter('DEBT', this)">🔴 Solo Deudores</button>
+            <button type="button" class="btn-toggle" data-debtor-filter="CREDIT" onclick="setDebtorFilter('CREDIT', this)">🟢 Solo a Favor</button>
+            <button type="button" class="btn-toggle" data-debtor-filter="CLEAR" onclick="setDebtorFilter('CLEAR', this)">⚪ Al Día</button>
+          </div>
+        </div>
+
+        <div class="export-buttons">
+          <button type="button" class="btn btn-primary btn-sm" onclick="exportDebtorsCsv()">
+            📊 Exportar Libreta a Excel (.csv)
+          </button>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="tx-table">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Teléfono / WhatsApp</th>
+                <th>Cédula / RIF</th>
+                <th>Estado y Saldo</th>
+                <th style="text-align: right;">Equivalente Bs. (BCV)</th>
+                <th style="text-align: center;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="debtorsTableBody">
+              <!-- Filas de clientes inyectadas por JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Historial de Movimientos del Cliente -->
+    <div id="debtorLedgerModal" style="display: none; position: fixed; inset: 0; background: rgba(10, 25, 47, 0.75); backdrop-filter: blur(6px); z-index: 99999; justify-content: center; align-items: center; padding: 20px;">
+      <div style="background: var(--color-surface, #fff); border-radius: 20px; max-width: 680px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); border: 1px solid var(--color-border); overflow: hidden;">
+        <div style="padding: 20px 24px; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; background: var(--color-surface-soft);">
+          <div>
+            <h3 id="modalDebtorName" style="font-size: 1.25rem; font-weight: 800; color: var(--color-text-main); margin: 0;">Historial de Cuenta</h3>
+            <span id="modalDebtorSub" style="font-size: 0.85rem; color: var(--color-text-muted);">Movimientos cronológicos</span>
+          </div>
+          <button type="button" onclick="closeDebtorLedgerModal()" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-text-muted);">&times;</button>
+        </div>
+
+        <div style="padding: 20px 24px; overflow-y: auto; flex: 1;">
+          <div id="modalDebtorSummaryBanner" style="padding: 14px 18px; border-radius: var(--radius-md); margin-bottom: 18px; font-weight: 700; font-size: 0.95rem;"></div>
+
+          <table class="tx-table" style="width: 100%;">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Concepto / Nota</th>
+                <th style="text-align: right;">Monto USD</th>
+                <th style="text-align: right;">Monto Bs.</th>
+              </tr>
+            </thead>
+            <tbody id="modalLedgerTableBody">
+              <!-- Movimientos del cliente -->
+            </tbody>
+          </table>
+        </div>
+
+        <div style="padding: 14px 24px; border-top: 1px solid var(--color-border); text-align: right; background: var(--color-surface-soft);">
+          <button type="button" class="btn btn-primary btn-sm" onclick="closeDebtorLedgerModal()">Cerrar</button>
+        </div>
       </div>
     </div>
 
@@ -719,6 +885,13 @@
   let activeTypeFilter = "ALL";
   let timelineChartInstance = null;
   let methodsChartInstance = null;
+
+  // Estado para Módulo de Libreta de Clientes (Fiados y Saldos a Favor)
+  let allDebtors = [];
+  let allLedgerEntries = [];
+  let filteredDebtors = [];
+  let activeDebtorFilter = "ALL"; // "ALL", "DEBT", "CREDIT", "CLEAR"
+  let activeDashboardTab = "transactions"; // "transactions", "debtors"
 
   // Drag and drop listeners
   const dropZone = document.getElementById('dropZone');
@@ -798,6 +971,39 @@
           amount: parseFloat(t.amount) || 0.0,
           amountUsd: parseFloat(t.amountUsd) || (t.amount / (currentProfile.bcvRate || 1))
         }));
+      } else {
+        allTransactions = [];
+      }
+
+      // Parsear Libreta de Clientes si viene en el JSON
+      if (Array.isArray(data.debtors)) {
+        allDebtors = data.debtors.map(d => ({
+          id: d.id || Date.now(),
+          name: d.name || "Cliente",
+          phone: d.phone || "",
+          identification: d.identification || "",
+          balanceUsd: parseFloat(d.balanceUsd) || 0.0,
+          createdAt: d.createdAt || Date.now(),
+          updatedAt: d.updatedAt || Date.now()
+        }));
+      } else {
+        allDebtors = [];
+      }
+
+      if (Array.isArray(data.ledgerEntries)) {
+        allLedgerEntries = data.ledgerEntries.map(e => ({
+          id: e.id || Date.now(),
+          debtorId: e.debtorId,
+          type: e.type || "CHARGE",
+          amountUsd: parseFloat(e.amountUsd) || 0.0,
+          amountVes: parseFloat(e.amountVes) || 0.0,
+          bcvRate: parseFloat(e.bcvRate) || currentProfile.bcvRate,
+          matchedTxId: e.matchedTxId || null,
+          notes: e.notes || "",
+          timestamp: e.timestamp || Date.now()
+        }));
+      } else {
+        allLedgerEntries = [];
       }
 
       saveToLocalCache();
@@ -873,7 +1079,7 @@
     }
   }
 
-  // Cargar Dataset de Demostración
+  // Cargar Dataset de Demostración (Incluye Ventas y Libreta de Fiados/Saldos a favor)
   function loadDemoDataset() {
     currentProfile = {
       merchantName: "Inversiones Panadería La Espiga C.A",
@@ -885,6 +1091,7 @@
 
     const now = Date.now();
     const hourMs = 3600000;
+    const dayMs = 86400000;
 
     allTransactions = [
       { timestamp: now - hourMs * 8, type: "INCOME", category: "Panadería", bankName: "Banesco (0134)", reference: "84729103", senderName: "Carlos Gómez", note: "3 Canillas + Queso", amount: 455.00, amountUsd: 10.00 },
@@ -899,6 +1106,63 @@
       { timestamp: now - hourMs * 0.5, type: "INCOME", category: "Panadería", bankName: "Banesco (0134)", reference: "12849102", senderName: "Luis Méndez", note: "Pan de Jamón", amount: 819.00, amountUsd: 18.00 }
     ];
 
+    // Clientes de Demostración para la Libreta
+    allDebtors = [
+      {
+        id: 1,
+        name: "Doña Carmen (Bodeguera Vecina)",
+        phone: "0414-1234567",
+        identification: "V-14567890",
+        balanceUsd: -18.50, // Debe $18.50
+        createdAt: now - dayMs * 5,
+        updatedAt: now - hourMs * 2
+      },
+      {
+        id: 2,
+        name: "Juan Gómez (Taller Mecánico)",
+        phone: "0424-9876543",
+        identification: "V-19876543",
+        balanceUsd: -42.00, // Debe $42.00
+        createdAt: now - dayMs * 3,
+        updatedAt: now - hourMs * 5
+      },
+      {
+        id: 3,
+        name: "Sra. Elena Morales (Cliente Frecuente)",
+        phone: "0412-3344556",
+        identification: "V-12984561",
+        balanceUsd: 8.20, // Tiene saldo a favor +$8.20
+        createdAt: now - dayMs * 8,
+        updatedAt: now - hourMs * 4
+      },
+      {
+        id: 4,
+        name: "Carlos Zambrano",
+        phone: "0416-5544332",
+        identification: "V-20112233",
+        balanceUsd: 0.00, // Cuenta al día
+        createdAt: now - dayMs * 12,
+        updatedAt: now - dayMs * 1
+      }
+    ];
+
+    // Movimientos de Libreta
+    allLedgerEntries = [
+      // Doña Carmen
+      { id: 101, debtorId: 1, type: "CHARGE", amountUsd: 25.00, amountVes: 1137.50, bcvRate: 45.50, notes: "3 Harinas PAN + 1 Aceite + 1 Café", timestamp: now - dayMs * 3 },
+      { id: 102, debtorId: 1, type: "PAYMENT", amountUsd: 6.50, amountVes: 295.75, bcvRate: 45.50, notes: "Abono Pago Móvil Banesco", timestamp: now - hourMs * 2 },
+
+      // Juan Gómez
+      { id: 103, debtorId: 2, type: "CHARGE", amountUsd: 42.00, amountVes: 1911.00, bcvRate: 45.50, notes: "Desayunos y cafés para el taller (6 personas)", timestamp: now - hourMs * 5 },
+
+      // Sra. Elena (Saldo a favor)
+      { id: 104, debtorId: 3, type: "PAYMENT", amountUsd: 8.20, amountVes: 373.10, bcvRate: 45.50, notes: "Vuelto de compra previa guardado a favor", timestamp: now - hourMs * 4 },
+
+      // Carlos Zambrano (Al día)
+      { id: 105, debtorId: 4, type: "CHARGE", amountUsd: 15.00, amountVes: 682.50, bcvRate: 45.50, notes: "Pan de jamón y refresco", timestamp: now - dayMs * 2 },
+      { id: 106, debtorId: 4, type: "PAYMENT", amountUsd: 15.00, amountVes: 682.50, bcvRate: 45.50, notes: "Cancelación total en efectivo USD", timestamp: now - dayMs * 1 }
+    ];
+
     saveToLocalCache();
     renderDashboard();
   }
@@ -908,6 +1172,8 @@
     try {
       localStorage.setItem('zeasy_pc_profile', JSON.stringify(currentProfile));
       localStorage.setItem('zeasy_pc_txs', JSON.stringify(allTransactions));
+      localStorage.setItem('zeasy_pc_debtors', JSON.stringify(allDebtors));
+      localStorage.setItem('zeasy_pc_ledger', JSON.stringify(allLedgerEntries));
     } catch (_) {}
   }
 
@@ -915,10 +1181,14 @@
     try {
       const p = localStorage.getItem('zeasy_pc_profile');
       const t = localStorage.getItem('zeasy_pc_txs');
+      const d = localStorage.getItem('zeasy_pc_debtors');
+      const l = localStorage.getItem('zeasy_pc_ledger');
       if (p && t) {
         currentProfile = JSON.parse(p);
         allTransactions = JSON.parse(t);
-        if (allTransactions.length > 0) {
+        if (d) allDebtors = JSON.parse(d);
+        if (l) allLedgerEntries = JSON.parse(l);
+        if (allTransactions.length > 0 || allDebtors.length > 0) {
           renderDashboard();
         }
       }
@@ -929,13 +1199,20 @@
     if (confirm("¿Deseas limpiar todos los registros cargados en esta computadora?")) {
       localStorage.removeItem('zeasy_pc_profile');
       localStorage.removeItem('zeasy_pc_txs');
+      localStorage.removeItem('zeasy_pc_debtors');
+      localStorage.removeItem('zeasy_pc_ledger');
       allTransactions = [];
       filteredTransactions = [];
+      allDebtors = [];
+      allLedgerEntries = [];
+      filteredDebtors = [];
       document.getElementById('profileBar').style.display = 'none';
       document.getElementById('kpiGrid').style.display = 'none';
+      document.getElementById('viewTabsBar').style.display = 'none';
       document.getElementById('chartsGrid').style.display = 'none';
       document.getElementById('actionBar').style.display = 'none';
       document.getElementById('tableCard').style.display = 'none';
+      document.getElementById('viewSectionDebtors').style.display = 'none';
       document.getElementById('emptyPrompt').style.display = 'block';
       document.getElementById('btnClearData').style.display = 'none';
     }
@@ -946,6 +1223,7 @@
     document.getElementById('emptyPrompt').style.display = 'none';
     document.getElementById('profileBar').style.display = 'flex';
     document.getElementById('kpiGrid').style.display = 'grid';
+    document.getElementById('viewTabsBar').style.display = 'flex';
     document.getElementById('chartsGrid').style.display = 'grid';
     document.getElementById('actionBar').style.display = 'flex';
     document.getElementById('tableCard').style.display = 'block';
@@ -962,6 +1240,7 @@
 
     // Aplicar filtros y recalcular
     applyFilters();
+    applyDebtorFilters();
   }
 
   function updateBcvRate(newRate) {
@@ -974,6 +1253,7 @@
       });
       saveToLocalCache();
       applyFilters();
+      applyDebtorFilters();
     }
   }
 
@@ -1026,7 +1306,9 @@
 
   function setTypeFilter(type, btn) {
     activeTypeFilter = type;
-    document.querySelectorAll('.btn-toggle').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.btn-group-toggle .btn-toggle').forEach(b => {
+      if (!b.hasAttribute('data-debtor-filter')) b.classList.remove('active');
+    });
     btn.classList.add('active');
     applyFilters();
   }
@@ -1082,7 +1364,7 @@
     const avgTicketVes = incomeCount > 0 ? (incomeVes / incomeCount) : 0;
     const avgTicketUsd = avgTicketVes / rate;
 
-    // Actualizar DOM
+    // Actualizar DOM Ventas
     document.getElementById('kpiIncomeCount').textContent = `${incomeCount} ventas`;
     document.getElementById('kpiTotalIncomeVes').textContent = formatVes(incomeVes);
     document.getElementById('kpiTotalIncomeUsd').textContent = `≈ $${formatUsd(incomeUsd)} USD`;
@@ -1099,6 +1381,291 @@
 
     document.getElementById('kpiAvgTicketVes').textContent = formatVes(avgTicketVes);
     document.getElementById('kpiAvgTicketUsd').textContent = `≈ $${formatUsd(avgTicketUsd)} USD`;
+
+    // Métricas de Libreta de Fiados y Saldos a Favor
+    let debtTotalUsd = 0;
+    let debtCount = 0;
+    let creditTotalUsd = 0;
+    let creditCount = 0;
+
+    allDebtors.forEach(d => {
+      if (d.balanceUsd < -0.009) {
+        debtTotalUsd += Math.abs(d.balanceUsd);
+        debtCount++;
+      } else if (d.balanceUsd > 0.009) {
+        creditTotalUsd += d.balanceUsd;
+        creditCount++;
+      }
+    });
+
+    const debtTotalVes = debtTotalUsd * rate;
+    const creditTotalVes = creditTotalUsd * rate;
+
+    document.getElementById('kpiDebtCount').textContent = `${debtCount} ${debtCount === 1 ? 'deudor' : 'deudores'}`;
+    document.getElementById('kpiDebtTotalUsd').textContent = `$ ${formatUsd(debtTotalUsd)} USD`;
+    document.getElementById('kpiDebtTotalVes').textContent = `≈ Bs. ${formatVes(debtTotalVes)}`;
+
+    document.getElementById('kpiCreditCount').textContent = `${creditCount} ${creditCount === 1 ? 'cliente' : 'clientes'}`;
+    document.getElementById('kpiCreditTotalUsd').textContent = `$ ${formatUsd(creditTotalUsd)} USD`;
+    document.getElementById('kpiCreditTotalVes').textContent = `≈ Bs. ${formatVes(creditTotalVes)}`;
+
+    const pill = document.getElementById('badgeDebtorsCountPill');
+    if (pill) pill.textContent = debtCount;
+  }
+
+  // --- CONTROLADOR DE PESTAÑAS (VENTAS VS LIBRETA) ---
+  function switchDashboardTab(tabName) {
+    activeDashboardTab = tabName;
+    const btnTx = document.getElementById('tabBtnTransactions');
+    const btnDb = document.getElementById('tabBtnDebtors');
+    const secTx = document.getElementById('viewSectionTransactions');
+    const secDb = document.getElementById('viewSectionDebtors');
+
+    if (tabName === 'transactions') {
+      btnTx.classList.add('active');
+      btnDb.classList.remove('active');
+      secTx.style.display = 'block';
+      secDb.style.display = 'none';
+    } else {
+      btnTx.classList.remove('active');
+      btnDb.classList.add('active');
+      secTx.style.display = 'none';
+      secDb.style.display = 'block';
+      applyDebtorFilters();
+    }
+  }
+
+  // --- FILTROS Y TABLA DE LA LIBRETA DE CLIENTES ---
+  function setDebtorFilter(filter, btn) {
+    activeDebtorFilter = filter;
+    document.querySelectorAll('[data-debtor-filter]').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    applyDebtorFilters();
+  }
+
+  function applyDebtorFilters() {
+    const query = (document.getElementById('debtorSearchInput')?.value || "").toLowerCase().trim();
+
+    filteredDebtors = allDebtors.filter(d => {
+      // Filtro de estado
+      if (activeDebtorFilter === "DEBT" && d.balanceUsd >= -0.009) return false;
+      if (activeDebtorFilter === "CREDIT" && d.balanceUsd <= 0.009) return false;
+      if (activeDebtorFilter === "CLEAR" && (d.balanceUsd < -0.009 || d.balanceUsd > 0.009)) return false;
+
+      // Búsqueda
+      if (query.length > 0) {
+        const match = (d.name && d.name.toLowerCase().includes(query)) ||
+                      (d.phone && d.phone.toLowerCase().includes(query)) ||
+                      (d.identification && d.identification.toLowerCase().includes(query));
+        if (!match) return false;
+      }
+      return true;
+    });
+
+    renderDebtorsTable();
+  }
+
+  function renderDebtorsTable() {
+    const tbody = document.getElementById('debtorsTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (filteredDebtors.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 28px; color: var(--color-text-muted);">No hay clientes registrados en esta categoría.</td></tr>';
+      return;
+    }
+
+    const rate = currentProfile.bcvRate || 1;
+
+    filteredDebtors.forEach(d => {
+      const tr = document.createElement('tr');
+      const isDebt = d.balanceUsd < -0.009;
+      const hasCredit = d.balanceUsd > 0.009;
+
+      let badgeHtml = '';
+      let amountUsdText = '';
+      let amountVesText = '';
+
+      if (isDebt) {
+        const debtUsd = Math.abs(d.balanceUsd);
+        const debtVes = debtUsd * rate;
+        badgeHtml = `<span class="kpi-badge badge-debt">🔴 Debe $${formatUsd(debtUsd)}</span>`;
+        amountUsdText = `<span style="font-weight: 700; color: #DE350B;">-$${formatUsd(debtUsd)}</span>`;
+        amountVesText = `<span style="font-weight: 700; color: #DE350B;">Bs. ${formatVes(debtVes)}</span>`;
+      } else if (hasCredit) {
+        const creditUsd = d.balanceUsd;
+        const creditVes = creditUsd * rate;
+        badgeHtml = `<span class="kpi-badge badge-credit">🟢 A favor $${formatUsd(creditUsd)}</span>`;
+        amountUsdText = `<span style="font-weight: 700; color: #00875A;">+$${formatUsd(creditUsd)}</span>`;
+        amountVesText = `<span style="font-weight: 700; color: #00875A;">Bs. ${formatVes(creditVes)}</span>`;
+      } else {
+        badgeHtml = `<span class="kpi-badge badge-clear">⚪ Al Día ($0.00)</span>`;
+        amountUsdText = `<span style="font-weight: 600; color: var(--color-text-muted);">$0.00</span>`;
+        amountVesText = `<span style="font-weight: 600; color: var(--color-text-muted);">Bs. 0,00</span>`;
+      }
+
+      tr.innerHTML = `
+        <td>
+          <div style="font-weight: 700; font-size: 0.95rem; color: var(--color-text-main);">${escapeHtml(d.name)}</div>
+          <div style="font-size: 0.76rem; color: var(--color-text-muted);">Registrado: ${new Date(d.createdAt).toLocaleDateString('es-VE')}</div>
+        </td>
+        <td>
+          ${d.phone ? `<a href="https://wa.me/${cleanPhoneForWa(d.phone)}" target="_blank" style="color: #00875A; font-weight: 600; text-decoration: none;">💬 ${escapeHtml(d.phone)}</a>` : '<span style="color:#aaa;">Sin número</span>'}
+        </td>
+        <td>
+          <span style="font-family: monospace; font-size: 0.88rem;">${escapeHtml(d.identification || "S/D")}</span>
+        </td>
+        <td>
+          ${badgeHtml}
+        </td>
+        <td style="text-align: right;">
+          ${amountVesText}
+          <div style="font-size: 0.8rem; color: var(--color-text-muted);">${amountUsdText}</div>
+        </td>
+        <td style="text-align: center; white-space: nowrap;">
+          <button type="button" class="btn btn-soft btn-sm" onclick="showDebtorLedgerModal(${d.id})" style="padding: 4px 10px; font-size: 0.82rem; margin-right: 4px;">
+            🔍 Movimientos
+          </button>
+          ${isDebt ? `
+          <button type="button" class="btn btn-primary btn-sm" onclick="openWhatsAppReminder(${d.id})" style="padding: 4px 10px; font-size: 0.82rem; background: #00875A; border-color: #00875A;">
+            💬 Cobrar
+          </button>
+          ` : ''}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function cleanPhoneForWa(phone) {
+    if (!phone) return "";
+    let clean = phone.replace(/[^0-9]/g, '');
+    if (clean.startsWith('0')) clean = '58' + clean.substring(1);
+    else if (!clean.startsWith('58') && clean.length === 10) clean = '58' + clean;
+    return clean;
+  }
+
+  function openWhatsAppReminder(debtorId) {
+    const debtor = allDebtors.find(d => d.id === debtorId);
+    if (!debtor) return;
+
+    const rate = currentProfile.bcvRate || 1;
+    const debtUsd = Math.abs(debtor.balanceUsd);
+    const debtVes = debtUsd * rate;
+
+    const msg = `👋 Hola *${debtor.name}*, un saludo de *${currentProfile.merchantName || 'tu comercio amigo'}*.
+
+Le recordamos amablemente su estado de cuenta pendiente:
+💵 *Saldo pendiente:* $${formatUsd(debtUsd)} USD
+👉 *Equivalente en Bs (Tasa BCV):* Bs. ${formatVes(debtVes)}
+
+🏦 *Datos para Pago Móvil:*
+• *Teléfono:* ${currentProfile.phoneNumber || '(Consultar)'}
+• *Cédula/RIF:* ${currentProfile.idCard || '(Consultar)'}
+
+¡Agradecemos su pronta atención y preferencia!
+⚡ _Enviado desde Zeasy_`;
+
+    const encoded = encodeURIComponent(msg);
+    const waUrl = debtor.phone ? `https://api.whatsapp.com/send?phone=${cleanPhoneForWa(debtor.phone)}&text=${encoded}` : `https://api.whatsapp.com/send?text=${encoded}`;
+    window.open(waUrl, '_blank');
+  }
+
+  function showDebtorLedgerModal(debtorId) {
+    const debtor = allDebtors.find(d => d.id === debtorId);
+    if (!debtor) return;
+
+    const rate = currentProfile.bcvRate || 1;
+    document.getElementById('modalDebtorName').textContent = debtor.name;
+    document.getElementById('modalDebtorSub').textContent = `Teléfono: ${debtor.phone || "Sin registrar"} • Cédula/RIF: ${debtor.identification || "S/D"}`;
+
+    const banner = document.getElementById('modalDebtorSummaryBanner');
+    if (debtor.balanceUsd < -0.009) {
+      const absUsd = Math.abs(debtor.balanceUsd);
+      banner.style.background = '#FFEBE6';
+      banner.style.color = '#DE350B';
+      banner.innerHTML = `⚠️ Estado Actual: <strong>DEBE $${formatUsd(absUsd)} USD</strong> (≈ Bs. ${formatVes(absUsd * rate)})`;
+    } else if (debtor.balanceUsd > 0.009) {
+      banner.style.background = '#E3FCEF';
+      banner.style.color = '#00875A';
+      banner.innerHTML = `✅ Estado Actual: <strong>CUENTA CON $${formatUsd(debtor.balanceUsd)} USD A FAVOR</strong> (≈ Bs. ${formatVes(debtor.balanceUsd * rate)})`;
+    } else {
+      banner.style.background = '#F4F5F7';
+      banner.style.color = '#5E6C84';
+      banner.innerHTML = `⚖️ Estado Actual: <strong>CUENTA AL DÍA ($0.00)</strong>`;
+    }
+
+    const tbody = document.getElementById('modalLedgerTableBody');
+    tbody.innerHTML = '';
+
+    const entries = allLedgerEntries.filter(e => e.debtorId == debtorId).sort((a,b) => b.timestamp - a.timestamp);
+
+    if (entries.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--color-text-muted);">No hay historial de movimientos detallado para este cliente.</td></tr>';
+    } else {
+      entries.forEach(e => {
+        const tr = document.createElement('tr');
+        const isCharge = e.type === "CHARGE";
+        const isPayment = e.type === "PAYMENT";
+        const dateStr = new Date(e.timestamp).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+        let typeBadge = '';
+        if (isCharge) {
+          typeBadge = '<span class="tx-badge-type badge-expense" style="font-size: 0.75rem;">📦 Fiado / Cargo</span>';
+        } else if (isPayment) {
+          typeBadge = '<span class="tx-badge-type badge-income" style="font-size: 0.75rem;">💵 Abono / Pago</span>';
+        } else {
+          typeBadge = '<span class="tx-badge-type" style="font-size: 0.75rem; background:#EAE6FF; color:#5243AA;">⚙️ Ajuste</span>';
+        }
+
+        tr.innerHTML = `
+          <td style="font-size: 0.8rem; white-space: nowrap; color: var(--color-text-muted);">${dateStr}</td>
+          <td>${typeBadge}</td>
+          <td style="font-size: 0.88rem;">${escapeHtml(e.notes || "Movimiento registrado")}</td>
+          <td style="text-align: right; font-weight: 700; color: ${isCharge ? '#DE350B' : '#00875A'};">
+            ${isCharge ? '-' : '+'}$${formatUsd(e.amountUsd)}
+          </td>
+          <td style="text-align: right; font-size: 0.85rem; color: var(--color-text-muted);">
+            Bs. ${formatVes(e.amountVes || (e.amountUsd * (e.bcvRate || rate)))}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('debtorLedgerModal').style.display = 'flex';
+  }
+
+  function closeDebtorLedgerModal() {
+    document.getElementById('debtorLedgerModal').style.display = 'none';
+  }
+
+  function exportDebtorsCsv() {
+    let csv = '\uFEFF'; // UTF-8 BOM
+    csv += `Comercio;\"${currentProfile.merchantName}\"\n`;
+    csv += `RIF / Cedula;\"${currentProfile.idCard}\"\n`;
+    csv += `Tasa BCV;${currentProfile.bcvRate.toFixed(2)}\n`;
+    csv += `Modulo;\"Libreta de Clientes, Fiados y Saldos a Favor\"\n`;
+    csv += `Fecha Exportacion;\"${new Date().toLocaleString('es-VE')}\"\n\n`;
+    csv += "Cliente;Telefono;Cedula;Estado;Saldo USD;Equivalente Bs\n";
+
+    const rate = currentProfile.bcvRate || 1;
+    allDebtors.forEach(d => {
+      let status = "AL DIA";
+      if (d.balanceUsd < -0.009) status = "DEUDOR (FIADO)";
+      else if (d.balanceUsd > 0.009) status = "SALDO A FAVOR";
+
+      const equivBs = (d.balanceUsd * rate).toFixed(2);
+      csv += `\"${d.name}\";\"${d.phone || ''}\";\"${d.identification || ''}\";\"${status}\";${d.balanceUsd.toFixed(2)};${equivBs}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `libreta_zeasy_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function renderTable() {

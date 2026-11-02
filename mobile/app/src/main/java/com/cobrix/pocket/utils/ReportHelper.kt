@@ -87,13 +87,14 @@ object ReportHelper {
     fun generateDetailedTextReport(
         profile: UserProfile,
         transactions: List<Transaction>,
-        periodLabel: String = "Hoy"
+        periodLabel: String = "Hoy",
+        debtorsSummary: com.cobrix.pocket.data.model.DebtorsSummary? = null
     ): String {
         val now = Date()
         val financials = calculateFinancials(transactions, profile.bcvRate)
         val sb = StringBuilder()
 
-        sb.append("📊 *REPORTE DE CIERRE - ZIPPY*\n")
+        sb.append("📊 *REPORTE DE CIERRE - ZEASY*\n")
         sb.append("─────────────────────────────────\n")
         sb.append("🏢 *Negocio:* ${profile.merchantName.ifEmpty { "Mi Negocio" }}\n")
         sb.append("🏷️ *Rubro:* ${profile.businessCategory}\n")
@@ -131,9 +132,23 @@ object ReportHelper {
         sb.append("─────────────────────────────────\n")
         sb.append("🏁 *BALANCE FINAL - GANANCIA NETA REAL:*\n")
         sb.append("👉 *Bs. ${String.format(Locale.US, "%.2f", financials.netProfitVes)}* ($${String.format(Locale.US, "%.2f", financials.netProfitUsd)} USD)\n")
-        sb.append("─────────────────────────────────\n\n")
+        sb.append("─────────────────────────────────\n")
 
-        sb.append("📝 *DETALLE DE MOVIMIENTOS CON TASA HISTÓRICA:* (${transactions.size})\n")
+        // Inclusión de la Libreta de Cuentas por Cobrar y Saldos a Favor
+        if (debtorsSummary != null && (debtorsSummary.debtorsCount > 0 || debtorsSummary.creditsCount > 0)) {
+            sb.append("\n📒 *LIBRETA DE CLIENTES Y CUENTAS POR COBRAR:*\n")
+            if (debtorsSummary.debtorsCount > 0) {
+                val totalStreetVes = debtorsSummary.totalDebtUsd * (if (profile.bcvRate > 0) profile.bcvRate else 1.0)
+                sb.append("• 🔴 Fiados por cobrar: $${String.format(Locale.US, "%.2f", debtorsSummary.totalDebtUsd)} USD (≈ Bs. ${String.format(Locale.US, "%.2f", totalStreetVes)})\n")
+                sb.append("   ↳ Clientes con deuda pendiente: ${debtorsSummary.debtorsCount}\n")
+            }
+            if (debtorsSummary.creditsCount > 0) {
+                sb.append("• 🟢 Saldos a favor de clientes: $${String.format(Locale.US, "%.2f", debtorsSummary.totalCreditUsd)} USD (${debtorsSummary.creditsCount} clientes con crédito disponible)\n")
+            }
+            sb.append("─────────────────────────────────\n")
+        }
+
+        sb.append("\n📝 *DETALLE DE MOVIMIENTOS CON TASA HISTÓRICA:* (${transactions.size})\n")
         if (transactions.isEmpty()) {
             sb.append("• No hubo movimientos registrados en el periodo seleccionado.\n")
         } else {
@@ -506,7 +521,8 @@ object ReportHelper {
         context: Context,
         profile: UserProfile,
         transactions: List<Transaction>,
-        periodTitle: String
+        periodTitle: String,
+        debtors: List<com.cobrix.pocket.data.model.Debtor>? = null
     ): File? {
         val reportsDir = File(context.cacheDir, "reports")
         if (!reportsDir.exists()) reportsDir.mkdirs()
@@ -525,7 +541,7 @@ object ReportHelper {
             sb.append("Periodo;").append("\"$periodTitle\"").append("\n")
             sb.append("Tasa BCV Referencial;").append(String.format(Locale.US, "%.2f", profile.bcvRate)).append("\n\n")
 
-            // Columnas de la tabla
+            // Columnas de la tabla de ventas
             sb.append("Fecha;Hora;Tipo;Categoria;Banco / Metodo;Monto Bs;Monto USD;Referencia;Remitente / Pagador;Nota\n")
 
             for (tx in transactions) {
@@ -553,6 +569,24 @@ object ReportHelper {
             sb.append("TOTAL COBRADO (BS);;;;;" + String.format(Locale.US, "%.2f", sumIncomeBs) + "\n")
             sb.append("TOTAL GASTOS (BS);;;;;" + String.format(Locale.US, "%.2f", sumExpenseBs) + "\n")
             sb.append("BALANCE NETO (BS);;;;;" + String.format(Locale.US, "%.2f", netBs) + "\n")
+
+            // Si hay clientes en la libreta, agregar sección al reporte Excel
+            if (!debtors.isNullOrEmpty()) {
+                val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+                sb.append("\n\n")
+                sb.append("--- LIBRETA DE CLIENTES (FIADOS Y SALDOS A FAVOR) ---\n")
+                sb.append("Cliente;Telefono;Cedula;Estado;Saldo USD;Equivalente Bs\n")
+                for (d in debtors) {
+                    val status = when {
+                        d.isDebtor -> "DEUDOR (FIADO)"
+                        d.hasCredit -> "SALDO A FAVOR"
+                        else -> "AL DIA"
+                    }
+                    val equivBs = String.format(Locale.US, "%.2f", d.getEquivalentVes(rate))
+                    val balUsd = String.format(Locale.US, "%.2f", d.balanceUsd)
+                    sb.append("\"${d.name}\";\"${d.phone ?: ""}\";\"${d.identification ?: ""}\";\"$status\";$balUsd;$equivBs\n")
+                }
+            }
 
             FileOutputStream(csvFile).use { out ->
                 // Escribir BOM UTF-8 (EF BB BF) para que Excel reconozca tildes y caracteres especiales

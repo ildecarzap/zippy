@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="8dp"
+    android:gravity="center_vertical">
+
+    <TextView
+        android:id="@+id/tvEntryTypeIcon"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:text="📦"
+        android:textSize="18sp"
+        android:gravity="center" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="8dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvEntryConcept"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Compra de Víveres"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tvEntryDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="02/11/2026 10:15"
+            android:textColor="@color/text_muted"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="end">
+
+        <TextView
+            android:id="@+id/tvEntryAmountUsd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-$12.00"
+            android:textStyle="bold"
+            android:textColor="#DE350B"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tvEntryAmountBs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bs. 546,00"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/surface">
+
+    <TextView
+        android:id="@+id/tvPaymentTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Registrar Abono / Pago"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp" />
+
+    <TextView
+        android:id="@+id/tvPaymentClientName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="Cliente: Doña Carmen"
+        android:textColor="@color/primary"
+        android:textStyle="bold"
+        android:textSize="14sp" />
+
+    <!-- Estado de deuda actual -->
+    <TextView
+        android:id="@+id/tvPaymentCurrentDebt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="Deuda actual: $18.50 USD"
+        android:textColor="#C62828"
+        android:textSize="13sp" />
+
+    <!-- Campo de Monto en USD -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:hint="Monto a Abonar ($ USD) *"
+        app:prefixText="$ "
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etPaymentAmountUsd"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Equivalente en Bs calculado en tiempo real -->
+    <TextView
+        android:id="@+id/tvPaymentEquivBs"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="≈ Bs. 0,00 (Tasa BCV: 45.00)"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp" />
+
+    <!-- Nota si hay excedente (Saldo a Favor) -->
+    <TextView
+        android:id="@+id/tvPaymentExcessHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="💡 Si abona más de lo que debe, el excedente quedará como Saldo a Favor para futuras compras."
+        android:textColor="#2E7D32"
+        android:textSize="11sp" />
+
+    <!-- Nota / Referencia -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="Nota / Referencia de Pago (Opcional)"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etPaymentNote"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Ej: Pago Móvil Banesco ref 4482, o Efectivo"
+            android:textSize="14sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnConfirmPayment"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="20dp"
+        android:text="Guardar Abono"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        app:cornerRadius="12dp"
+        android:backgroundTint="#00875A"
+        android:textColor="@color/white" />
+
+</LinearLayout>

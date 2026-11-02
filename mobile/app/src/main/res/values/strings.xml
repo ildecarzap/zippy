@@ -2,7 +2,15 @@
     <string name="app_name">Zeasy</string>
     <string name="nav_cashier">Cobrar</string>
     <string name="nav_ledger">Jornada</string>
+    <string name="nav_debtors">Libreta</string>
     <string name="nav_settings">Ajustes</string>
+
+    <!-- Libreta de Clientes / Fiados -->
+    <string name="debtors_title">Libreta de Clientes</string>
+    <string name="debtors_total_street">En la calle (Por cobrar)</string>
+    <string name="debtors_total_credit">Saldos a favor (Clientes)</string>
+    <string name="btn_add_debtor">+ Anotar Cliente</string>
+    <string name="btn_quick_fiar">📒 Fiar a Cuenta</string>
 
     <!-- Cashier -->
     <string name="cashier_title">Caja Rápida</string>

@@ -10,6 +10,9 @@ import android.util.Log
 import androidx.core.content.FileProvider
 import com.cobrix.pocket.data.db.PocketDatabaseHelper
 import com.cobrix.pocket.data.model.BankCatalog
+import com.cobrix.pocket.data.model.Debtor
+import com.cobrix.pocket.data.model.LedgerEntry
+import com.cobrix.pocket.data.model.LedgerEntryType
 import com.cobrix.pocket.data.model.Transaction
 import com.cobrix.pocket.data.model.TransactionType
 import com.cobrix.pocket.data.model.UserProfile
@@ -26,6 +29,7 @@ data class BackupRestoreResult(
     val success: Boolean,
     val message: String,
     val transactionsRestored: Int = 0,
+    val debtorsRestored: Int = 0,
     val merchantName: String = ""
 )
 
@@ -104,6 +108,42 @@ object BackupManager {
             txArray.put(txJson)
         }
         root.put("transactions", txArray)
+
+        // 4. Libreta de Clientes (Cuentas por Cobrar y Saldos a Favor)
+        val debtors = dbHelper.getAllDebtors()
+        val debtorsArray = JSONArray()
+        for (d in debtors) {
+            val dJson = JSONObject().apply {
+                put("id", d.id)
+                put("name", d.name)
+                put("phone", d.phone ?: "")
+                put("identification", d.identification ?: "")
+                put("balanceUsd", d.balanceUsd)
+                put("createdAt", d.createdAt)
+                put("updatedAt", d.updatedAt)
+            }
+            debtorsArray.put(dJson)
+        }
+        root.put("debtors", debtorsArray)
+
+        // 5. Historial de Movimientos de la Libreta
+        val ledgerEntries = dbHelper.getAllLedgerEntries()
+        val ledgerArray = JSONArray()
+        for (e in ledgerEntries) {
+            val eJson = JSONObject().apply {
+                put("id", e.id)
+                put("debtorId", e.debtorId)
+                put("type", e.type.name)
+                put("amountUsd", e.amountUsd)
+                put("amountVes", e.amountVes)
+                put("bcvRate", e.bcvRate)
+                put("matchedTxId", e.matchedTransactionId ?: JSONObject.NULL)
+                put("notes", e.notes ?: "")
+                put("timestamp", e.timestamp)
+            }
+            ledgerArray.put(eJson)
+        }
+        root.put("ledgerEntries", ledgerArray)
 
         return root.toString(2)
     }
@@ -238,10 +278,61 @@ object BackupManager {
                 restoredTxsCount = dbHelper.insertTransactionsBatch(txList)
             }
 
+            // 4. Restaurar Libreta de Clientes (Debtors y LedgerEntries)
+            var restoredDebtorsCount = 0
+            val dbHelper = PocketDatabaseHelper.getInstance(context)
+
+            if (root.has("debtors")) {
+                val dArray = root.getJSONArray("debtors")
+                val dList = mutableListOf<Debtor>()
+                for (i in 0 until dArray.length()) {
+                    val d = dArray.getJSONObject(i)
+                    dList.add(
+                        Debtor(
+                            id = d.optLong("id", 0L),
+                            name = d.optString("name", "Cliente"),
+                            phone = d.optString("phone", "").takeIf { it.isNotBlank() },
+                            identification = d.optString("identification", "").takeIf { it.isNotBlank() },
+                            balanceUsd = d.optDouble("balanceUsd", 0.0),
+                            createdAt = d.optLong("createdAt", System.currentTimeMillis()),
+                            updatedAt = d.optLong("updatedAt", System.currentTimeMillis())
+                        )
+                    )
+                }
+                restoredDebtorsCount = dbHelper.bulkInsertDebtors(dList)
+            }
+
+            if (root.has("ledgerEntries")) {
+                val lArray = root.getJSONArray("ledgerEntries")
+                val lList = mutableListOf<LedgerEntry>()
+                for (i in 0 until lArray.length()) {
+                    val l = lArray.getJSONObject(i)
+                    val type = try {
+                        LedgerEntryType.valueOf(l.optString("type", "CHARGE"))
+                    } catch (_: Exception) { LedgerEntryType.CHARGE }
+                    val matchedId = if (l.has("matchedTxId") && !l.isNull("matchedTxId")) l.getLong("matchedTxId") else null
+                    lList.add(
+                        LedgerEntry(
+                            id = l.optLong("id", 0L),
+                            debtorId = l.optLong("debtorId", 0L),
+                            type = type,
+                            amountUsd = l.optDouble("amountUsd", 0.0),
+                            amountVes = l.optDouble("amountVes", 0.0),
+                            bcvRate = l.optDouble("bcvRate", 1.0),
+                            matchedTransactionId = matchedId,
+                            notes = l.optString("notes", ""),
+                            timestamp = l.optLong("timestamp", System.currentTimeMillis())
+                        )
+                    )
+                }
+                dbHelper.bulkInsertLedgerEntries(lList)
+            }
+
             BackupRestoreResult(
                 success = true,
                 message = "Respaldo restaurado exitosamente.",
                 transactionsRestored = restoredTxsCount,
+                debtorsRestored = restoredDebtorsCount,
                 merchantName = merchant
             )
         } catch (e: Exception) {
