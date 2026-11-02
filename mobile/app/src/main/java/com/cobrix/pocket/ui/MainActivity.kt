@@ -231,6 +231,8 @@ class MainActivity : AppCompatActivity() {
         if (uri != null) {
             val bankCode = targetCropBankCode ?: selectedBankConfigCode
             val intent = Intent(this, QrCropActivity::class.java).apply {
+                data = uri
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 putExtra(QrCropActivity.EXTRA_SOURCE_URI, uri.toString())
                 putExtra(QrCropActivity.EXTRA_BANK_CODE, bankCode)
             }
