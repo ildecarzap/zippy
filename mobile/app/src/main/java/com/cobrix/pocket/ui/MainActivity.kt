@@ -86,6 +86,9 @@ import com.cobrix.pocket.data.model.Debtor
 import com.cobrix.pocket.data.model.LedgerEntry
 import com.cobrix.pocket.data.model.LedgerEntryType
 import com.cobrix.pocket.databinding.DialogAddDebtorBinding
+import com.cobrix.pocket.databinding.DialogEditDebtorBinding
+import com.cobrix.pocket.databinding.DialogSecurityPinBinding
+import com.cobrix.pocket.databinding.DialogChangeSecurityPinBinding
 import com.cobrix.pocket.databinding.DialogAddChargeBinding
 import com.cobrix.pocket.databinding.DialogAddPaymentBinding
 import com.cobrix.pocket.databinding.DialogDebtorDetailBinding
@@ -525,23 +528,129 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Exige confirmación biométrica (huella) o PIN del teléfono antes de modificar
-     * datos bancarios sensibles, cargar/cambiar códigos QR o alterar cuentas de cobro.
+     * datos bancarios sensibles, cargar/cambiar códigos QR, o modificar/eliminar clientes de la libreta.
+     * Si el dispositivo o emulador no cuenta con biometría o credencial de sistema activa,
+     * solicita el PIN de seguridad de Zeasy (por defecto: 1234).
      */
-    private fun requireSecurityAuth(actionTitle: String, onSuccess: () -> Unit) {
+    private fun requireSecurityAuth(
+        actionTitle: String,
+        description: String = "Coloca tu huella digital o ingresa el PIN para confirmar esta acción",
+        onSuccess: () -> Unit
+    ) {
         if (BiometricHelper.isBiometricAvailable(this)) {
             BiometricHelper.showBiometricPrompt(
                 activity = this,
                 title = actionTitle,
                 subtitle = "Confirmación de Seguridad",
-                description = "Coloca tu huella digital o ingresa el PIN para confirmar esta acción",
+                description = description,
                 onSuccess = onSuccess,
                 onError = { _ ->
-                    Toast.makeText(this, "🔒 Acción cancelada: Se requiere huella o PIN", Toast.LENGTH_SHORT).show()
+                    // Si se cancela o falla la biometría, permitir validar con el PIN de la app
+                    showSecurityPinDialog(actionTitle, description, onSuccess)
                 }
             )
         } else {
-            onSuccess()
+            showSecurityPinDialog(actionTitle, description, onSuccess)
         }
+    }
+
+    /**
+     * Diálogo de confirmación de PIN de seguridad de la app.
+     * Protege acciones sensibles en emuladores o dispositivos sin bloqueo de pantalla configurado.
+     */
+    private fun showSecurityPinDialog(
+        actionTitle: String,
+        description: String,
+        onSuccess: () -> Unit
+    ) {
+        val dialog = Dialog(this)
+        val dBinding = DialogSecurityPinBinding.inflate(layoutInflater)
+        dialog.setContentView(dBinding.root)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        dBinding.tvPinDialogTitle.text = actionTitle
+        dBinding.tvPinDialogDescription.text = description
+
+        val isCustom = PreferencesHelper.hasCustomSecurityPin(this)
+        if (isCustom) {
+            dBinding.tvPinHelperNotice.text = "🔒 Ingresa tu PIN de seguridad configurado"
+        } else {
+            dBinding.tvPinHelperNotice.text = "💡 PIN predeterminado: 1234 • Puedes cambiarlo en Ajustes"
+        }
+
+        dBinding.btnCancelPin.setOnClickListener {
+            dialog.dismiss()
+            Toast.makeText(this, "🔒 Acción cancelada: Se requiere autorización", Toast.LENGTH_SHORT).show()
+        }
+
+        dBinding.btnConfirmPin.setOnClickListener {
+            val enteredPin = dBinding.etSecurityPinInput.text.toString().trim()
+            val savedPin = PreferencesHelper.getSecurityPin(this)
+
+            if (enteredPin.isEmpty()) {
+                dBinding.etSecurityPinInput.error = "Ingresa tu PIN"
+                return@setOnClickListener
+            }
+
+            if (enteredPin == savedPin) {
+                dialog.dismiss()
+                onSuccess()
+            } else {
+                dBinding.etSecurityPinInput.error = "PIN incorrecto"
+                Toast.makeText(this, "❌ PIN de seguridad incorrecto", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        dialog.show()
+    }
+
+    /**
+     * Permite al dueño del negocio configurar o cambiar su PIN de seguridad.
+     */
+    private fun showChangeSecurityPinDialog() {
+        val dialog = Dialog(this)
+        val dBinding = DialogChangeSecurityPinBinding.inflate(layoutInflater)
+        dialog.setContentView(dBinding.root)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        val isCustom = PreferencesHelper.hasCustomSecurityPin(this)
+        if (!isCustom) {
+            dBinding.layoutCurrentPin.hint = "PIN Actual (Predeterminado: 1234)"
+        }
+
+        dBinding.btnCancelChangePin.setOnClickListener { dialog.dismiss() }
+
+        dBinding.btnSaveNewPin.setOnClickListener {
+            val currentPinInput = dBinding.etCurrentPin.text.toString().trim()
+            val newPinInput = dBinding.etNewPin.text.toString().trim()
+            val confirmPinInput = dBinding.etConfirmNewPin.text.toString().trim()
+            val savedPin = PreferencesHelper.getSecurityPin(this)
+
+            if (currentPinInput.isEmpty()) {
+                dBinding.etCurrentPin.error = "Ingresa el PIN actual"
+                return@setOnClickListener
+            }
+            if (currentPinInput != savedPin) {
+                dBinding.etCurrentPin.error = "El PIN actual no coincide"
+                return@setOnClickListener
+            }
+            if (newPinInput.length < 4) {
+                dBinding.etNewPin.error = "El nuevo PIN debe tener al menos 4 dígitos"
+                return@setOnClickListener
+            }
+            if (newPinInput != confirmPinInput) {
+                dBinding.etConfirmNewPin.error = "Los nuevos PIN no coinciden"
+                return@setOnClickListener
+            }
+
+            PreferencesHelper.setSecurityPin(this, newPinInput)
+            Toast.makeText(this, "✅ Nuevo PIN de seguridad guardado con éxito", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     // --- SELECTOR DE MONEDA (BS / $) CON TOGGLEGROUP EXCLUSIVO ---
@@ -2026,6 +2135,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        dBinding.btnDetailEdit.setOnClickListener {
+            showEditDebtorDialog(debtor, dialog)
+        }
+
+        dBinding.btnDetailDelete.setOnClickListener {
+            confirmAndDeleteDebtor(debtor, dialog)
+        }
+
         dBinding.btnDetailClose.setOnClickListener { dialog.dismiss() }
         dBinding.btnDetailShareWhatsApp.setOnClickListener {
             dialog.dismiss()
@@ -2033,6 +2150,120 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    /**
+     * Muestra el modal para editar datos del cliente (Nombre, Teléfono, Cédula/RIF).
+     * Exige autorización de seguridad (Huella digital o PIN) para guardar cualquier cambio.
+     */
+    private fun showEditDebtorDialog(debtor: Debtor, parentDetailDialog: Dialog) {
+        val dialog = Dialog(this)
+        val dBinding = DialogEditDebtorBinding.inflate(layoutInflater)
+        dialog.setContentView(dBinding.root)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        dBinding.etEditDebtorName.setText(debtor.name)
+        dBinding.etEditDebtorPhone.setText(debtor.phone ?: "")
+        dBinding.etEditDebtorId.setText(debtor.identification ?: "")
+
+        dBinding.btnCancelEditDebtor.setOnClickListener { dialog.dismiss() }
+
+        dBinding.btnSaveEditDebtor.setOnClickListener {
+            val newName = dBinding.etEditDebtorName.text.toString().trim()
+            val newPhone = dBinding.etEditDebtorPhone.text.toString().trim().ifBlank { null }
+            val newIdDoc = dBinding.etEditDebtorId.text.toString().trim().ifBlank { null }
+
+            if (newName.isEmpty()) {
+                dBinding.etEditDebtorName.error = "Ingresa el nombre del cliente"
+                return@setOnClickListener
+            }
+
+            val hasChanges = (newName != debtor.name) ||
+                    (newPhone != debtor.phone) ||
+                    (newIdDoc != debtor.identification)
+
+            if (!hasChanges) {
+                Toast.makeText(this, "No se realizaron cambios", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+                return@setOnClickListener
+            }
+
+            requireSecurityAuth(
+                actionTitle = "🔒 Modificar Cliente",
+                description = "Coloca tu huella digital o ingresa el PIN para guardar los cambios de $newName"
+            ) {
+                val updatedDebtor = debtor.copy(
+                    name = newName,
+                    phone = newPhone,
+                    identification = newIdDoc
+                )
+                val success = dbHelper.updateDebtor(updatedDebtor)
+                if (success) {
+                    Toast.makeText(this, "✅ Datos del cliente actualizados con éxito", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                    parentDetailDialog.dismiss()
+                    loadDebtors()
+                    // Mostrar detalle con la información actualizada
+                    showDebtorDetailDialog(updatedDebtor)
+                } else {
+                    Toast.makeText(this, "Error al actualizar los datos del cliente", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        dialog.show()
+    }
+
+    /**
+     * Muestra alerta de advertencia y exige confirmación de seguridad (Huella o PIN)
+     * antes de eliminar un cliente de la libreta, previniendo borrados accidentales o no autorizados.
+     */
+    private fun confirmAndDeleteDebtor(debtor: Debtor, parentDetailDialog: Dialog) {
+        val profile = PreferencesHelper.getUserProfile(this)
+        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+
+        val alertMessage = when {
+            debtor.isDebtor -> {
+                val debtVes = debtor.getEquivalentVes(rate)
+                "⚠️ ATENCIÓN: Este cliente tiene una deuda pendiente de:\n\n" +
+                        "• $${String.format(Locale.US, "%.2f", debtor.debtAmountUsd)} (≈ Bs. ${String.format(Locale.US, "%.2f", debtVes)})\n\n" +
+                        "Si lo eliminas de la libreta, se borrará su saldo deudor y todo su historial de fiados y pagos.\n\n" +
+                        "¿Estás seguro de que deseas eliminar a \"${debtor.name}\"?"
+            }
+            debtor.hasCredit -> {
+                val creditVes = debtor.getEquivalentVes(rate)
+                "⚠️ ATENCIÓN: Este cliente tiene un saldo a favor de:\n\n" +
+                        "• $${String.format(Locale.US, "%.2f", debtor.creditAmountUsd)} (≈ Bs. ${String.format(Locale.US, "%.2f", creditVes)})\n\n" +
+                        "Si lo eliminas, se borrará este crédito disponible y sus registros.\n\n" +
+                        "¿Estás seguro de que deseas eliminar a \"${debtor.name}\"?"
+            }
+            else -> {
+                "¿Estás seguro de que deseas eliminar a \"${debtor.name}\" de tu libreta?\n\n" +
+                        "Se borrará su registro y el historial de movimientos de manera definitiva."
+            }
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("🗑️ ¿Eliminar Cliente?")
+            .setMessage(alertMessage)
+            .setPositiveButton("Sí, Eliminar") { _, _ ->
+                requireSecurityAuth(
+                    actionTitle = "🔒 Eliminar Cliente",
+                    description = "Coloca tu huella digital o ingresa el PIN para autorizar la eliminación de ${debtor.name}"
+                ) {
+                    val success = dbHelper.deleteDebtor(debtor.id)
+                    if (success) {
+                        Toast.makeText(this, "🗑️ ${debtor.name} eliminado de la libreta", Toast.LENGTH_SHORT).show()
+                        parentDetailDialog.dismiss()
+                        loadDebtors()
+                    } else {
+                        Toast.makeText(this, "Error al eliminar el cliente de la libreta", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
     private fun onQuickFiarClicked() {
@@ -3356,6 +3587,10 @@ class MainActivity : AppCompatActivity() {
             if (!isBindingSettingsData) {
                 updateSaveButtonState()
             }
+        }
+
+        binding.btnChangeSecurityPin.setOnClickListener {
+            showChangeSecurityPinDialog()
         }
 
         // Probar Soundbox (dejar sonar la voz para que el usuario conozca la función)

@@ -20,14 +20,33 @@ Prestadores de servicios (médicos, mecánicos, peluquerías).
 El Pitch de Venta en la calle (Demoledor):
 "¿Cansado de pedir captures de Pago Móvil o de abrir el banco para ver si cayó el dinero? Pon Zeasy en tu mostrador: muestra tu QR de cualquier banco o Binance, y la app te canta en voz alta el monto exacto en cuanto el dinero cae en tu cuenta. Pruébalo 7 días gratis."
 
-3. ¿Están bien los precios? ($2.99/mes)
-La relación valor/precio:
-$2.99 USD al mes equivale a $0.10 USD al día. Para cualquier comercio que venda al menos 2 refrescos o 1 harina Pan diaria, el costo de la app es prácticamente invisible. No hay resistencia por el monto.
-La crítica y riesgo del modelo mensual:
-En Venezuela, cobrar $2.99 mes a mes por Pago Móvil genera fricción operativa para ti (cobrar 12 veces al año a cada comerciante).
-Estrategia sugerida:
-Ofrece el mes a $2.99, pero incentiva fuertemente paquetes de 3 meses por $7.99 o 1 año por $24.99 - $29.99.
-A los comerciantes les gusta pagar 6 meses o 1 año de una sola vez si les resuelves la vida; a ti te garantiza flujo de caja adelantado y te ahorra horas de gestión de cobranza.
+3. ¿Cómo monetizar sin perder a bodegueros, taxistas y economía informal?
+
+La Regla de Oro: "El Caballo de Troya" (Cero Rehenes)
+- Nunca tomes el negocio del comerciante como rehén. Si a un bodeguero o taxista se le bloquea la caja en medio de un cobro porque "venció la suscripción", no pagará: desinstalará la app inmediatamente y volverá al papel.
+- **Plan Básico Siempre Gratis ($0):** Cobro con 1 banco activo, teclado financiero, conversor BCV oficial, código QR a pantalla completa, sonido auténtico de caja registradora ("Ka-ching" 💵) y libreta esencial. Con esto, el comerciante NUNCA tiene un motivo para borrar la app.
+- **¿Qué se cobra entonces? (Superpoderes):**
+  1. Multibanco simultáneo (detectar pagos de 4 bancos al mismo tiempo sin cambiar manualmente).
+  2. Soundbox por Voz Inteligente (TTS que anuncia el monto y nombre del pagador por altavoz).
+  3. Billeteras Digitales y Cripto (Binance Pay / Zinli).
+  4. Respaldo en la Nube automático (si se le pierde el celular no pierde su libreta de clientes fiados).
+  5. Reportes Contables formales en PDF con estampa cronológica para auditoría.
+
+El Modelo Psicológico: "Pases / Recargas Prepagadas" vs. "Renta Fija Obligatoria"
+- En la economía informal venezolana, la palabra "suscripción" genera rechazo porque suena a compromiso fijo en meses malos.
+- El modelo ganador es el de **Recarga Telefónica / Pase de Temporada**:
+  - **Pase Mensual ($1.99 - $2.49 / mes):** Menos de $0.08 al día (el costo de medio refresco). Cero resistencia.
+  - **Pase Trimestral ($4.99):** Descuento atractivo para olvidarse por 3 meses.
+  - **Pase Anual ($14.99 - $19.99 / año):** El favorito de los comerciantes consolidados; pagan una sola vez y tienen flujo garantizado.
+- **¿Qué pasa si se vence el Pase?**
+  - La app **NO se bloquea**. Simplemente pasa al modo Básico: queda activo su banco principal y el sonido de campana. Un banner amigable le avisa: *"Tu pase PRO finalizó. Tu caja sigue funcionando gratis con tu banco principal. Toca aquí para recargar cuando gustes."*
+
+Operativa de Pago sin Fricción:
+- **100% en Bolívares por Pago Móvil:** Mediante la pasarela CobrixPay integrada. El usuario paga a tasa BCV y en 3 segundos el webhook de CobrixPay renueva la licencia de forma automática en la app, sin necesidad de mandar captures ni esperar aprobación humana.
+- **Tarjetas / Códigos de Activación Físicos:** Generación de códigos (ej: `ZIP-30-XXXX`) que se pueden vender físicamente o por WhatsApp mediante revendedores locales con comisión.
+
+Cumplimiento con Google Play Store:
+- Mantener activo `PLAY_STORE_REVIEW_MODE = true` en la versión enviada a Google Play para que los revisores no bloqueen la app por políticas de Google Play Billing, canalizando las recargas locales a través de la web o enlaces directos de CobrixPay.
 4. A nivel de seguridad y legal: ¿Tendremos problemas?
 Frente a Bancos y SUDEBAN:
 Cero riesgo de captación ilegal: Zeasy NO es billetera custodial, NO retiene dinero y NO ejecuta débitos en cuentas. Opera estrictamente como un visor de QR (accesibilidad) y un lector de notificaciones push del sistema operativo. Es legalmente transparente.

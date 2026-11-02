@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/surface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔒"
+            android:textSize="22sp"
+            android:layout_marginEnd="10dp" />
+
+        <TextView
+            android:id="@+id/tvPinDialogTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Confirmación de Seguridad"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvPinDialogDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Ingresa tu PIN de seguridad para autorizar cambios protegidos en la libreta:"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layoutPinInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="PIN de Seguridad (4 dígitos)"
+        app:passwordToggleEnabled="true"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etSecurityPinInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberPassword"
+            android:maxLength="8"
+            android:gravity="center"
+            android:letterSpacing="0.25"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <TextView
+        android:id="@+id/tvPinHelperNotice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="💡 PIN por defecto: 1234 • Puedes cambiarlo en Ajustes"
+        android:textColor="@color/text_muted"
+        android:textSize="11sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="22dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancelPin"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:text="Cancelar"
+            android:textSize="13sp"
+            app:cornerRadius="12dp"
+            android:backgroundTint="#F1F5F9"
+            android:textColor="#475569" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnConfirmPin"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1.2"
+            android:layout_marginStart="6dp"
+            android:text="Autorizar"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:cornerRadius="12dp"
+            android:backgroundTint="@color/primary"
+            android:textColor="@color/white" />
+    </LinearLayout>
+
+</LinearLayout>

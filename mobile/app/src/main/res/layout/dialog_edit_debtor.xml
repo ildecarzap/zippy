@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/surface">
+
+    <TextView
+        android:id="@+id/tvEditDebtorTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Editar Datos del Cliente"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp" />
+
+    <TextView
+        android:id="@+id/tvEditDebtorSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Modifica el nombre, teléfono o número de documento del cliente"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp" />
+
+    <!-- Banner informativo de seguridad -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="12dp"
+        android:padding="10dp"
+        android:background="@drawable/bg_badge_rounded"
+        android:backgroundTint="#EFF6FF">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔒"
+            android:textSize="16sp"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Protegido: Se solicitará tu huella digital o PIN antes de aplicar cualquier cambio"
+            android:textColor="#1D4ED8"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="Nombre o Apodo del Cliente *"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etEditDebtorName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPersonName|textCapWords"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="Teléfono (WhatsApp)"
+        app:startIconDrawable="@drawable/ic_contacts_ledger"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etEditDebtorPhone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="phone"
+            android:hint="Ej: 04141234567"
+            android:textSize="14sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="Cédula / RIF (Opcional)"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etEditDebtorId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textCapCharacters"
+            android:hint="Ej: V-18992011"
+            android:textSize="14sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Botones de Acción -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="22dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancelEditDebtor"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:text="Cancelar"
+            android:textSize="13sp"
+            app:cornerRadius="12dp"
+            android:backgroundTint="#F1F5F9"
+            android:textColor="#475569" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSaveEditDebtor"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1.4"
+            android:layout_marginStart="6dp"
+            android:text="💾 Guardar Cambios"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:cornerRadius="12dp"
+            android:backgroundTint="@color/primary"
+            android:textColor="@color/white" />
+    </LinearLayout>
+
+</LinearLayout>

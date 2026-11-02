@@ -73,9 +73,10 @@ El ecosistema **Zeasy** está compuesto por tres piezas clave que interactúan d
   * URL de backend configurada a producción: `https://zeasy-app-902301530733.europe-west1.run.app`.
 * **Arquitectura de Seguridad y Experiencia de Usuario:**
   * **Navegación Fluida:** El ingreso a la pantalla de Ajustes es directo y no bloquea al comerciante con contraseñas para consultas o revisión de estado.
-  * **Autenticación Biométrica / PIN en Puntos Críticos:** Se exige validación de identidad (huella digital o PIN del teléfono) únicamente en dos momentos esenciales para proteger los fondos:
+  * **Autenticación Biométrica / PIN en Puntos Críticos:** Se exige validación de identidad (huella digital o PIN del teléfono) en tres momentos esenciales para proteger los fondos e información:
     1. **Al Cargar o Modificar Códigos QR:** Protege los códigos QR de bancos y Binance Pay para evitar que personas no autorizadas manipulen las cuentas de cobro.
     2. **Al Guardar Cambios en Ajustes:** Valida la identidad del dueño del teléfono cuando se modifican datos de cobro, números de pago móvil o parámetros del sistema.
+    3. **Al Editar o Eliminar Clientes en la Libreta de Fiados:** Evita que terceros, empleados o personas con acceso físico al dispositivo alteren nombres, números de teléfono (desvío de pagos por WhatsApp) o borren deudas pendientes. Cuenta con fallback automático a PIN de Seguridad propio de Zeasy (`app_security_pin`, por defecto `1234`, personalizable en Ajustes) para emuladores y dispositivos sin bloqueo de pantalla configurado.
   * **Sistema Anti-Pérdida de Datos (Borrador Reactivo):** La app almacena en segundo plano (`saveSettingsDraft`) todo texto ingresado por el usuario en tiempo real. Si el comerciante sale temporalmente de la app para otorgar permisos de escucha de notificaciones o segundo plano en los ajustes del sistema operativo, sus datos no se borran y se restauran automáticamente al volver.
   * **Gestión Accesible de Bancos:** Botones de alta visibilidad para `🗑️ Quitar Banco` y `🗑️ Quitar QR` con confirmación explícita para evitar eliminaciones accidentales.
 
@@ -168,6 +169,27 @@ Cada instalación genera un **`device_id`** persistente y único en el almacenam
            ├─ 4. Cambia status a ACTIVE
            └─ 5. Guarda recibo en zeasy_payment_transactions
 ```
+
+### Estrategia de Monetización Adaptativa para la Economía Informal (Bodegas, Taxistas y Transporte)
+Para maximizar la retención y rentabilidad sin espantar a comercios populares ni generar rechazo por "suscripciones obligatorias":
+1. **Principio del Caballo de Troya (Cero Rehenes):**
+   - El cobro básico con 1 banco activo, teclado financiero, conversión BCV, QR a pantalla completa y sonido chime de caja registradora es **100% gratuito e ilimitado de por vida**. La app nunca se bloquea para cobrar.
+2. **Modelo de Pases Prepagados / Recargas (Sin Renta Fija):**
+   - El comercio no asume un compromiso mensual forzado. Adquiere "Pases de Temporada":
+     - **Pase Mensual:** $1.99 - $2.49 / mes (menos de $0.08 al día).
+     - **Pase Trimestral:** $4.99 (descuento atractivo).
+     - **Pase Anual:** $14.99 - $19.99 / año (pago único con tranquilidad todo el año).
+   - Si el pase expira, la app degrada pacíficamente a Plan Básico y sigue funcionando con su banco principal.
+3. **Superpoderes Monetizables:**
+   - Multibanco simultáneo (escucha 4 bancos a la vez sin cambiar de banco manualmente).
+   - Soundbox por Voz Inteligente (TTS que canta monto y pagador por altavoz).
+   - Billeteras digitales (Binance Pay / Zinli).
+   - Respaldo en la nube automatizado para rescatar la libreta ante pérdida o robo.
+   - Reportes contables en PDF con número de referencia bancaria.
+4. **Vía de Pago Local sin Fricción:**
+   - Cobro en Bolívares a tasa oficial BCV por Pago Móvil mediante CobrixPay.
+   - Activación automática en 3 segundos al conciliarse el webhook.
+   - Distribución alternativa con tarjetas y códigos de activación (`ZIP-30-XXXX`).
 
 ---
 

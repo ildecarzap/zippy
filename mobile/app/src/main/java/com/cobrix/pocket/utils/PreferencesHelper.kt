@@ -45,6 +45,9 @@ object PreferencesHelper {
 
     val DEFAULT_ENABLED_BANKS = emptySet<String>()
 
+    private const val KEY_SECURITY_PIN = "app_security_pin"
+    const val DEFAULT_SECURITY_PIN = "1234"
+
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -705,5 +708,17 @@ object PreferencesHelper {
             KEY_DRAFT_EMAIL to (prefs.getString(KEY_DRAFT_EMAIL, "") ?: ""),
             KEY_DRAFT_BCV_RATE to (prefs.getString(KEY_DRAFT_BCV_RATE, "") ?: "")
         )
+    }
+
+    fun getSecurityPin(context: Context): String {
+        return getPrefs(context).getString(KEY_SECURITY_PIN, DEFAULT_SECURITY_PIN) ?: DEFAULT_SECURITY_PIN
+    }
+
+    fun setSecurityPin(context: Context, pin: String) {
+        getPrefs(context).edit().putString(KEY_SECURITY_PIN, pin.trim()).apply()
+    }
+
+    fun hasCustomSecurityPin(context: Context): Boolean {
+        return getPrefs(context).contains(KEY_SECURITY_PIN)
     }
 }

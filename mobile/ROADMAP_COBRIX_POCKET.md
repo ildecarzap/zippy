@@ -62,8 +62,15 @@ La aplicación móvil nativa Android **Zippy** cuenta con un núcleo de cobro, g
   * Botón directo **"Fiar"** en el teclado de caja registradora con selección y creación de clientes en un solo paso.
   * **Compensación automática:** Las compras fiadas descuentan saldos a favor previos y los pagos en exceso generan crédito para la próxima compra.
   * **Cobranza por WhatsApp con 1 toque:** Mensaje profesional con desglose USD y equivalente exacto en Bs a tasa oficial BCV, datos bancarios y código QR adjunto mediante `FileProvider`.
-  * Sección dedicada en el reporte contable diario y exportación en CSV.
-  * Soporte completo en respaldos JSON (`BackupManager`) e integración con el Dashboard Web para PC.
+  * **✏️ Edición y 🗑️ Eliminación Segura de Clientes:** Botones dedicados en el detalle del cliente para corregir nombre, WhatsApp y cédula/RIF, o eliminar el registro con cálculo de advertencia del impacto contable (deudas pendientes o créditos a favor).
+  * **🛡️ Doble Capa de Seguridad (Huella o PIN):** Exige autorización mediante `BiometricPrompt` (huella digital o PIN del teléfono) con fallback automático al PIN de seguridad propio de Zeasy (`app_security_pin`, por defecto `1234`, configurable en Ajustes) para proteger los datos en mostrador o emuladores.
+  * **Sección dedicada en el reporte contable diario y exportación en CSV.**
+  * **Soporte completo en respaldos JSON (`BackupManager`) e integración con el Dashboard Web para PC.**
+* [x] **💡 Estrategia de Monetización Adaptativa para la Economía Informal:**
+  * **Principio del Caballo de Troya (Cero Rehenes):** El Plan Básico para 1 banco, teclado, conversor BCV, QR y sonido chime es 100% gratuito e ilimitado de por vida para garantizar que el comercio nunca desinstale la app.
+  * **Modelo de Pases / Recargas Prepagadas:** Sin rentas fijas forzadas ($1.99/mes, $4.99/3m, $14.99-$19.99/año). Al expirar el pase, la app pasa a modo Básico sin bloquear la caja.
+  * **Superpoderes PRO:** Multibanco simultáneo (4 bancos), Soundbox por Voz Inteligente (TTS), Binance Pay / Zinli, Respaldo en la Nube y Reporte PDF.
+  * **Cobro por Pago Móvil con CobrixPay:** Conciliación automática en 3 segundos mediante Webhooks y soporte para tarjetas/códigos prepagados.
 * [x] **Datos Corporativos Oficiales:**
   * Empresa: `Ciem tech solutions C.A`
   * RIF: `J-50849495-4`

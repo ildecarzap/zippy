@@ -2019,6 +2019,19 @@
                                 android:textSize="13sp"
                                 android:textStyle="bold" />
 
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnChangeSecurityPin"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="42dp"
+                                android:layout_marginTop="10dp"
+                                android:text="🔑 Configurar / Cambiar PIN de Seguridad"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/text_primary"
+                                app:strokeColor="@color/border"
+                                app:cornerRadius="10dp" />
+
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
