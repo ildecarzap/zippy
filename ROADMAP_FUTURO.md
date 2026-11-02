@@ -5,6 +5,19 @@ Este documento recopila las ideas, mejoras y módulos estratégicos identificado
 
 ---
 
+## ✅ Módulo Estratégico Implementado: Libreta de Clientes y Fiados (Micro-Ledger v1.3.5)
+*Objetivo alcanzado: Digitalizar la libreta de fiados y cuentas por cobrar de bodegas, comercios y trabajadores independientes con enfoque zero-KYC y local-first.*
+
+- [x] **Base de Datos SQLite v3 Relacional:** Tablas `debtors` y `ledger_entries` con eliminación en cascada e índices optimizados.
+- [x] **Convención de Signos Unificada:** `balance_usd` negativo para deudas (`Debe`), positivo para vueltos pendientes (`A favor`) y cero para cuentas al día.
+- [x] **Botón «Fiar» en Teclado de Caja Registradora:** Carga rápida de deudas al instante con creación y selección de clientes en un solo paso.
+- [x] **Compensación Inteligente de Saldos:** Descuento automático de saldos a favor previos al realizar nuevas compras fiadas y acreditación automática de pagos excedentes.
+- [x] **Cobro por WhatsApp con 1 Toque:** Redacción de recordatorio con cálculo en USD y Bs a tasa oficial BCV, datos de Pago Móvil y código QR adjunto mediante `FileProvider`.
+- [x] **Reportes Contables y Respaldos:** Sección deudores/saldos a favor en cierre diario, exportación a CSV y respaldo JSON completo.
+- [x] **Dashboard Web para PC:** Visor contable con KPIs de deudores, búsqueda reactiva, modal de movimientos y cobro vía WhatsApp Web.
+
+---
+
 ## 📌 Fase 1: Control de Empleados y Seguridad en Mostrador (Modo Cajero)
 *Objetivo: Permitir que los dueños de negocios dejen el teléfono en caja con empleados sin temor a manipulaciones o fuga de información.*
 

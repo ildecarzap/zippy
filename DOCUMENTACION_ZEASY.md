@@ -16,6 +16,7 @@
 8. [Configuración de la Base de Datos en Supabase](#8-configuración-de-la-base-de-datos-en-supabase)
 9. [Conectar la App Android (cobrix-pocket) a Producción](#9-conectar-la-app-android-cobrix-pocket-a-producción)
 10. [Operaciones y Soporte Administrativo](#10-operaciones-y-soporte-administrativo)
+11. [Módulo Estratégico: Libreta de Clientes, Fiados y Saldos a Favor (Micro-Ledger)](#11-módulo-estratégico-libreta-de-clientes-fiados-y-saldos-a-favor-micro-ledger)
 
 ---
 
@@ -363,3 +364,139 @@ Una vez que tengas tu URL de producción en GCP (por ejemplo `https://zeasy.ciem
   3. Revisa o ajusta el mensaje en el recuadro editable si deseas personalizar el saludo.
   4. Haz clic en **"Abrir Chat de WhatsApp"**. El cliente recibirá el enlace directo `https://app.cobrix-pay.com/pay/{payment_token}` para pagar con Pago Móvil.
   5. Una vez que el cliente pague, Zeasy Web renovará la licencia en tiempo real de forma automática.
+
+---
+
+## 11. Módulo Estratégico: Libreta de Clientes, Fiados y Saldos a Favor (Micro-Ledger)
+
+A partir de la versión **v1.3.5** (Base de datos SQLite versión 3), Zeasy incorpora el módulo **"Libreta de Clientes" (Micro-Ledger)**, diseñado para formalizar y simplificar el crédito de consumo informal y los saldos pendientes en pequeños comercios de Venezuela y la región.
+
+### 11.1 Propósito y Enfoque de Negocio
+En bodegas, panaderías, carnicerías, kioscos y servicios de transporte (taxis, mototaxis), existen dos fricciones diarias críticas:
+1. **Pérdida en cobros fiados:** El uso de cuadernos de papel ("la libreta de la bodega") genera extravíos, manchas, olvidos y discusiones sobre el monto real o la tasa de cambio a la que se pactó el crédito.
+2. **Problema del vuelto en efectivo / pago móvil:** La escasez de efectivo en bolívares y denominaciones pequeñas de divisas obliga a los clientes a dejar "vueltos a favor" o transferir redondeando hacia arriba.
+
+**Estrategia Zero-KYC / Local-First:**  
+El módulo no requiere que el comprador se registre en ninguna pasarela ni descargue apps. Funciona de manera 100% offline-first en el dispositivo del comerciante, integrando cobranza en 1 toque por WhatsApp con datos bancarios y código QR adjunto.
+
+---
+
+### 11.2 Arquitectura y Modelo de Datos (SQLite v3)
+
+La base de datos local `pocket_local.db` se actualizó a `DATABASE_VERSION = 3`, introduciendo dos nuevas tablas relacionales con eliminación en cascada:
+
+```
+┌────────────────────────────────────────┐
+│               debtors                  │
+├────────────────────────────────────────┤
+│ id (INTEGER PK AUTOINCREMENT)          │
+│ name (TEXT NOT NULL)                   │
+│ phone (TEXT)                           │
+│ id_card (TEXT)                         │
+│ notes (TEXT)                           │
+│ balance_usd (REAL DEFAULT 0.0)         │
+│ created_at (INTEGER NOT NULL)          │
+│ updated_at (INTEGER NOT NULL)          │
+└──────────────────┬─────────────────────┘
+                   │ 1
+                   │
+                   │ N
+┌──────────────────▼─────────────────────┐
+│           ledger_entries               │
+├────────────────────────────────────────┤
+│ id (INTEGER PK AUTOINCREMENT)          │
+│ debtor_id (INTEGER FK -> debtors(id))  │
+│ type (TEXT: CHARGE / PAYMENT)          │
+│ amount_usd (REAL NOT NULL)             │
+│ amount_ves (REAL DEFAULT 0.0)          │
+│ exchange_rate (REAL DEFAULT 1.0)       │
+│ description (TEXT)                     │
+│ reference (TEXT)                       │
+│ timestamp (INTEGER NOT NULL)           │
+└────────────────────────────────────────┘
+```
+
+#### Convención de Signos Unificada (`balance_usd`)
+Para evitar duplicación de campos y garantizar consistencia aritmética, el estado financiero de cada cliente se maneja mediante una única variable con signo:
+* **`balance_usd < -0.009` (Deuda / Fiado):** El cliente le debe dinero al comercio. En la interfaz se muestra en rojo con etiqueta `Debe: $X.XX`.
+* **`balance_usd > 0.009` (Saldo a Favor):** El cliente tiene dinero disponible en el negocio (vuelto guardado o sobrepago). En la interfaz se muestra en verde/esmeralda con etiqueta `A favor: $X.XX`.
+* **`-0.009 <= balance_usd <= 0.009` (Al Día):** No hay cuentas pendientes. En la interfaz se muestra en gris con etiqueta `Al día`.
+
+#### Índices de Rendimiento Creados:
+* `idx_debtors_name`: Búsqueda instantánea de clientes por nombre.
+* `idx_ledger_debtor_id`: Filtrado rápido del historial de movimientos por cliente.
+* `idx_ledger_timestamp`: Ordenamiento cronológico eficiente.
+
+---
+
+### 11.3 Integración con Caja Rápida y Compensación Automática
+
+1. **Botón «Fiar» en Teclado de Caja (`btnQuickFiar`):**
+   * En la pantalla principal de cobro, el comerciante digita el monto de la compra en dólares o bolívares y puede presionar el botón directo **"Fiar"** (icono de libreta).
+   * Se despliega el selector rápido `dialog_quick_fiar_select.xml`, donde puede elegir un cliente existente o agregar uno nuevo en segundos.
+2. **Compensación Inteligente de Saldo a Favor:**
+   * Si el cliente seleccionado posee un **Saldo a Favor** previo (ej. $5.00) y se le carga una compra fiada de $8.00:
+     * El sistema notifica al cajero en pantalla.
+     * Descuenta automáticamente los $5.00 a favor del cliente.
+     * Registra la deuda resultante por el remanente exacto ($3.00).
+3. **Manejo de Abonos con Excedente:**
+   * Si un cliente debe $4.00 y realiza un abono de $10.00:
+     * La deuda queda cancelada en su totalidad ($0.00).
+     * El excedente de $6.00 pasa de inmediato a **Saldo a Favor**, quedando disponible para su próxima compra.
+
+---
+
+### 11.4 Cobranza Inteligente vía WhatsApp y QR Dinámico
+
+Desde la tarjeta de cualquier cliente con deuda en la pestaña **Clientes**, el comerciante puede presionar el botón verde de WhatsApp. El sistema ejecuta:
+
+1. **Cálculo Automático Multimoneda:**
+   * Lee la deuda en USD y la convierte al equivalente exacto en Bolívares (Bs.) usando la tasa oficial BCV del día guardada en la app.
+2. **Plantilla de Cobro Amigable y Profesional:**
+   ```text
+   Hola Juan Pérez, te escribimos de Abasto El Triunfo.
+   Te recordamos tu saldo pendiente en la libreta:
+   💵 Total: $12.50 USD (o Bs. 625.00 a tasa oficial BCV: 50.00)
+
+   Puedes cancelar por Pago Móvil a nuestros datos:
+   • Banco: Banesco (0134)
+   • Teléfono: 0424-1234567
+   • Cédula/RIF: V-12345678
+
+   (Adjuntamos nuestro código QR para que pagues fácilmente)
+   ¡Muchas gracias por tu preferencia!
+   ```
+3. **Adjunto Automático de Código QR:**
+   * Si el comerciante tiene cargado su código QR bancario en los ajustes de la app, Zeasy utiliza Android `FileProvider` (`com.cobrix.pocket.fileprovider`) para anexar la imagen del QR directamente al chat de WhatsApp sin requerir descargas adicionales ni provocar fallos de URI.
+
+---
+
+### 11.5 Reportes Contables y Exportaciones
+
+* **Reporte de Cierre Consolidado (`ReportHelper.kt`):**
+  * Incluye la sección estructurada:
+    ```text
+    📒 LIBRETA DE CLIENTES Y CUENTAS POR COBRAR
+    • Clientes con deuda pendiente: 8
+    • Total por cobrar en la calle: $145.20 USD
+    • Total saldos a favor (vueltos pendientes): $18.50 USD
+    ```
+* **Exportación CSV:** Genera la tabla detallada de deudores y saldos a favor para importar en hojas de cálculo (Microsoft Excel o Google Sheets).
+* **Copias de Seguridad (`BackupManager.kt`):** El archivo JSON de respaldo incluye las claves `"debtors"` y `"ledgerEntries"` con trazabilidad completa para restaurar la libreta íntegra en un teléfono nuevo.
+
+---
+
+### 11.6 Visualizador y Auditoría en Dashboard Web para PC (`dashboard.html`)
+
+Para los comerciantes que prefieren revisar sus cuentas desde una computadora o laptop:
+1. **Tarjetas Métricas en Encabezado:**
+   * Indicador destacado en naranja: **Fiados por Cobrar ($ USD)**.
+   * Indicador destacado en esmeralda: **Saldos a Favor ($ USD)**.
+2. **Pestaña «Libreta de Clientes»:**
+   * Tabla con buscador por nombre, cédula o teléfono.
+   * Filtros en un clic: **Todos**, **Deudores**, **A Favor**, **Al Día**.
+3. **Modal de Detalle y Auditoría (`🔍 Movimientos`):**
+   * Muestra el desglose cronológico de todas las compras fiadas (CARGO) y abonos (ABONO/PAGO) del cliente con fecha, hora, monto en USD y referencia.
+4. **Acciones Directas desde PC:**
+   * Enlace a **WhatsApp Web** para enviar recordatorios con un clic desde el navegador.
+   * Botón **"Exportar Libreta a CSV"** para auditoría contable.

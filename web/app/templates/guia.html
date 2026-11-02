@@ -10,7 +10,7 @@
       Guía de Inicio Rápido e Instructivo Zeasy
     </h1>
     <p style="color: var(--color-text-muted); max-width: 680px; margin: 0 auto; font-size: 1.05rem; line-height: 1.6;">
-      Aprende paso a paso cómo configurar tus datos, vincular tus bancos y códigos QR, recibir pagos con sonido de caja y cuadrar tu día con la tasa BCV oficial.
+      Aprende paso a paso cómo configurar tus datos, vincular tus bancos y códigos QR, recibir pagos con sonido de caja, controlar tu libreta de fiados y cuadrar tu día con la tasa BCV oficial.
     </p>
   </div>
 
@@ -275,6 +275,67 @@
           </div>
           <div style="margin-top: 8px; font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600;">
             📱 Pantalla de Jornada y Cierre de Ventas
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PASO 6: PANTALLA CLIENTES (LIBRETA DE FIADOS Y SALDOS A FAVOR) -->
+    <!-- ========================================================================= -->
+    <div class="card" style="padding: 28px; border: 1.5px solid #E0E7FF; background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px;">
+        <span style="background-color: #EEF2FF; color: #4F46E5; font-weight: 800; font-size: 1.15rem; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #C7D2FE;">6</span>
+        <div>
+          <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #1E1B4B;">Paso 6: Pantalla «Clientes» • Libreta de Fiados y Vueltos a Favor</h2>
+          <span style="font-size: 0.85rem; color: #6366F1; font-weight: 600;">Dile adiós a los cuadernos de papel perdidos o manchados</span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; align-items: center;">
+        <div>
+          <p style="color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 14px;">
+            En la nueva pestaña <strong>📒 Clientes</strong> y desde el teclado de caja:
+          </p>
+          <ul style="padding-left: 20px; color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8;">
+            <li><strong>📝 Botón «Fiar» en Caja Rápida:</strong> Escribe cualquier monto en el teclado y presiona el botón azul <em>"Fiar"</em> para cargarlo al cliente de inmediato o crear uno nuevo con su nombre y WhatsApp en 5 segundos.</li>
+            <li><strong>🟢 Saldos a Favor (Vueltos Guardados):</strong> ¿No tienes sencillo en bolívares o dólares para darle el vuelto al cliente? Regístralo como abono en su cuenta. Quedará en verde como <strong>«A favor»</strong> y Zeasy <strong>lo descontará automáticamente</strong> en su próxima compra.</li>
+            <li><strong>💬 Cobranza con QR por WhatsApp en 1 Clic:</strong> Toca el botón verde de WhatsApp al lado del cliente con deuda. Zeasy redacta un mensaje formal con el total en USD, su equivalente en Bolívares a la tasa oficial BCV del día, tus datos de Pago Móvil y <strong>le adjunta la foto de tu código QR de forma automática</strong>.</li>
+            <li><strong>🔍 Historial de Movimientos:</strong> Toca sobre cualquier cliente para auditar en detalle cada compra fiada (cargo) o abono recibido con fecha, hora y notas.</li>
+            <li><strong>💻 Panel en PC (Dashboard Web):</strong> Carga el respaldo en tu computadora para revisar los totales en la calle, exportar la lista a Excel (CSV) y enviar recordatorios desde WhatsApp Web en el mostrador.</li>
+          </ul>
+        </div>
+
+        <div>
+          <!-- Simulación visual de tarjeta de cliente moderna -->
+          <div style="background: #FFFFFF; border-radius: 18px; padding: 20px; box-shadow: 0 10px 25px rgba(99, 102, 241, 0.08); border: 1.5px solid #E2E8F0;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+              <div>
+                <span style="font-size: 1.05rem; font-weight: 800; color: #1E293B;">Juan Pérez</span>
+                <div style="font-size: 0.8rem; color: #64748B;">📱 0424-1234567 • V-18234567</div>
+              </div>
+              <span style="background: #FEE2E2; color: #991B1B; font-size: 0.78rem; font-weight: 800; padding: 4px 10px; border-radius: 999px;">
+                Debe $12.50
+              </span>
+            </div>
+            
+            <div style="background: #F8FAFC; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; font-size: 0.82rem; color: #475569; display: flex; justify-content: space-between;">
+              <span>Equivalente BCV:</span>
+              <strong style="color: #0F172A;">Bs. 625.00</strong>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+              <div style="flex: 1; background: #25D366; color: #FFFFFF; font-size: 0.82rem; font-weight: 700; padding: 8px 12px; border-radius: 10px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <span>💬 Recordar + QR</span>
+              </div>
+              <div style="background: #F1F5F9; color: #334155; font-size: 0.82rem; font-weight: 700; padding: 8px 12px; border-radius: 10px; text-align: center;">
+                ➕ Abono
+              </div>
+            </div>
+
+            <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #E2E8F0; font-size: 0.78rem; color: #10B981; display: flex; align-items: center; gap: 6px; font-weight: 600;">
+              <span>✓ Compensación automática en la próxima compra</span>
+            </div>
           </div>
         </div>
       </div>

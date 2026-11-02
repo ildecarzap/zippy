@@ -2,10 +2,11 @@
 
 > **Estado del Proyecto:**  
 > • Fase 1 (Core Funcional & Usabilidad): **100% Completada**  
-> • Fase 2.1 (Branding Definitivo & Logo 3D Oficial — Zippy): **100% Completada**  
+> • Fase 2.1 (Branding Definitivo & Logo 3D Oficial — Zippy/Zeasy): **100% Completada**  
 > • Fase 2.2 (Modelo Freemium, PlanCapabilityManager & Modal PRO): **100% Completada**  
 > • Fase 2.3 (Copia de Seguridad, Migración entre Teléfonos y Cloud Sync): **100% Completada**  
-> • Próximo Paso: Fase 3 (Micro-Backend de Sincronización Web de Tasa BCV y Panel Administrativo CIEM)
+> • Fase 2.4 (Libreta de Clientes, Fiados y Saldos a Favor — Micro-Ledger v1.3.5): **100% Completada**  
+> • Próximo Paso: Fase 3 (Despliegue de Producción y Sincronización en la Nube)
 
 ---
 
@@ -55,6 +56,14 @@ La aplicación móvil nativa Android **Zippy** cuenta con un núcleo de cobro, g
   * Exportación directa para compartir a Google Drive, WhatsApp o correo.
   * Restauración de 1 clic desde cualquier archivo de respaldo para migrar sin pérdida de datos al cambiar de teléfono.
   * Protocolo de sincronización en la nube para cuentas Zippy PRO.
+* [x] **📒 Libreta de Clientes, Cuentas por Cobrar y Saldos a Favor (Micro-Ledger v1.3.5):**
+  * Base de datos local SQLite v3 con tablas `debtors` y `ledger_entries` e índices relacionales.
+  * Regla de balance con signo unificada: deudas (`< -0.009`), saldos a favor por vueltos pendientes (`> 0.009`) y estado al día.
+  * Botón directo **"Fiar"** en el teclado de caja registradora con selección y creación de clientes en un solo paso.
+  * **Compensación automática:** Las compras fiadas descuentan saldos a favor previos y los pagos en exceso generan crédito para la próxima compra.
+  * **Cobranza por WhatsApp con 1 toque:** Mensaje profesional con desglose USD y equivalente exacto en Bs a tasa oficial BCV, datos bancarios y código QR adjunto mediante `FileProvider`.
+  * Sección dedicada en el reporte contable diario y exportación en CSV.
+  * Soporte completo en respaldos JSON (`BackupManager`) e integración con el Dashboard Web para PC.
 * [x] **Datos Corporativos Oficiales:**
   * Empresa: `Ciem tech solutions C.A`
   * RIF: `J-50849495-4`

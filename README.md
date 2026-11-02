@@ -40,9 +40,11 @@ zeasy-app/
 * **Detección Multibanco en Tiempo Real:** Enrutador con soporte para Banesco, BDV, Mercantil, Provincial, BNC y Bancamiga, además de SMS.
 * **Soundbox Parlante:** Anuncio de cobros por voz o timbre de caja registradora.
 * **Cierre de Jornada:** Registro de cobros, gastos y ganancia neta diaria.
+* **Libreta de Clientes y Fiados (Micro-Ledger):** Registro de fiados directo desde el teclado de caja, control de saldos a favor (vueltos pendientes), cobro por WhatsApp con tasa BCV y código QR bancario adjunto.
 
 ### 2. Hub Web & Panel de Control (`web/`)
 * **Landing Page & Planes:** Presentación de la app y planes para comerciantes.
+* **Dashboard Web PC:** Visor contable y de auditoría para cargar respaldos de la app móvil, con visualización de jornada y gestión completa de la Libreta de Clientes (deudas, saldos a favor, historial de movimientos y exportación CSV).
 * **Panel Administrativo Protegido:** Gestión de licencias en 1 clic:
   * Extender PRO (+30 días).
   * Degradar a Básico si no paga.
