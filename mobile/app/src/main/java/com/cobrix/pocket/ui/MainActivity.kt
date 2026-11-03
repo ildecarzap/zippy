@@ -457,6 +457,7 @@ class MainActivity : AppCompatActivity() {
         PreferencesHelper.sanitizeBasicPlanBank(this)
         val previouslyEnabled = wasNotificationListenerEnabled
         checkNotificationPermission()
+        PocketNotificationListenerService.ensureServiceBound(this)
 
         if (!previouslyEnabled && wasNotificationListenerEnabled) {
             // Acaba de activar el permiso de escucha, sugerir optimización de batería si aún está con restricciones
@@ -554,6 +555,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateShiftUI() {
         val isActive = PreferencesHelper.isShiftActive(this)
+        PocketNotificationListenerService.updateForegroundShiftState(this)
         if (isActive) {
             binding.btnHeaderShiftToggle.text = "🟢 En Jornada"
             binding.btnHeaderShiftToggle.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#00875A"))
@@ -1809,16 +1811,39 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnRescanNotifications.setOnClickListener {
-            if (!PocketNotificationListenerService.isServiceRunning()) {
+            // 1. Siempre refrescar la tabla de Jornada y Libreta de inmediato
+            loadTodayLedger()
+            loadDebtors()
+
+            // 2. Verificar si el permiso está otorgado en Ajustes de Android (no si la instancia en RAM se durmió)
+            if (!PocketNotificationListenerService.isPermissionGranted(this)) {
                 promptActivateNotificationListener()
                 return@setOnClickListener
             }
+
+            // 3. Si el permiso ya está concedido pero Android suspendió el servicio, reconectarlo sin pedir permisos
+            if (!PocketNotificationListenerService.isServiceRunning()) {
+                PocketNotificationListenerService.ensureServiceBound(this)
+                binding.btnRescanNotifications.postDelayed({
+                    val count = PocketNotificationListenerService.rescanActiveNotifications(playSound = true)
+                    loadTodayLedger()
+                    loadDebtors()
+                    if (count > 0) {
+                        Toast.makeText(this, "✅ Se sincronizaron $count cobro(s) de la barra de notificaciones", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(this, "🔄 Jornada actualizada y escucha activa", Toast.LENGTH_SHORT).show()
+                    }
+                }, 650)
+                return@setOnClickListener
+            }
+
             val count = PocketNotificationListenerService.rescanActiveNotifications(playSound = true)
             if (count > 0) {
                 Toast.makeText(this, "✅ Se sincronizaron $count cobro(s) de la barra de notificaciones", Toast.LENGTH_LONG).show()
                 loadTodayLedger()
+                loadDebtors()
             } else {
-                Toast.makeText(this, "ℹ️ No hay nuevos cobros pendientes en la barra", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "🔄 Jornada actualizada • Sin cobros nuevos en la barra", Toast.LENGTH_SHORT).show()
             }
         }
     }

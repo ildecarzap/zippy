@@ -3,10 +3,15 @@ package com.cobrix.pocket.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -20,6 +25,7 @@ import com.cobrix.pocket.data.model.TransactionType
 import com.cobrix.pocket.service.parser.MultibankParserRouter
 import com.cobrix.pocket.service.parser.ParserUtils
 import com.cobrix.pocket.service.utils.PaymentDeduplicator
+import com.cobrix.pocket.ui.MainActivity
 import com.cobrix.pocket.utils.LicenseManager
 import com.cobrix.pocket.utils.PlanCapabilityManager
 import com.cobrix.pocket.utils.PreferencesHelper
@@ -31,6 +37,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
     private lateinit var dbHelper: PocketDatabaseHelper
     private var soundHelper: SoundHelper? = null
     private val parserRouter = MultibankParserRouter()
+    private var paymentWakeLock: PowerManager.WakeLock? = null
 
     companion object {
         private const val TAG = "PocketNotiListener"
@@ -43,10 +50,52 @@ class PocketNotificationListenerService : NotificationListenerService() {
         const val EXTRA_PHONE = "extra_phone"
         const val EXTRA_RECONCILED_DEBTOR = "extra_reconciled_debtor"
         private const val CHANNEL_ID = "cobrix_pocket_alerts"
+        private const val CHANNEL_FOREGROUND_ID = "zeasy_shift_foreground_service"
+        private const val FOREGROUND_NOTIFICATION_ID = 9010
 
         @Volatile
         var instance: PocketNotificationListenerService? = null
             private set
+
+        /**
+         * Verifica si el usuario ya concedió el permiso de acceso a notificaciones en Ajustes de Android.
+         */
+        fun isPermissionGranted(context: Context): Boolean {
+            return try {
+                val enabledListeners = Settings.Secure.getString(
+                    context.contentResolver,
+                    "enabled_notification_listeners"
+                )
+                enabledListeners != null && enabledListeners.contains(context.packageName)
+            } catch (_: Exception) {
+                false
+            }
+        }
+
+        /**
+         * Fuerza la reconexión inmediata del servicio si el permiso ya está otorgado pero Android
+         * suspendió el proceso tras cerrar la app.
+         */
+        fun ensureServiceBound(context: Context) {
+            if (!isPermissionGranted(context)) return
+            try {
+                val componentName = ComponentName(context, PocketNotificationListenerService::class.java)
+                requestRebind(componentName)
+                val serviceIntent = Intent(context, PocketNotificationListenerService::class.java)
+                context.startService(serviceIntent)
+            } catch (e: Exception) {
+                Log.w(TAG, "No se pudo forzar rebind de servicio: ${e.message}")
+            }
+        }
+
+        /**
+         * Sincroniza la notificación fija de segundo plano cuando el comercio activa o pausa la Jornada.
+         */
+        fun updateForegroundShiftState(context: Context) {
+            if (!isPermissionGranted(context)) return
+            ensureServiceBound(context)
+            instance?.applyForegroundState()
+        }
 
         /**
          * Re-escanea todas las notificaciones activas en la barra de Android.
@@ -65,13 +114,27 @@ class PocketNotificationListenerService : NotificationListenerService() {
         dbHelper = PocketDatabaseHelper.getInstance(this)
         soundHelper = SoundHelper(this)
         createNotificationChannel()
+        applyForegroundState()
         Log.i(TAG, "Servicio de escucha Zeasy iniciado.")
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        instance = this
+        applyForegroundState()
+        return START_STICKY
     }
 
     override fun onListenerConnected() {
         super.onListenerConnected()
         instance = this
+        applyForegroundState()
         Log.i(TAG, "Notification listener connected.")
+        // Al reconectar (por ejemplo al despertar en segundo plano), escanear cobros pendientes en barra
+        try {
+            rescanInternal(playSound = true)
+        } catch (e: Exception) {
+            Log.w(TAG, "Error en rescan al conectar listener: ${e.message}")
+        }
     }
 
     override fun onListenerDisconnected() {
@@ -79,13 +142,32 @@ class PocketNotificationListenerService : NotificationListenerService() {
         if (instance == this) {
             instance = null
         }
-        Log.i(TAG, "Notification listener disconnected.")
+        Log.i(TAG, "Notification listener disconnected. Solicitando reconexión inmediata...")
+        try {
+            requestRebind(ComponentName(this, PocketNotificationListenerService::class.java))
+        } catch (e: Exception) {
+            Log.w(TAG, "Error solicitando rebind en onListenerDisconnected: ${e.message}")
+        }
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // Si el usuario cierra la app deslizándola de recientes, mantener vivo el listener
+        if (isPermissionGranted(this)) {
+            try {
+                requestRebind(ComponentName(this, PocketNotificationListenerService::class.java))
+                applyForegroundState()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error protegiendo servicio en onTaskRemoved: ${e.message}")
+            }
+        }
     }
 
     override fun onDestroy() {
         if (instance == this) {
             instance = null
         }
+        releaseWakeLock()
         soundHelper?.shutdown()
         super.onDestroy()
     }
@@ -93,6 +175,84 @@ class PocketNotificationListenerService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
         processStatusBarNotification(sbn, playSound = true)
+    }
+
+    /**
+     * Adquiere un WakeLock parcial de 8 segundos para evitar que el procesador entre en sueño profundo
+     * mientras el teléfono está bloqueado y se guarda/anuncia el cobro.
+     */
+    private fun acquirePaymentWakeLock() {
+        try {
+            val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return
+            if (paymentWakeLock == null) {
+                paymentWakeLock = pm.newWakeLock(
+                    PowerManager.PARTIAL_WAKE_LOCK,
+                    "Zeasy:PaymentProcessingWakeLock"
+                ).apply {
+                    setReferenceCounted(false)
+                }
+            }
+            paymentWakeLock?.acquire(8000L)
+        } catch (e: Exception) {
+            Log.w(TAG, "No se pudo adquirir WakeLock temporal: ${e.message}")
+        }
+    }
+
+    private fun releaseWakeLock() {
+        try {
+            if (paymentWakeLock?.isHeld == true) {
+                paymentWakeLock?.release()
+            }
+        } catch (_: Exception) {}
+    }
+
+    /**
+     * Mantiene el servicio en Foreground mientras la Jornada está activa para que Android
+     * no lo cierre cuando la app se quita de recientes y el teléfono se bloquea.
+     */
+    fun applyForegroundState() {
+        try {
+            if (PreferencesHelper.isShiftActive(this) && isPermissionGranted(this)) {
+                val openIntent = Intent(this, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                val pendingIntent = PendingIntent.getActivity(
+                    this,
+                    0,
+                    openIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+
+                val fgNotification = NotificationCompat.Builder(this, CHANNEL_FOREGROUND_ID)
+                    .setSmallIcon(R.drawable.ic_cashier)
+                    .setContentTitle("🟢 Zeasy en Jornada Activa")
+                    .setContentText("Escuchando pagos recibidos en segundo plano")
+                    .setPriority(NotificationCompat.PRIORITY_LOW)
+                    .setOngoing(true)
+                    .setSilent(true)
+                    .setContentIntent(pendingIntent)
+                    .build()
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    startForeground(
+                        FOREGROUND_NOTIFICATION_ID,
+                        fgNotification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                    )
+                } else {
+                    startForeground(FOREGROUND_NOTIFICATION_ID, fgNotification)
+                }
+            } else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Aviso al aplicar estado foreground: ${e.message}")
+        }
     }
 
     /**
@@ -248,6 +408,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
         }
 
         PaymentDeduplicator.markNotificationKeyProcessed(sbn.key)
+        acquirePaymentWakeLock()
 
         Log.i(TAG, "¡Pago válido detectado! Banco: ${parsedPayment.bancoCodigo.displayName}, Monto: ${parsedPayment.monto}, Ref: ${parsedPayment.referenciaUltimos4}")
 
@@ -493,15 +654,31 @@ class PocketNotificationListenerService : NotificationListenerService() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            val alertChannel = NotificationChannel(
                 CHANNEL_ID,
                 "Cobros Recibidos Zeasy",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Notificaciones de cobros recibidos y confirmados con Zeasy"
+                // SoundHelper controla la voz, el sonido de caja y el patrón de vibración distintivo
+                setSound(null, null)
+                enableVibration(false)
             }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+            manager.createNotificationChannel(alertChannel)
+
+            val fgChannel = NotificationChannel(
+                CHANNEL_FOREGROUND_ID,
+                "Zeasy Escucha en Jornada",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Mantiene activa la detección de cobros en segundo plano durante la jornada"
+                setShowBadge(false)
+                setSound(null, null)
+                enableVibration(false)
+            }
+            manager.createNotificationChannel(fgChannel)
         }
     }
 }
