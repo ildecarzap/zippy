@@ -207,51 +207,16 @@ class PocketNotificationListenerService : NotificationListenerService() {
     }
 
     /**
-     * Mantiene el servicio en Foreground mientras la Jornada está activa para que Android
-     * no lo cierre cuando la app se quita de recientes y el teléfono se bloquea.
+     * Mantiene vinculado el servicio del sistema NotificationListenerService cuando la Jornada está activa,
+     * sin requerir permisos restringidos de Foreground Service en Google Play.
      */
     fun applyForegroundState() {
         try {
             if (PreferencesHelper.isShiftActive(this) && isPermissionGranted(this)) {
-                val openIntent = Intent(this, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                }
-                val pendingIntent = PendingIntent.getActivity(
-                    this,
-                    0,
-                    openIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-
-                val fgNotification = NotificationCompat.Builder(this, CHANNEL_FOREGROUND_ID)
-                    .setSmallIcon(R.drawable.ic_cashier)
-                    .setContentTitle("🟢 Zeasy en Jornada Activa")
-                    .setContentText("Escuchando pagos recibidos en segundo plano")
-                    .setPriority(NotificationCompat.PRIORITY_LOW)
-                    .setOngoing(true)
-                    .setSilent(true)
-                    .setContentIntent(pendingIntent)
-                    .build()
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    startForeground(
-                        FOREGROUND_NOTIFICATION_ID,
-                        fgNotification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-                    )
-                } else {
-                    startForeground(FOREGROUND_NOTIFICATION_ID, fgNotification)
-                }
-            } else {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                } else {
-                    @Suppress("DEPRECATION")
-                    stopForeground(true)
-                }
+                requestRebind(ComponentName(this, PocketNotificationListenerService::class.java))
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Aviso al aplicar estado foreground: ${e.message}")
+            Log.w(TAG, "Aviso al sincronizar estado de escucha: ${e.message}")
         }
     }
 
