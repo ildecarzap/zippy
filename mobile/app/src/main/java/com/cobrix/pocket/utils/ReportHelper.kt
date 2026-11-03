@@ -10,6 +10,9 @@ import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.cobrix.pocket.data.model.Debtor
+import com.cobrix.pocket.data.model.LedgerEntry
+import com.cobrix.pocket.data.model.LedgerEntryType
 import com.cobrix.pocket.data.model.Transaction
 import com.cobrix.pocket.data.model.TransactionCategories
 import com.cobrix.pocket.data.model.TransactionType
@@ -33,6 +36,10 @@ object ReportHelper {
         val totalIncomeUsd: Double,
         val totalExpenseUsd: Double,
         val netProfitUsd: Double,
+        val directSalesVes: Double,
+        val directSalesUsd: Double,
+        val fiadoRecoveryVes: Double,
+        val fiadoRecoveryUsd: Double,
         val incomeCount: Int,
         val expenseCount: Int,
         val incomeByCategory: Map<String, Pair<Double, Int>>,
@@ -42,6 +49,8 @@ object ReportHelper {
     fun calculateFinancials(transactions: List<Transaction>, bcvRate: Double): ReportFinancials {
         var totalIncomeVes = 0.0
         var totalExpenseVes = 0.0
+        var directSalesVes = 0.0
+        var fiadoRecoveryVes = 0.0
         var incomeCount = 0
         var expenseCount = 0
 
@@ -51,6 +60,11 @@ object ReportHelper {
         for (tx in transactions) {
             if (tx.type == TransactionType.INCOME) {
                 totalIncomeVes += tx.amount
+                if (tx.category == TransactionCategories.INCOME_ABONO_FIADO) {
+                    fiadoRecoveryVes += tx.amount
+                } else {
+                    directSalesVes += tx.amount
+                }
                 incomeCount++
                 val cur = incomeMap[tx.category] ?: Pair(0.0, 0)
                 incomeMap[tx.category] = Pair(cur.first + tx.amount, cur.second + 1)
@@ -66,6 +80,8 @@ object ReportHelper {
         val totalIncomeUsd = if (bcvRate > 0) totalIncomeVes / bcvRate else 0.0
         val totalExpenseUsd = if (bcvRate > 0) totalExpenseVes / bcvRate else 0.0
         val netUsd = if (bcvRate > 0) netVes / bcvRate else 0.0
+        val directSalesUsd = if (bcvRate > 0) directSalesVes / bcvRate else 0.0
+        val fiadoRecoveryUsd = if (bcvRate > 0) fiadoRecoveryVes / bcvRate else 0.0
 
         return ReportFinancials(
             totalIncomeVes = totalIncomeVes,
@@ -74,6 +90,10 @@ object ReportHelper {
             totalIncomeUsd = totalIncomeUsd,
             totalExpenseUsd = totalExpenseUsd,
             netProfitUsd = netUsd,
+            directSalesVes = directSalesVes,
+            directSalesUsd = directSalesUsd,
+            fiadoRecoveryVes = fiadoRecoveryVes,
+            fiadoRecoveryUsd = fiadoRecoveryUsd,
             incomeCount = incomeCount,
             expenseCount = expenseCount,
             incomeByCategory = incomeMap,
@@ -113,8 +133,12 @@ object ReportHelper {
                 val displayName = TransactionCategories.getCategoryDisplayName(category)
                 sb.append("• $displayName ($count): Bs. ${String.format(Locale.US, "%.2f", amountVes)} ($${String.format(Locale.US, "%.2f", amountUsd)})\n")
             }
+            if (financials.fiadoRecoveryVes > 0.0) {
+                sb.append("   ├─ 🛒 Ventas directas de contado: Bs. ${String.format(Locale.US, "%.2f", financials.directSalesVes)} ($${String.format(Locale.US, "%.2f", financials.directSalesUsd)})\n")
+                sb.append("   └─ 📒 Cobranza de fiados (Libreta): Bs. ${String.format(Locale.US, "%.2f", financials.fiadoRecoveryVes)} ($${String.format(Locale.US, "%.2f", financials.fiadoRecoveryUsd)})\n")
+            }
         }
-        sb.append("🟢 *TOTAL INGRESOS:* Bs. ${String.format(Locale.US, "%.2f", financials.totalIncomeVes)} ($${String.format(Locale.US, "%.2f", financials.totalIncomeUsd)})\n\n")
+        sb.append("🟢 *TOTAL INGRESOS EN CAJA:* Bs. ${String.format(Locale.US, "%.2f", financials.totalIncomeVes)} ($${String.format(Locale.US, "%.2f", financials.totalIncomeUsd)})\n\n")
 
         sb.append("📉 *DESGLOSE DE GASTOS OPERATIVOS:*\n")
         if (financials.expenseByCategory.isEmpty()) {
@@ -624,6 +648,282 @@ object ReportHelper {
             context.startActivity(Intent.createChooser(intent, "Compartir Reporte Excel (.csv)"))
         } catch (e: Exception) {
             Toast.makeText(context, "No se pudo compartir el archivo Excel", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Genera un Estado de Cuenta Detallado en PDF para un cliente específico de la Libreta (Función PRO).
+     * Incluye membrete del comercio, saldo actual en USD y Bs a tasa BCV del día, monto exacto con céntimos
+     * de conciliación, datos bancarios para Pago Móvil y tabla cronológica de fiados y abonos.
+     */
+    fun generateDebtorStatementPdf(
+        context: Context,
+        profile: UserProfile,
+        debtor: Debtor,
+        entries: List<LedgerEntry>
+    ): File? {
+        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+        val pageWidth = 595
+        val pageHeight = 842
+        val document = PdfDocument()
+        val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
+        val page = document.startPage(pageInfo)
+        val canvas: Canvas = page.canvas
+
+        val paintTitle = Paint().apply {
+            color = Color.parseColor("#0A2540")
+            textSize = 17f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+        val paintSubtitle = Paint().apply {
+            color = Color.parseColor("#0096C7")
+            textSize = 10.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+        val paintLabel = Paint().apply {
+            color = Color.parseColor("#627D98")
+            textSize = 9.5f
+            isAntiAlias = true
+        }
+        val paintValue = Paint().apply {
+            color = Color.parseColor("#0A192F")
+            textSize = 10.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+        val paintSectionHeader = Paint().apply {
+            color = Color.parseColor("#0A2540")
+            textSize = 11.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+        val paintTableText = Paint().apply {
+            color = Color.parseColor("#0A192F")
+            textSize = 9f
+            isAntiAlias = true
+        }
+        val paintCharge = Paint().apply {
+            color = Color.parseColor("#DE350B")
+            textSize = 9.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+        val paintPayment = Paint().apply {
+            color = Color.parseColor("#00875A")
+            textSize = 9.5f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+        val paintLine = Paint().apply {
+            color = Color.parseColor("#CFE0F5")
+            strokeWidth = 1f
+        }
+        val paintBoxBg = Paint().apply {
+            color = Color.parseColor("#F4F8FC")
+            style = Paint.Style.FILL
+        }
+
+        var y = 40f
+        val margin = 36f
+        val contentWidth = pageWidth - (margin * 2)
+
+        // 1. Encabezado Corporativo
+        val merchantName = profile.merchantName.ifEmpty { "MI COMERCIO" }.uppercase(Locale.US)
+        canvas.drawText("ESTADO DE CUENTA DE CLIENTE • $merchantName", margin, y, paintTitle)
+        y += 16f
+        val emittedStr = FULL_DATETIME_FORMAT.format(Date())
+        canvas.drawText("Emitido con Zeasy PRO • Fecha: $emittedStr • Tasa BCV Oficial: Bs. ${String.format(Locale.US, "%.2f", rate)}/USD", margin, y, paintSubtitle)
+        y += 14f
+        canvas.drawLine(margin, y, margin + contentWidth, y, paintLine)
+        y += 14f
+
+        // 2. Datos del Cliente y del Comercio
+        canvas.drawRoundRect(margin, y, margin + contentWidth, y + 66f, 8f, 8f, paintBoxBg)
+        val col1 = margin + 12f
+        val col2 = margin + (contentWidth / 2f) + 12f
+
+        canvas.drawText("Cliente:", col1, y + 18f, paintLabel)
+        canvas.drawText(debtor.name, col1, y + 32f, paintValue)
+        canvas.drawText("Teléfono / Cédula:", col1, y + 46f, paintLabel)
+        val metaClient = listOfNotNull(debtor.phone?.takeIf { it.isNotBlank() }, debtor.identification?.takeIf { it.isNotBlank() })
+            .joinToString(" • ").ifEmpty { "No registrado" }
+        canvas.drawText(metaClient, col1, y + 58f, paintValue)
+
+        canvas.drawText("Datos para Pago Móvil del Comercio:", col2, y + 18f, paintLabel)
+        canvas.drawText("${profile.bankName} (${profile.bankCode})", col2, y + 32f, paintValue)
+        canvas.drawText("Tel: ${profile.phoneNumber} • RIF/CI: ${profile.idCard}", col2, y + 48f, paintValue)
+
+        y += 80f
+
+        // 3. Resumen de Saldo Actual
+        val totalChargesUsd = entries.filter { it.type == LedgerEntryType.CHARGE }.sumOf { it.amountUsd }
+        val totalPaymentsUsd = entries.filter { it.type == LedgerEntryType.PAYMENT }.sumOf { it.amountUsd }
+
+        val kpiWidth = (contentWidth - 16f) / 3f
+        val kpiHeight = 54f
+
+        // KPI Total Fiado Histórico
+        canvas.drawRoundRect(margin, y, margin + kpiWidth, y + kpiHeight, 6f, 6f, paintBoxBg)
+        canvas.drawText("HISTÓRICO COMPRAS FIADAS", margin + 8f, y + 16f, paintLabel)
+        canvas.drawText("$${String.format(Locale.US, "%.2f", totalChargesUsd)} USD", margin + 8f, y + 33f, paintCharge)
+        canvas.drawText("≈ Bs. ${String.format(Locale.US, "%.2f", totalChargesUsd * rate)}", margin + 8f, y + 46f, paintLabel)
+
+        // KPI Total Abonado Histórico
+        val kpi2X = margin + kpiWidth + 8f
+        canvas.drawRoundRect(kpi2X, y, kpi2X + kpiWidth, y + kpiHeight, 6f, 6f, paintBoxBg)
+        canvas.drawText("HISTÓRICO ABONOS / PAGOS", kpi2X + 8f, y + 16f, paintLabel)
+        canvas.drawText("$${String.format(Locale.US, "%.2f", totalPaymentsUsd)} USD", kpi2X + 8f, y + 33f, paintPayment)
+        canvas.drawText("≈ Bs. ${String.format(Locale.US, "%.2f", totalPaymentsUsd * rate)}", kpi2X + 8f, y + 46f, paintLabel)
+
+        // KPI Saldo Actual
+        val kpi3X = kpi2X + kpiWidth + 8f
+        val paintBalBg = Paint().apply {
+            color = if (debtor.isDebtor) Color.parseColor("#FFEBEE") else Color.parseColor("#E8F5E9")
+            style = Paint.Style.FILL
+        }
+        canvas.drawRoundRect(kpi3X, y, kpi3X + kpiWidth, y + kpiHeight, 6f, 6f, paintBalBg)
+        if (debtor.isDebtor) {
+            canvas.drawText("SALDO DEUDOR ACTUAL", kpi3X + 8f, y + 15f, paintCharge)
+            canvas.drawText("$${String.format(Locale.US, "%.2f", debtor.debtAmountUsd)} USD", kpi3X + 8f, y + 31f, paintTitle)
+            canvas.drawText("Exacto a transferir: Bs. ${String.format(Locale.US, "%.2f", debtor.getConciliationVes(rate))}", kpi3X + 8f, y + 46f, paintCharge)
+        } else if (debtor.hasCredit) {
+            canvas.drawText("SALDO A FAVOR DEL CLIENTE", kpi3X + 8f, y + 15f, paintPayment)
+            canvas.drawText("$${String.format(Locale.US, "%.2f", debtor.creditAmountUsd)} USD", kpi3X + 8f, y + 31f, paintTitle)
+            canvas.drawText("≈ Bs. ${String.format(Locale.US, "%.2f", debtor.getEquivalentVes(rate))}", kpi3X + 8f, y + 46f, paintPayment)
+        } else {
+            canvas.drawText("CUENTA AL DÍA", kpi3X + 8f, y + 15f, paintSubtitle)
+            canvas.drawText("$0.00 USD", kpi3X + 8f, y + 32f, paintTitle)
+            canvas.drawText("Sin saldo pendiente", kpi3X + 8f, y + 46f, paintLabel)
+        }
+
+        y += 72f
+
+        // 4. Tabla Detallada de Movimientos (Compras a crédito y Abonos)
+        canvas.drawText("HISTORIAL DETALLADO DE FIADOS Y ABONOS (${entries.size} registros)", margin, y, paintSectionHeader)
+        y += 14f
+        canvas.drawLine(margin, y, margin + contentWidth, y, paintLine)
+        y += 14f
+
+        canvas.drawText("Fecha / Hora", margin, y, paintLabel)
+        canvas.drawText("Operación", margin + 85f, y, paintLabel)
+        canvas.drawText("Concepto / Detalle de Artículos", margin + 165f, y, paintLabel)
+        canvas.drawText("Monto USD", margin + 365f, y, paintLabel)
+        canvas.drawText("Equiv. Bs (BCV Hoy)", margin + 435f, y, paintLabel)
+        y += 6f
+        canvas.drawLine(margin, y, margin + contentWidth, y, paintLine)
+        y += 14f
+
+        val dtFmt = SimpleDateFormat("dd/MM/yy HH:mm", Locale.US)
+        val maxListY = pageHeight - 90f
+
+        if (entries.isEmpty()) {
+            canvas.drawText("No hay movimientos registrados para este cliente.", margin, y, paintTableText)
+        } else {
+            for (entry in entries) {
+                if (y > maxListY) {
+                    canvas.drawText("... continúan registros en el historial digital ...", margin, y, paintLabel)
+                    break
+                }
+                val isCharge = entry.type == LedgerEntryType.CHARGE
+                val dtStr = dtFmt.format(Date(entry.timestamp))
+                val opStr = if (isCharge) "Compra / Fiado" else "Abono / Pago"
+                val conceptStr = (entry.notes?.takeIf { it.isNotBlank() } ?: if (isCharge) "Compra a crédito" else "Abono a cuenta").take(34)
+                val sign = if (isCharge) "-" else "+"
+                val usdStr = "$sign$${String.format(Locale.US, "%.2f", entry.amountUsd)}"
+                val bsToday = entry.amountUsd * rate
+                val bsStr = "Bs. ${String.format(Locale.US, "%.2f", bsToday)}"
+
+                canvas.drawText(dtStr, margin, y, paintTableText)
+                canvas.drawText(opStr, margin + 85f, y, if (isCharge) paintCharge else paintPayment)
+                canvas.drawText(conceptStr, margin + 165f, y, paintTableText)
+                canvas.drawText(usdStr, margin + 365f, y, if (isCharge) paintCharge else paintPayment)
+                canvas.drawText(bsStr, margin + 435f, y, paintTableText)
+                y += 15f
+            }
+        }
+
+        // Pie de página
+        val footerY = pageHeight - 40f
+        canvas.drawLine(margin, footerY, margin + contentWidth, footerY, paintLine)
+        val footerNote = if (debtor.isDebtor) {
+            "Nota: Las cuentas por cobrar están indexadas en USD a la tasa oficial del BCV del día del pago. Monto exacto para conciliación automática: Bs. ${String.format(Locale.US, "%.2f", debtor.getConciliationVes(rate))}"
+        } else {
+            "Documento emitido por Zeasy PRO • Ciem tech solutions C.A • RIF J-50849495-4"
+        }
+        canvas.drawText(footerNote, margin, footerY + 16f, paintLabel)
+
+        document.finishPage(page)
+
+        val reportsDir = File(context.cacheDir, "reports")
+        if (!reportsDir.exists()) reportsDir.mkdirs()
+
+        val cleanName = debtor.name.replace(Regex("[^a-zA-Z0-9]"), "_").take(20)
+        val fileTimestamp = SimpleDateFormat("dd-MM-yy", Locale.US).format(Date())
+        val pdfFile = File(reportsDir, "estado_cuenta_${cleanName}_${fileTimestamp}.pdf")
+        return try {
+            FileOutputStream(pdfFile).use { out ->
+                document.writeTo(out)
+            }
+            document.close()
+            pdfFile
+        } catch (e: Exception) {
+            document.close()
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Comparte el PDF de Estado de Cuenta del cliente directamente por WhatsApp (o selector de apps).
+     */
+    fun shareDebtorStatementPdf(
+        context: Context,
+        pdfFile: File,
+        debtorName: String,
+        customerPhone: String? = null
+    ) {
+        val uri: Uri = try {
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", pdfFile)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error al preparar el PDF de estado de cuenta", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val waPackage = WhatsAppHelper.getWhatsAppPackage(context)
+        var cleanPhone = customerPhone?.replace(Regex("[^0-9]"), "") ?: ""
+        if (cleanPhone.startsWith("0")) {
+            cleanPhone = "58" + cleanPhone.substring(1)
+        } else if (cleanPhone.isNotEmpty() && !cleanPhone.startsWith("58") && cleanPhone.length == 10) {
+            cleanPhone = "58$cleanPhone"
+        }
+
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, "Estado de Cuenta - $debtorName")
+            putExtra(Intent.EXTRA_TEXT, "👋 Hola $debtorName, te compartimos tu estado de cuenta detallado actualizado a la tasa BCV del día.")
+            if (cleanPhone.isNotEmpty() && waPackage != null) {
+                putExtra("jid", "$cleanPhone@s.whatsapp.net")
+                setPackage(waPackage)
+            }
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        try {
+            if (cleanPhone.isNotEmpty() && waPackage != null) {
+                context.startActivity(intent)
+            } else {
+                context.startActivity(Intent.createChooser(intent, "Enviar Estado de Cuenta PDF"))
+            }
+        } catch (e: Exception) {
+            try {
+                intent.setPackage(null)
+                context.startActivity(Intent.createChooser(intent, "Enviar Estado de Cuenta PDF"))
+            } catch (_: Exception) {
+                Toast.makeText(context, "No se pudo compartir el PDF", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

@@ -67,7 +67,7 @@ object ZeasySyncManager {
                 put("phone", profile.phoneNumber)
                 put("doc_id", profile.idCard)
                 put("email", profile.email)
-                put("app_version", "1.3.3")
+                put("app_version", com.cobrix.pocket.BuildConfig.VERSION_NAME)
             }
 
             val writer = OutputStreamWriter(regConn.outputStream)
@@ -109,8 +109,14 @@ object ZeasySyncManager {
                     Log.d(TAG, "💰 Precios remotos Zippy actualizados: 1m=\$$p1, 3m=\$$p3, 12m=\$$p12")
                 }
 
+                // Sincronizar modo revisión / edición abierta desde el portal admin si está presente
+                if (json.has("play_store_review_mode")) {
+                    val remoteReview = json.optBoolean("play_store_review_mode", false)
+                    PlanCapabilityManager.setServerReviewMode(context, remoteReview)
+                }
+
                 // En modo revisión de Google Play, no permitir degradación a plan básico ni marcar vencimiento
-                if (PlanCapabilityManager.PLAY_STORE_REVIEW_MODE) {
+                if (PlanCapabilityManager.isReviewMode(context)) {
                     Log.i(TAG, "⭐ Modo Revisión Google Play activo: Conservando estado PRO ilimitado sin degradación.")
                     return@withContext false
                 }
@@ -262,9 +268,59 @@ object ZeasySyncManager {
         }
 
         val deviceId = PlanCapabilityManager.getDeviceId(context)
+        val masterKeys = setOf(
+            "ZEASYPRO2026",
+            "ZIPPYPRO2026",
+            "ZEASY-PRO-30-CIEM",
+            "ZEASY-PRO-90-CIEM",
+            "ZEASY-PRO-365-CIEM"
+        )
+
+        // Bloquear si ingresan el propio ID del dispositivo o un código incompleto (< 10 caracteres)
+        if (code.equals(deviceId, ignoreCase = true) ||
+            code.equals(deviceId.replace("-", ""), ignoreCase = true) ||
+            (code !in masterKeys && code.length < 10)
+        ) {
+            return@withContext RedeemResult(
+                success = false,
+                message = "Código inválido. El ID del terminal no es un código de activación. Solicita tu código PRO a soporte por WhatsApp o Correo."
+            )
+        }
+
         val baseUrl = getServerUrl(context)
 
         try {
+            // Verificar primero el código asignado al dispositivo en el servidor para impedir coincidencias parciales
+            if (code !in masterKeys) {
+                val checkUrl = URL("$baseUrl/api/v1/license/check?device_id=$deviceId")
+                val checkConn = checkUrl.openConnection() as HttpURLConnection
+                checkConn.requestMethod = "GET"
+                checkConn.setRequestProperty("Accept", "application/json")
+                checkConn.connectTimeout = 6000
+                checkConn.readTimeout = 6000
+                if (checkConn.responseCode == 200) {
+                    val checkReader = BufferedReader(InputStreamReader(checkConn.inputStream))
+                    val checkSb = StringBuilder()
+                    var checkLine: String?
+                    while (checkReader.readLine().also { checkLine = it } != null) {
+                        checkSb.append(checkLine)
+                    }
+                    checkReader.close()
+                    checkConn.disconnect()
+
+                    val checkJson = JSONObject(checkSb.toString())
+                    val expectedServerCode = checkJson.optString("activation_code", "").trim().uppercase(Locale.US)
+                    if (expectedServerCode.isEmpty() || code != expectedServerCode) {
+                        return@withContext RedeemResult(
+                            success = false,
+                            message = "Código de activación inválido o no corresponde a este dispositivo. Solicita tu código vigente por WhatsApp."
+                        )
+                    }
+                } else {
+                    checkConn.disconnect()
+                }
+            }
+
             val url = URL("$baseUrl/api/v1/license/redeem")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"

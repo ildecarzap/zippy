@@ -13,6 +13,7 @@ object TransactionCategories {
     const val INCOME_MANUAL_EFECTIVO_USD = "EFECTIVO_USD"
     const val INCOME_MANUAL_PUNTO = "PUNTO_VENTA"
     const val INCOME_MANUAL_TRANSFERENCIA = "TRANSFERENCIA"
+    const val INCOME_ABONO_FIADO = "ABONO_FIADO"
     const val INCOME_MANUAL_OTRO = "OTRO_INGRESO"
 
     // Gastos
@@ -31,6 +32,7 @@ object TransactionCategories {
             INCOME_MANUAL_EFECTIVO_USD -> "Efectivo ($ USD)"
             INCOME_MANUAL_PUNTO -> "Punto de Venta / Tarjeta"
             INCOME_MANUAL_TRANSFERENCIA -> "Transferencia"
+            INCOME_ABONO_FIADO -> "Abono de Fiado (Libreta)"
             INCOME_MANUAL_OTRO -> "Otro Ingreso"
             EXPENSE_GASOLINA -> "Gasolina"
             EXPENSE_COMIDA -> "Comida / Café"

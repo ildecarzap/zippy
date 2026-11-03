@@ -240,12 +240,14 @@ class PocketDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABAS
             put(COL_CATEGORY, tx.category)
             put(COL_NOTE, tx.note)
             put(COL_REFERENCE, tx.reference)
+            put(COL_SENDER_NAME, tx.senderName)
         }
         return db.update(TABLE_TRANSACTIONS, values, "$COL_ID = ?", arrayOf(tx.id.toString()))
     }
 
     fun deleteTransaction(id: Long): Int {
         val db = writableDatabase
+        reversePaymentByTransactionId(id)
         return db.delete(TABLE_TRANSACTIONS, "$COL_ID = ?", arrayOf(id.toString()))
     }
 
@@ -625,6 +627,120 @@ class PocketDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABAS
             }
         }
         return list
+    }
+
+    /**
+     * Busca si una transacción de Jornada ya está vinculada a un abono/pago en la Libreta.
+     */
+    fun getLedgerEntryByTransactionId(txId: Long): LedgerEntry? {
+        if (txId <= 0L) return null
+        val db = readableDatabase
+        val cursor = db.query(
+            TABLE_LEDGER_ENTRIES,
+            null,
+            "$COL_ENTRY_MATCHED_TX_ID = ?",
+            arrayOf(txId.toString()),
+            null, null, null
+        )
+        return cursor.use {
+            if (it.moveToFirst()) cursorToLedgerEntry(it) else null
+        }
+    }
+
+    /**
+     * Si se elimina un movimiento en Jornada que estaba vinculado a un abono de fiado,
+     * revierte el abono en la libreta para mantener la contabilidad consistente.
+     */
+    fun reversePaymentByTransactionId(txId: Long): Boolean {
+        val entry = getLedgerEntryByTransactionId(txId) ?: return false
+        if (entry.type != LedgerEntryType.PAYMENT) return false
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.execSQL(
+                "UPDATE $TABLE_DEBTORS SET $COL_DEBTOR_BALANCE_USD = $COL_DEBTOR_BALANCE_USD - ?, $COL_DEBTOR_UPDATED_AT = ? WHERE $COL_DEBTOR_ID = ?",
+                arrayOf(entry.amountUsd, System.currentTimeMillis(), entry.debtorId)
+            )
+            db.delete(TABLE_LEDGER_ENTRIES, "$COL_ENTRY_ID = ?", arrayOf(entry.id.toString()))
+            db.setTransactionSuccessful()
+            return true
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    data class ConciliationMatch(
+        val debtor: Debtor,
+        val discountUsd: Double,
+        val isPartialAgreed: Boolean = false
+    )
+
+    /**
+     * Busca automáticamente un deudor activo cuyo monto exacto de conciliación (Equivalente BCV + céntimos,
+     * o un abono parcial acordado con céntimos) coincida con el Pago Móvil recibido.
+     * Si no hay coincidencia única sin dudas, retorna null para que el comerciante pueda asignarlo manualmente desde Jornada.
+     */
+    fun findDebtorForAutoConciliation(
+        context: Context,
+        amountVes: Double,
+        bcvRate: Double,
+        senderPhone: String? = null
+    ): ConciliationMatch? {
+        if (amountVes <= 0.0 || bcvRate <= 0.0) return null
+        val activeDebtors = getAllDebtors().filter { it.isDebtor }
+        if (activeDebtors.isEmpty()) return null
+
+        val cleanSenderPhone = senderPhone?.replace(Regex("[^0-9]"), "")?.takeLast(7) ?: ""
+
+        // 0. Verificar si algún deudor tiene un acuerdo de cobro (total o abono parcial) enviado por WhatsApp con céntimos
+        val agreedMatches = activeDebtors.mapNotNull { debtor ->
+            val pending = com.cobrix.pocket.utils.PreferencesHelper.getPendingDebtorConciliation(context, debtor.id)
+            if (pending != null && Math.abs(amountVes - pending.first) < 0.005) {
+                ConciliationMatch(
+                    debtor = debtor,
+                    discountUsd = pending.second,
+                    isPartialAgreed = pending.second < debtor.debtAmountUsd - 0.01
+                )
+            } else null
+        }
+        if (agreedMatches.size == 1) {
+            return agreedMatches.first()
+        } else if (agreedMatches.size > 1 && cleanSenderPhone.length >= 7) {
+            val phoneMatch = agreedMatches.find { m ->
+                m.debtor.phone?.replace(Regex("[^0-9]"), "")?.endsWith(cleanSenderPhone) == true
+            }
+            if (phoneMatch != null) return phoneMatch
+        }
+
+        // 1. Coincidencia exacta con el monto de conciliación total (Equivalente BCV + céntimos adicionales del deudor)
+        val exactConciliationMatches = activeDebtors.filter { debtor ->
+            Math.abs(amountVes - debtor.getConciliationVes(bcvRate)) < 0.005
+        }
+        if (exactConciliationMatches.size == 1) {
+            val d = exactConciliationMatches.first()
+            return ConciliationMatch(debtor = d, discountUsd = d.debtAmountUsd, isPartialAgreed = false)
+        } else if (exactConciliationMatches.size > 1 && cleanSenderPhone.length >= 7) {
+            val phoneMatch = exactConciliationMatches.find { d ->
+                d.phone?.replace(Regex("[^0-9]"), "")?.endsWith(cleanSenderPhone) == true
+            }
+            if (phoneMatch != null) {
+                return ConciliationMatch(debtor = phoneMatch, discountUsd = phoneMatch.debtAmountUsd, isPartialAgreed = false)
+            }
+        }
+
+        // 2. Si viene teléfono del remitente y coincide con un único deudor cuyo saldo base en Bs coincide exactamente
+        if (cleanSenderPhone.length >= 7) {
+            val phoneAndBaseMatches = activeDebtors.filter { debtor ->
+                val dPhone = debtor.phone?.replace(Regex("[^0-9]"), "") ?: ""
+                dPhone.endsWith(cleanSenderPhone) && Math.abs(amountVes - debtor.getEquivalentVes(bcvRate)) < 0.02
+            }
+            if (phoneAndBaseMatches.size == 1) {
+                val d = phoneAndBaseMatches.first()
+                return ConciliationMatch(debtor = d, discountUsd = d.debtAmountUsd, isPartialAgreed = false)
+            }
+        }
+
+        return null
     }
 
     fun getAllLedgerEntries(): List<LedgerEntry> {

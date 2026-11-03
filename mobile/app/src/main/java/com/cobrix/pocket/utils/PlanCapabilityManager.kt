@@ -22,6 +22,7 @@ object PlanCapabilityManager {
     private const val KEY_TRIAL_EXPIRATION = "trial_expiration"
     private const val KEY_PRO_EXPIRATION = "pro_expiration"
     private const val KEY_LICENSE_KEY = "license_key"
+    private const val KEY_REMOTE_REVIEW_MODE = "remote_review_mode"
 
     private const val TRIAL_DURATION_MS = 7L * 24 * 60 * 60 * 1000 // 7 días
 
@@ -32,14 +33,23 @@ object PlanCapabilityManager {
     const val OFFICIAL_WEBSITE = "https://zeasy-app-902301530733.europe-west1.run.app"
 
     // ==============================================================================
-    // 🚀 SWITCH MAESTRO DE REVISIÓN GOOGLE PLAY / EDICIÓN ABIERTA
+    // 🚀 SWITCH MAESTRO DE REVISIÓN GOOGLE PLAY / EDICIÓN COMERCIAL
     // ==============================================================================
-    // true:  Modo Google Play Review (Todas las funciones PRO desbloqueadas, sin
-    //        pantallas ni banners de pago, sin límites de bancos ni vencimiento).
-    // false: Modo Comercial Producción (Planes Free/Trial/PRO, límites de 1 banco,
-    //        avisos de renovación y cobro automatizado con CobrixPay).
+    // false: Modo Comercial Activo (Planes Básico y PRO mediante Código de Activación
+    //        sin precios visibles en la app, 100% seguro para políticas de Google Play).
+    // true:  Modo Revisión Abierta (Todas las funciones desbloqueadas sin solicitar código).
+    //        También puede controlarse remotamente desde el Portal Admin de Zeasy Hub.
     // ==============================================================================
-    const val PLAY_STORE_REVIEW_MODE = true
+    const val PLAY_STORE_REVIEW_MODE = false
+
+    fun isReviewMode(context: Context): Boolean {
+        if (PLAY_STORE_REVIEW_MODE) return true
+        return getPrefs(context).getBoolean(KEY_REMOTE_REVIEW_MODE, false)
+    }
+
+    fun setServerReviewMode(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_REMOTE_REVIEW_MODE, enabled).apply()
+    }
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -71,7 +81,7 @@ object PlanCapabilityManager {
 
     fun getPlanType(context: Context): PlanType {
         // En modo revisión de Google Play, toda la aplicación se desbloquea en PRO
-        if (PLAY_STORE_REVIEW_MODE) {
+        if (isReviewMode(context)) {
             return PlanType.PRO_ACTIVE
         }
 
@@ -95,7 +105,7 @@ object PlanCapabilityManager {
     }
 
     fun isPro(context: Context): Boolean {
-        if (PLAY_STORE_REVIEW_MODE) return true
+        if (isReviewMode(context)) return true
         return getPlanType(context) != PlanType.FREE
     }
 
@@ -123,7 +133,7 @@ object PlanCapabilityManager {
     }
 
     fun getDaysRemaining(context: Context): Int {
-        if (PLAY_STORE_REVIEW_MODE) return 365
+        if (isReviewMode(context)) return 365
         val prefs = getPrefs(context)
         val now = System.currentTimeMillis()
         val exp = when (getPlanType(context)) {
@@ -167,21 +177,25 @@ object PlanCapabilityManager {
     }
 
     /**
-     * Activa o extiende el Plan PRO mediante clave provista por soporte o backend.
+     * Activa o extiende el Plan PRO mediante clave maestra provista por soporte (respaldo offline).
+     * Prohibido aceptar el propio ID del dispositivo como clave de activación.
      */
     fun activateWithLicenseKey(context: Context, rawKey: String): Boolean {
         val key = rawKey.trim().uppercase(Locale.US)
-        val deviceId = getDeviceId(context)
+        val deviceId = getDeviceId(context).uppercase(Locale.US)
 
-        // Verificaciones de claves universales de soporte y formato
+        // Bloquear explícitamente si intentan pegar su propio ID de dispositivo
+        if (key == deviceId || key == deviceId.replace("-", "")) {
+            return false
+        }
+
+        // Solo claves maestras exactas de soporte en caso de contingencia sin red
         var daysToAdd = 0
-        when {
-            key == "ZIPPYPRO2026" || key == "ZIPPY-PRO-LIFETIME" -> daysToAdd = 365
-            key == "ZIPPY30" || key.startsWith("ZIP-30-") -> daysToAdd = 30
-            key == "ZIPPY90" || key.startsWith("ZIP-90-") -> daysToAdd = 90
-            key == "ZIPPY365" || key.startsWith("ZIP-365-") -> daysToAdd = 365
-            key.contains(deviceId.replace("-", "")) -> daysToAdd = 30
-            key.length >= 8 && key.startsWith("ZIPPY") -> daysToAdd = 30
+        when (key) {
+            "ZEASYPRO2026", "ZIPPYPRO2026" -> daysToAdd = 365
+            "ZEASY-PRO-30-CIEM" -> daysToAdd = 30
+            "ZEASY-PRO-90-CIEM" -> daysToAdd = 90
+            "ZEASY-PRO-365-CIEM" -> daysToAdd = 365
             else -> return false
         }
 
@@ -241,6 +255,8 @@ object PlanCapabilityManager {
 
     /**
      * Matriz de características según el plan actual.
+     * Nota: La Libreta de Clientes básica (anotar clientes, contactos, fiar/abonar en Bs/$,
+     * ajuste diario BCV y recordatorio WhatsApp en texto) es 100% libre en el Plan Básico.
      */
     fun getPlanFeatures(context: Context): PlanFeatures {
         val type = getPlanType(context)
@@ -253,7 +269,9 @@ object PlanCapabilityManager {
                 canUseVoiceSoundbox = false,
                 canUseCloudBackup = false,
                 historyDaysRetention = 7,
-                canUseWallets = false
+                canUseWallets = false,
+                canExportDebtorPdf = false,
+                canUseAutoConciliation = false
             )
             PlanType.PRO_TRIAL -> PlanFeatures(
                 planType = PlanType.PRO_TRIAL,
@@ -263,7 +281,9 @@ object PlanCapabilityManager {
                 canUseVoiceSoundbox = true,
                 canUseCloudBackup = true,
                 historyDaysRetention = 365,
-                canUseWallets = true
+                canUseWallets = true,
+                canExportDebtorPdf = true,
+                canUseAutoConciliation = true
             )
             PlanType.PRO_ACTIVE -> PlanFeatures(
                 planType = PlanType.PRO_ACTIVE,
@@ -273,12 +293,16 @@ object PlanCapabilityManager {
                 canUseVoiceSoundbox = true,
                 canUseCloudBackup = true,
                 historyDaysRetention = 365,
-                canUseWallets = true
+                canUseWallets = true,
+                canExportDebtorPdf = true,
+                canUseAutoConciliation = true
             )
         }
     }
 
     fun canExportPdf(context: Context): Boolean = getPlanFeatures(context).canExportPdf
+    fun canExportDebtorPdf(context: Context): Boolean = getPlanFeatures(context).canExportDebtorPdf
+    fun canUseAutoConciliation(context: Context): Boolean = getPlanFeatures(context).canUseAutoConciliation
     fun canUseMultibank(context: Context): Boolean = getPlanFeatures(context).maxBanks > 1
     fun canUseVoiceInput(context: Context): Boolean = getPlanFeatures(context).canUseVoiceInput
     fun canUseVoiceSoundbox(context: Context): Boolean = getPlanFeatures(context).canUseVoiceSoundbox

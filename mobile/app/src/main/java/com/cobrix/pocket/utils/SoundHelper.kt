@@ -87,6 +87,21 @@ class SoundHelper(private val context: Context) : TextToSpeech.OnInitListener {
     }
 
     /**
+     * Anuncia un Pago Móvil que concilió automáticamente la deuda de un cliente en la Libreta.
+     */
+    fun announceReconciledPayment(amount: Double, debtorName: String) {
+        if (!isTtsInitialized || tts == null) return
+
+        try {
+            val formatted = String.format(Locale.US, "%.0f", amount)
+            val phrase = "Pago recibido de $formatted bolívares. Abonado a la cuenta de $debtorName."
+            tts?.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "PAYMENT_RECONCILED_ANNOUNCE")
+        } catch (e: Exception) {
+            Log.e("SoundHelper", "Error anunciando voz de conciliación", e)
+        }
+    }
+
+    /**
      * Anuncia el pago recibido en cripto / USDT por voz sintética.
      */
     fun announceCryptoPayment(amount: Double, currency: String = "dólares") {

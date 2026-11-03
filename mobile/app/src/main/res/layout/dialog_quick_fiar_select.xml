@@ -30,15 +30,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:hint="Nombre del Cliente *"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        android:hint="Nombre del Cliente * (escribe o selecciona)">
 
         <AutoCompleteTextView
             android:id="@+id/actvQuickFiarClientName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textPersonName|textCapWords"
-            android:hint="Escribe o selecciona cliente"
+            android:padding="14dp"
+            android:textColor="@color/text_primary"
             android:textSize="15sp"
             android:textStyle="bold" />
     </com.google.android.material.textfield.TextInputLayout>
@@ -48,14 +48,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:hint="Artículos / Nota (Opcional)"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        android:hint="Artículos / Nota (Opcional, ej. Canilla, queso)">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etQuickFiarConcept"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Ej: Canilla, queso, café"
+            android:textColor="@color/text_primary"
             android:textSize="14sp" />
     </com.google.android.material.textfield.TextInputLayout>
 

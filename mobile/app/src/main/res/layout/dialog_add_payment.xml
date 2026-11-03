@@ -36,25 +36,56 @@
         android:textColor="#C62828"
         android:textSize="13sp" />
 
-    <!-- Campo de Monto en USD -->
-    <com.google.android.material.textfield.TextInputLayout
+    <!-- Selector de Moneda para Abonar: Bolívares o Dólares -->
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/togglePaymentCurrency"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
-        android:hint="Monto a Abonar ($ USD) *"
-        app:prefixText="$ "
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        android:layout_marginTop="12dp"
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:checkedButton="@id/btnPaymentCurrencyUsd">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPaymentCurrencyVes"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Bs. Bolívares"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPaymentCurrencyUsd"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="$ Dólares (USD)"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+    <!-- Campo de Monto a Abonar -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilPaymentAmount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:hint="Monto a Abonar en Dólares ($ USD) *">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etPaymentAmountUsd"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="numberDecimal"
+            android:textColor="@color/text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Equivalente en Bs calculado en tiempo real -->
+    <!-- Equivalente calculado en tiempo real -->
     <TextView
         android:id="@+id/tvPaymentEquivBs"
         android:layout_width="wrap_content"
@@ -62,15 +93,16 @@
         android:layout_marginTop="4dp"
         android:text="≈ Bs. 0,00 (Tasa BCV: 45.00)"
         android:textColor="@color/text_secondary"
-        android:textSize="12sp" />
+        android:textStyle="bold"
+        android:textSize="12.5sp" />
 
-    <!-- Nota si hay excedente (Saldo a Favor) -->
+    <!-- Nota de integración con Jornada y Excedente -->
     <TextView
         android:id="@+id/tvPaymentExcessHint"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:text="💡 Si abona más de lo que debe, el excedente quedará como Saldo a Favor para futuras compras."
+        android:text="🟢 Este abono se registrará como entrada de dinero en tu Jornada de hoy para el reporte final."
         android:textColor="#2E7D32"
         android:textSize="11sp" />
 
@@ -78,15 +110,14 @@
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:hint="Nota / Referencia de Pago (Opcional)"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        android:layout_marginTop="10dp"
+        android:hint="Nota / Referencia (Opcional, ej. Pago Móvil o Efectivo)">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etPaymentNote"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Ej: Pago Móvil Banesco ref 4482, o Efectivo"
+            android:textColor="@color/text_primary"
             android:textSize="14sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -95,7 +126,7 @@
         android:layout_width="match_parent"
         android:layout_height="52dp"
         android:layout_marginTop="20dp"
-        android:text="Guardar Abono"
+        android:text="Guardar Abono y Sumar a Jornada"
         android:textSize="15sp"
         android:textStyle="bold"
         app:cornerRadius="12dp"

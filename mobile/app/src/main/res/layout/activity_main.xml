@@ -2114,7 +2114,7 @@
                                         android:id="@+id/tvTrialPaymentAlertMessage"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="⏰ Tu prueba Zeasy PRO está por finalizar. Solicita tu enlace de pago para continuar sin interrupciones."
+                                        android:text="⏰ Tu período de prueba Zeasy PRO está por finalizar. Solicita tu código de activación a soporte."
                                         android:textColor="@color/text_primary"
                                         android:textSize="12sp" />
 
@@ -2124,7 +2124,7 @@
                                         android:layout_width="match_parent"
                                         android:layout_height="38dp"
                                         android:layout_marginTop="6dp"
-                                        android:text="💳 Solicitar Link de Pago PRO por WhatsApp"
+                                        android:text="🔑 Solicitar o Ingresar Código de Activación PRO"
                                         android:textSize="11sp"
                                         android:textStyle="bold"
                                         app:cornerRadius="6dp" />
@@ -2379,7 +2379,7 @@
                         android:layout_marginTop="4dp"
                         android:layout_marginBottom="24dp"
                         android:gravity="center"
-                        android:text="Zeasy v1.3.0 • Ciem tech solutions C.A"
+                        android:text="Zeasy v1.3.7 • Ciem tech solutions C.A"
                         android:textColor="@color/text_muted"
                         android:textSize="13sp" />
 

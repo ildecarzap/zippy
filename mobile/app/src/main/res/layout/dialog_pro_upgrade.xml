@@ -64,7 +64,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Desbloquea el potencial completo de tu negocio"
+                    android:text="Habilita las funciones avanzadas en tu terminal"
                     android:textColor="@color/accent_blue"
                     android:textStyle="bold"
                     android:textSize="13sp" />
@@ -75,7 +75,7 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="14dp"
             app:cardCornerRadius="14dp"
             app:cardElevation="0dp"
             app:strokeColor="@color/border_subtle"
@@ -86,7 +86,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="14dp">
 
                 <!-- Item 1: Multibanco -->
                 <LinearLayout
@@ -100,7 +100,7 @@
                         android:layout_height="28dp"
                         android:gravity="center"
                         android:text="🏦"
-                        android:textSize="18sp" />
+                        android:textSize="17sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -114,24 +114,24 @@
                             android:text="Detección y QR Multibanco Simultáneo"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
+                            android:textSize="13sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Banesco, BDV, Mercantil, Provincial, BNC y Bancamiga activos al mismo tiempo."
+                            android:text="Banesco, BDV, Mercantil, Provincial, BNC, Bancamiga y Binance Pay activos a la vez."
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
+                            android:textSize="11.5sp" />
                     </LinearLayout>
                 </LinearLayout>
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:layout_marginVertical="10dp"
+                    android:layout_marginVertical="8dp"
                     android:background="@color/border_subtle" />
 
-                <!-- Item 2: Reportes PDF -->
+                <!-- Item 2: Libreta PRO (PDF + Conciliación Automática) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -142,8 +142,8 @@
                         android:layout_width="28dp"
                         android:layout_height="28dp"
                         android:gravity="center"
-                        android:text="📄"
-                        android:textSize="18sp" />
+                        android:text="📒"
+                        android:textSize="17sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -154,70 +154,27 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Reportes Formales en PDF y Excel (.csv)"
+                            android:text="Libreta PRO: Conciliación Automática y PDF"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
+                            android:textSize="13sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Genera documentos contables con RIF, firmas y exporta en Excel para cuadre y auditoría."
+                            android:text="Descuenta deudas automáticamente al llegar el Pago Móvil y envía estados de cuenta en PDF."
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
+                            android:textSize="11.5sp" />
                     </LinearLayout>
                 </LinearLayout>
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:layout_marginVertical="10dp"
+                    android:layout_marginVertical="8dp"
                     android:background="@color/border_subtle" />
 
-                <!-- Item 3: Carga por Voz -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:gravity="center"
-                        android:text="🎙️"
-                        android:textSize="18sp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Carga Rápida de Gastos e Ingresos por Voz"
-                            android:textStyle="bold"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Dicta carreras, compras de repuestos o ventas en segundos mientras manejas."
-                            android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginVertical="10dp"
-                    android:background="@color/border_subtle" />
-
-                <!-- Item 4: Soundbox con Nombre -->
+                <!-- Item 3: Soundbox Parlante y Dictado por Voz -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -229,7 +186,7 @@
                         android:layout_height="28dp"
                         android:gravity="center"
                         android:text="🔊"
-                        android:textSize="18sp" />
+                        android:textSize="17sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -240,27 +197,27 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Soundbox Parlante con Síntesis de Voz"
+                            android:text="Soundbox Parlante y Carga por Voz"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
+                            android:textSize="13sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Anuncia los pagos por altavoz o corneta Bluetooth para evitar estafas con capturas falsas."
+                            android:text="Anuncia en voz alta cada pago recibido o fiado conciliado, y registra gastos hablando."
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
+                            android:textSize="11.5sp" />
                     </LinearLayout>
                 </LinearLayout>
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:layout_marginVertical="10dp"
+                    android:layout_marginVertical="8dp"
                     android:background="@color/border_subtle" />
 
-                <!-- Item 5: Nube & Migración -->
+                <!-- Item 4: Reportes PDF, Excel y Nube -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -271,8 +228,8 @@
                         android:layout_width="28dp"
                         android:layout_height="28dp"
                         android:gravity="center"
-                        android:text="☁️"
-                        android:textSize="18sp" />
+                        android:text="📄"
+                        android:textSize="17sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -283,298 +240,158 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Copia de Seguridad y Migración Inmediata"
+                            android:text="Cierres Contables PDF/Excel y Respaldo"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
+                            android:textSize="13sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Cambia de teléfono y recupera al instante todos tus cobros, QRs y configuración."
+                            android:text="Exporta cuadres auditables con desglose de fiados y respalda tu cartera para cambiar de equipo."
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginVertical="10dp"
-                    android:background="@color/border_subtle" />
-
-                <!-- Item 6: Billeteras Digitales y Cripto (Binance Pay) -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:gravity="center"
-                        android:text="🟡"
-                        android:textSize="18sp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Billeteras Digitales y Cobros en USDT"
-                            android:textStyle="bold"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Muestra tu QR de Binance Pay en pantalla, cobra en USDT por WhatsApp y recibe alertas con Soundbox."
-                            android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
+                            android:textSize="11.5sp" />
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- SELECTOR DE PAQUETES PRO -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Elige tu paquete de activación Zeasy PRO:"
-            android:textColor="@color/text_secondary"
-            android:textStyle="bold"
-            android:textSize="12sp" />
-
-        <LinearLayout
+        <!-- SECCIÓN DE CÓDIGO DE ACTIVACIÓN DEL DISPOSITIVO -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/accent_cyan"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/surface_variant">
 
-            <!-- Paquete 1 Mes -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardPackage1m"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/border_subtle"
-                app:strokeWidth="1dp"
-                app:cardBackgroundColor="@color/card_background">
+                android:orientation="vertical"
+                android:padding="12dp">
 
-                <LinearLayout
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:paddingVertical="10dp"
-                    android:paddingHorizontal="4dp">
+                    android:text="🔑 ¿Ya tienes tu código de activación?"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"
+                    android:textSize="12.5sp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="1 Mes"
-                        android:textColor="@color/text_primary"
-                        android:textStyle="bold"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/tvPrice1m"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="$2.99"
-                        android:textColor="@color/accent_blue"
-                        android:textStyle="bold"
-                        android:textSize="15sp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Mensual"
-                        android:textColor="@color/text_muted"
-                        android:textSize="10sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Paquete 3 Meses -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardPackage3m"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginHorizontal="2dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/border_subtle"
-                app:strokeWidth="1dp"
-                app:cardBackgroundColor="@color/card_background">
-
-                <LinearLayout
+                <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:paddingVertical="10dp"
-                    android:paddingHorizontal="4dp">
+                    android:layout_marginTop="8dp"
+                    android:hint="Ingresa tu Código de Activación PRO"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etProActivationCode"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="3 Meses"
-                        android:textColor="@color/text_primary"
-                        android:textStyle="bold"
-                        android:textSize="13sp" />
+                        android:inputType="textCapCharacters"
+                        android:singleLine="true"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-                    <TextView
-                        android:id="@+id/tvPrice3m"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="$7.99"
-                        android:textColor="@color/accent_blue"
-                        android:textStyle="bold"
-                        android:textSize="15sp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Ahorra 11%"
-                        android:textColor="@color/accent_green"
-                        android:textStyle="bold"
-                        android:textSize="10sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Paquete 1 Año (Recomendado) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardPackage12m"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1.15"
-                android:layout_marginStart="4dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/accent_green"
-                app:strokeWidth="2dp"
-                app:cardBackgroundColor="#F0FDF4">
-
-                <LinearLayout
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnProRedeemCode"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:paddingVertical="10dp"
-                    android:paddingHorizontal="4dp">
+                    android:layout_height="46dp"
+                    android:layout_marginTop="8dp"
+                    android:text="🔑 Validar y Activar Código"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="13.5sp"
+                    app:backgroundTint="@color/primary"
+                    app:cornerRadius="10dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="⭐ 1 Año"
-                        android:textColor="#166534"
-                        android:textStyle="bold"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/tvPrice12m"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="$29.99"
-                        android:textColor="#15803D"
-                        android:textStyle="bold"
-                        android:textSize="15sp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="2 Meses Gratis"
-                        android:textColor="#166534"
-                        android:textStyle="bold"
-                        android:textSize="10sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
-
-        <!-- AVISO ANTI-ESTAFAS Y CERO CUSTODIA -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginTop="10dp"
-            android:paddingHorizontal="4dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="🛡️ Zeasy nunca te pedirá claves ni datos bancarios. Cero custodia."
-                android:textColor="@color/text_muted"
-                android:textSize="11sp"
-                android:gravity="center" />
-        </LinearLayout>
-
-        <!-- Botón 1: Prueba Gratis de 7 Días -->
+        <!-- Botón 1: Prueba Gratis de 7 Días (Solo si no la ha usado) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnProTrial"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="14dp"
-            android:text="✨ Probar 7 Días Gratis"
+            android:layout_height="50dp"
+            android:layout_marginTop="12dp"
+            android:text="✨ Activar 7 Días de Prueba Gratis"
             android:textAllCaps="false"
             android:textColor="@color/primary"
             android:textStyle="bold"
-            android:textSize="15sp"
+            android:textSize="14sp"
             app:backgroundTint="@color/accent_green"
             app:cornerRadius="12dp" />
 
-        <!-- Botón 2: Activar con Soporte en WhatsApp -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnProWhatsapp"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_marginTop="8dp"
-            android:text="💬 Activar con Soporte (WhatsApp)"
-            android:textAllCaps="false"
-            android:textColor="@color/text_primary"
-            android:textSize="14sp"
-            app:backgroundTint="@color/accent_blue"
-            app:cornerRadius="12dp" />
-
-        <!-- Botón 3: Canjear Código -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnProRedeemCode"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="46dp"
-            android:layout_marginTop="8dp"
-            android:text="🔑 Tengo un Código de Activación"
-            android:textAllCaps="false"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp"
-            app:strokeColor="@color/border_subtle"
-            app:cornerRadius="12dp" />
-
-        <!-- Botón 4: Continuar con Free -->
+        <!-- Solicitud de Código a Soporte CIEM (WhatsApp o Correo) -->
         <TextView
-            android:id="@+id/tvProDismiss"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:gravity="center"
-            android:padding="8dp"
+            android:text="¿Necesitas solicitar un código de activación para tu negocio?"
+            android:textColor="@color/text_secondary"
+            android:textStyle="bold"
+            android:textSize="11.5sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnProWhatsapp"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="💬 Por WhatsApp"
+                android:textAllCaps="false"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
+                android:textSize="12.5sp"
+                app:backgroundTint="@color/accent_blue"
+                app:cornerRadius="10dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnProEmail"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="✉️ Por Correo"
+                android:textAllCaps="false"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
+                android:textSize="12.5sp"
+                app:strokeColor="@color/border_subtle"
+                app:cornerRadius="10dp" />
+        </LinearLayout>
+
+        <!-- AVISO ANTI-ESTAFAS Y CERO CUSTODIA -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="🛡️ Zeasy nunca te pedirá claves ni datos bancarios. Cero custodia."
+            android:textColor="@color/text_muted"
+            android:textSize="11sp"
+            android:gravity="center" />
+
+        <!-- Continuar con Free -->
+        <TextView
+            android:id="@+id/tvProDismiss"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:padding="6dp"
             android:text="Continuar con el Plan Básico Gratuito"
             android:textColor="@color/text_muted"
             android:textSize="13sp" />

@@ -721,4 +721,39 @@ object PreferencesHelper {
     fun hasCustomSecurityPin(context: Context): Boolean {
         return getPrefs(context).contains(KEY_SECURITY_PIN)
     }
+
+    /**
+     * Guarda un acuerdo de cobro (total o abono parcial) con céntimos de conciliación para un deudor,
+     * válido por 48 horas, para que cuando llegue el Pago Móvil exacto se descuente automáticamente.
+     */
+    fun savePendingDebtorConciliation(
+        context: Context,
+        debtorId: Long,
+        exactAmountVes: Double,
+        discountAmountUsd: Double
+    ) {
+        val prefs = getPrefs(context)
+        prefs.edit()
+            .putString("pending_concil_${debtorId}", "$exactAmountVes|$discountAmountUsd|${System.currentTimeMillis()}")
+            .apply()
+    }
+
+    fun getPendingDebtorConciliation(context: Context, debtorId: Long): Pair<Double, Double>? {
+        val raw = getPrefs(context).getString("pending_concil_${debtorId}", null) ?: return null
+        val parts = raw.split("|")
+        if (parts.size < 3) return null
+        val ves = parts[0].toDoubleOrNull() ?: return null
+        val usd = parts[1].toDoubleOrNull() ?: return null
+        val ts = parts[2].toLongOrNull() ?: return null
+        // Vigencia de 48 horas para el acuerdo de cobro
+        if (System.currentTimeMillis() - ts > 48L * 60 * 60 * 1000L) {
+            clearPendingDebtorConciliation(context, debtorId)
+            return null
+        }
+        return Pair(ves, usd)
+    }
+
+    fun clearPendingDebtorConciliation(context: Context, debtorId: Long) {
+        getPrefs(context).edit().remove("pending_concil_${debtorId}").apply()
+    }
 }

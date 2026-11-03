@@ -51,7 +51,7 @@ except Exception as e:
 app = FastAPI(
     title=settings.APP_NAME,
     description="Portal Web, Instructivo y Panel de Control de Licencias Zeasy - CIEM Tech Solutions C.A",
-    version="1.3.0",
+    version="1.3.7",
     docs_url=None if not settings.DEBUG else "/docs",
     redoc_url=None
 )

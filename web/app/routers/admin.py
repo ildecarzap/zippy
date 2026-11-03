@@ -500,6 +500,7 @@ async def admin_settings_page(
     company_rif = get_system_setting(db, "company_rif", settings.COMPANY_RIF)
     company_phone = get_system_setting(db, "company_phone", settings.COMPANY_PHONE)
     company_email = get_system_setting(db, "company_email", settings.COMPANY_EMAIL)
+    play_store_review_mode = get_system_setting(db, "play_store_review_mode", "false")
 
     return templates.TemplateResponse(
         request=request,
@@ -517,6 +518,7 @@ async def admin_settings_page(
             "company_rif": company_rif,
             "company_phone": company_phone,
             "company_email": company_email,
+            "play_store_review_mode": play_store_review_mode,
             "success": request.query_params.get("success"),
             "error": request.query_params.get("error")
         }
@@ -534,6 +536,7 @@ async def update_system_settings(
     company_rif: str = Form(...),
     company_phone: str = Form(...),
     company_email: str = Form(...),
+    play_store_review_mode: str = Form("false"),
     current_admin: AdminUser = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
@@ -547,6 +550,7 @@ async def update_system_settings(
     set_system_setting(db, "company_rif", company_rif.strip(), "RIF fiscal")
     set_system_setting(db, "company_phone", company_phone.strip(), "Teléfono oficial de contacto")
     set_system_setting(db, "company_email", company_email.strip(), "Correo oficial de soporte")
+    set_system_setting(db, "play_store_review_mode", "true" if play_store_review_mode.lower() == "true" else "false", "Modo revisión Google Play (desbloquea todo temporalmente)")
 
     logger.info(f"⚙️ [ADMIN] Parámetros del sistema y paquetes de precios actualizados por {current_admin.username}")
     return RedirectResponse(

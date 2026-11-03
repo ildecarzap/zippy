@@ -37,14 +37,32 @@ data class Debtor(
     val creditAmountUsd: Double
         get() = if (balanceUsd > 0) balanceUsd else 0.0
 
-    /** Calcula el equivalente en Bolívares según la tasa BCV suministrada */
+    /**
+     * Céntimos únicos de conciliación (de 0.01 a 0.99 Bs) asignados al deudor según su ID.
+     * Permite que al recibir un Pago Móvil por el monto exacto en Bs + céntimos,
+     * Zeasy detecte automáticamente a qué deudor pertenece y descuente su deuda.
+     */
+    val conciliationCents: Double
+        get() = if (id > 0L) (((id - 1L) % 99L) + 1L) / 100.0 else 0.01
+
+    /** Calcula el equivalente base en Bolívares según la tasa BCV suministrada */
     fun getEquivalentVes(bcvRate: Double): Double {
         val rate = if (bcvRate > 0) bcvRate else 1.0
         return when {
-            isDebtor -> debtAmountUsd * rate
-            hasCredit -> creditAmountUsd * rate
+            isDebtor -> Math.round(debtAmountUsd * rate * 100.0) / 100.0
+            hasCredit -> Math.round(creditAmountUsd * rate * 100.0) / 100.0
             else -> 0.0
         }
+    }
+
+    /**
+     * Calcula el monto exacto en Bolívares para conciliación automática de deuda,
+     * sumando los céntimos adicionales identificadores al equivalente BCV del día.
+     */
+    fun getConciliationVes(bcvRate: Double): Double {
+        if (!isDebtor) return getEquivalentVes(bcvRate)
+        val baseVes = getEquivalentVes(bcvRate)
+        return Math.round((baseVes + conciliationCents) * 100.0) / 100.0
     }
 }
 

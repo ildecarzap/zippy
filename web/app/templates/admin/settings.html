@@ -168,6 +168,15 @@
               <input type="number" step="1" min="1" max="168" name="expire_hours" class="form-control" value="{{ expire_hours }}" required>
               <small style="color: var(--color-text-muted); font-size: 0.78rem;">Tiempo límite antes de que CobrixPay anule la deuda.</small>
             </div>
+
+            <div class="form-group">
+              <label class="form-label">Modo de Operación en App Android</label>
+              <select name="play_store_review_mode" class="form-control">
+                <option value="false" {% if play_store_review_mode != 'true' %}selected{% endif %}>⚡ Modo Comercial PRO Activo (Solicitar Código)</option>
+                <option value="true" {% if play_store_review_mode == 'true' %}selected{% endif %}>🛡️ Modo Revisión Google Play (Todo Abierto)</option>
+              </select>
+              <small style="color: var(--color-text-muted); font-size: 0.78rem;">Activa o pausa el control de licencias PRO remotamente.</small>
+            </div>
           </div>
 
           <div style="border-top: 1px solid var(--color-border); padding-top: 18px; margin-bottom: 18px;">

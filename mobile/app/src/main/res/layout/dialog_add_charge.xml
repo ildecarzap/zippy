@@ -31,7 +31,7 @@
         android:id="@+id/layoutCreditNoticeBanner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="10dp"
         android:orientation="horizontal"
         android:background="#E8F5E9"
         android:padding="10dp"
@@ -48,25 +48,56 @@
             android:textSize="12sp" />
     </LinearLayout>
 
-    <!-- Campo de Monto en USD -->
-    <com.google.android.material.textfield.TextInputLayout
+    <!-- Selector de Moneda para Fiar: Bolívares o Dólares -->
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/toggleChargeCurrency"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="14dp"
-        android:hint="Monto en Dólares ($ USD) *"
-        app:prefixText="$ "
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:checkedButton="@id/btnChargeCurrencyUsd">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnChargeCurrencyVes"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Bs. Bolívares"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnChargeCurrencyUsd"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="$ Dólares (USD)"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+    <!-- Campo de Monto (Bs. o USD según selección) -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilChargeAmount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:hint="Monto a Fiar en Dólares ($ USD) *">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etChargeAmountUsd"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="numberDecimal"
+            android:textColor="@color/text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Equivalente en Bs calculado en tiempo real -->
+    <!-- Equivalente calculado en tiempo real y aviso de ajuste diario BCV -->
     <TextView
         android:id="@+id/tvChargeEquivBs"
         android:layout_width="wrap_content"
@@ -74,21 +105,29 @@
         android:layout_marginTop="4dp"
         android:text="≈ Bs. 0,00 (Tasa BCV: 45.00)"
         android:textColor="@color/text_secondary"
-        android:textSize="12sp" />
+        android:textStyle="bold"
+        android:textSize="12.5sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="🔄 La deuda se indexa y ajusta diariamente a la tasa oficial del BCV"
+        android:textColor="@color/ubii_cyan"
+        android:textSize="11sp" />
 
     <!-- Concepto / Artículos -->
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
-        android:hint="Artículos / Detalle (Opcional)"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        android:layout_marginTop="12dp"
+        android:hint="Artículos / Detalle (Opcional, ej. 3 Canillas, Queso)">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etChargeConcept"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Ej: 3 Canillas, 1 Harina, 500g Queso"
+            android:textColor="@color/text_primary"
             android:textSize="14sp" />
     </com.google.android.material.textfield.TextInputLayout>
 

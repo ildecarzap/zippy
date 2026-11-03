@@ -23,18 +23,30 @@
         android:textColor="@color/text_secondary"
         android:textSize="13sp" />
 
+    <!-- Botón para cargar datos desde la libreta de contactos del teléfono -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnPickContactNewDebtor"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:layout_marginTop="14dp"
+        android:text="📇 Cargar desde Contactos del Teléfono"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        app:cornerRadius="10dp" />
+
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:hint="Nombre o Apodo del Cliente *"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        android:layout_marginTop="12dp"
+        android:hint="Nombre o Apodo del Cliente * (ej. Doña Carmen)">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etNewDebtorName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textPersonName|textCapWords"
+            android:textColor="@color/text_primary"
             android:textSize="15sp"
             android:textStyle="bold" />
     </com.google.android.material.textfield.TextInputLayout>
@@ -42,33 +54,30 @@
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:hint="Teléfono (WhatsApp)"
-        app:startIconDrawable="@drawable/ic_contacts_ledger"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        android:layout_marginTop="10dp"
+        android:hint="Teléfono WhatsApp (ej. 04141234567)">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etNewDebtorPhone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="phone"
-            android:hint="Ej: 04141234567"
+            android:textColor="@color/text_primary"
             android:textSize="14sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:hint="Cédula / RIF (Opcional)"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        android:layout_marginTop="10dp"
+        android:hint="Cédula / RIF (Opcional, ej. V-18456789)">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etNewDebtorId"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textCapCharacters"
-            android:hint="Ej: V-18992011"
+            android:textColor="@color/text_primary"
             android:textSize="14sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -76,7 +85,7 @@
         android:id="@+id/btnSaveNewDebtor"
         android:layout_width="match_parent"
         android:layout_height="52dp"
-        android:layout_marginTop="22dp"
+        android:layout_marginTop="20dp"
         android:text="Guardar en Libreta"
         android:textSize="15sp"
         android:textStyle="bold"

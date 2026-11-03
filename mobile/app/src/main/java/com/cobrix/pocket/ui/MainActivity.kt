@@ -309,6 +309,55 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Callback y Launcher para importar deudor desde la libreta de contactos del teléfono
+    private var onContactPickedCallback: ((name: String, phone: String) -> Unit)? = null
+
+    private val pickContactLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val contactUri = result.data?.data
+            if (contactUri != null) {
+                try {
+                    val projection = arrayOf(
+                        android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER
+                    )
+                    contentResolver.query(contactUri, projection, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val nameIdx = cursor.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                            val numIdx = cursor.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER)
+                            val contactName = if (nameIdx >= 0) cursor.getString(nameIdx)?.trim() ?: "" else ""
+                            val rawNumber = if (numIdx >= 0) cursor.getString(numIdx)?.trim() ?: "" else ""
+
+                            // Normalizar número venezolano (ej. +58 414-1234567 -> 04141234567)
+                            var cleanPhone = rawNumber.replace(Regex("[^0-9+]"), "")
+                            if (cleanPhone.startsWith("+58")) {
+                                cleanPhone = "0" + cleanPhone.removePrefix("+58")
+                            } else if (cleanPhone.startsWith("58") && cleanPhone.length == 12) {
+                                cleanPhone = "0" + cleanPhone.substring(2)
+                            } else {
+                                cleanPhone = cleanPhone.replace("+", "")
+                            }
+
+                            onContactPickedCallback?.invoke(contactName, cleanPhone)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(this, "No se pudo leer el contacto seleccionado", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun launchPhoneContactPicker(onPicked: (name: String, phone: String) -> Unit) {
+        onContactPickedCallback = onPicked
+        try {
+            val intent = Intent(Intent.ACTION_PICK, android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+            pickContactLauncher.launch(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "No se encontró aplicación de Contactos en el teléfono", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     // Receptor en tiempo real para cuando el servicio captura un pago
     private val paymentReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -319,13 +368,22 @@ class MainActivity : AppCompatActivity() {
                 val ref = intent.getStringExtra(PocketNotificationListenerService.EXTRA_REF) ?: ""
                 val bank = intent.getStringExtra(PocketNotificationListenerService.EXTRA_BANK) ?: ""
                 val phone = intent.getStringExtra(PocketNotificationListenerService.EXTRA_PHONE) ?: ""
+                val reconciledDebtor = intent.getStringExtra(PocketNotificationListenerService.EXTRA_RECONCILED_DEBTOR) ?: ""
 
                 runOnUiThread {
                     loadTodayLedger()
+                    loadDebtors()
                     PreferencesHelper.getAndClearPendingCelebration(this@MainActivity)
+                    if (reconciledDebtor.isNotEmpty()) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "✅ ¡Pago Móvil conciliado automáticamente con el fiado de $reconciledDebtor!",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                     if (PreferencesHelper.isCelebrationScreenEnabled(this@MainActivity) && (amount > 0.0 || amountUsd > 0.0)) {
                         showPaymentCelebrationDialog(amount, ref, bank, phone, amountUsd, isCrypto)
-                    } else {
+                    } else if (reconciledDebtor.isEmpty()) {
                         Toast.makeText(this@MainActivity, "🎉 ¡Nuevo pago registrado en caja!", Toast.LENGTH_LONG).show()
                     }
                 }
@@ -418,6 +476,7 @@ class MainActivity : AppCompatActivity() {
         }
         updateShiftUI()
         loadTodayLedger()
+        loadDebtors()
         setupCashierBankSelector()
         renderCashierBankCards()
         updateCashierHeaderSummary()
@@ -783,6 +842,7 @@ class MainActivity : AppCompatActivity() {
             updateCashierHeaderSummary()
             updateSelectedBankConfigCard()
             updateDisplayAmount()
+            loadDebtors()
             loadSettings(forceReload = true)
 
             lifecycleScope.launch {
@@ -1864,6 +1924,18 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
+        dBinding.btnPickContactNewDebtor.setOnClickListener {
+            launchPhoneContactPicker { pickedName, pickedPhone ->
+                if (pickedName.isNotEmpty()) {
+                    dBinding.etNewDebtorName.setText(pickedName)
+                }
+                if (pickedPhone.isNotEmpty()) {
+                    dBinding.etNewDebtorPhone.setText(pickedPhone)
+                }
+                Toast.makeText(this, "📇 Datos cargados desde tus contactos", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         dBinding.btnSaveNewDebtor.setOnClickListener {
             val name = dBinding.etNewDebtorName.text.toString().trim()
             val phone = dBinding.etNewDebtorPhone.text.toString().trim().ifBlank { null }
@@ -1901,6 +1973,7 @@ class MainActivity : AppCompatActivity() {
 
         val profile = PreferencesHelper.getUserProfile(this)
         val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+        var isChargeVesMode = false // Por defecto $ USD, seleccionable a Bs. Bolívares
 
         dBinding.tvChargeClientName.text = "Cliente: ${debtor.name}"
 
@@ -1915,26 +1988,66 @@ class MainActivity : AppCompatActivity() {
             dBinding.layoutCreditNoticeBanner.visibility = View.GONE
         }
 
+        fun updateChargeConversion() {
+            val rawInput = dBinding.etChargeAmountUsd.text?.toString()?.replace(',', '.')?.toDoubleOrNull() ?: 0.0
+            if (isChargeVesMode) {
+                val equivUsd = rawInput / rate
+                dBinding.tvChargeEquivBs.text = String.format(
+                    Locale.US,
+                    "≈ $%.2f USD (Tasa BCV: %.2f)",
+                    equivUsd,
+                    rate
+                )
+            } else {
+                val equivBs = rawInput * rate
+                dBinding.tvChargeEquivBs.text = String.format(
+                    Locale.US,
+                    "≈ Bs. %.2f (Tasa BCV: %.2f)",
+                    equivBs,
+                    rate
+                )
+            }
+        }
+
+        dBinding.toggleChargeCurrency.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                isChargeVesMode = (checkedId == R.id.btnChargeCurrencyVes)
+                dBinding.tilChargeAmount.hint = if (isChargeVesMode) {
+                    "Monto a Fiar en Bolívares (Bs.) *"
+                } else {
+                    "Monto a Fiar en Dólares ($ USD) *"
+                }
+                updateChargeConversion()
+            }
+        }
+
         dBinding.etChargeAmountUsd.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val inputUsd = s?.toString()?.toDoubleOrNull() ?: 0.0
-                val equivBs = inputUsd * rate
-                dBinding.tvChargeEquivBs.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa BCV: %.2f)", equivBs, rate)
+                updateChargeConversion()
             }
             override fun afterTextChanged(s: Editable?) {}
         })
 
         dBinding.btnConfirmCharge.setOnClickListener {
-            val amountUsd = dBinding.etChargeAmountUsd.text.toString().toDoubleOrNull() ?: 0.0
+            val rawInput = dBinding.etChargeAmountUsd.text.toString().replace(',', '.').toDoubleOrNull() ?: 0.0
             val concept = dBinding.etChargeConcept.text.toString().trim()
 
-            if (amountUsd <= 0.0) {
+            if (rawInput <= 0.0) {
                 dBinding.etChargeAmountUsd.error = "Ingresa un monto válido"
                 return@setOnClickListener
             }
 
-            val amountVes = amountUsd * rate
+            val amountUsd: Double
+            val amountVes: Double
+            if (isChargeVesMode) {
+                amountVes = rawInput
+                amountUsd = rawInput / rate
+            } else {
+                amountUsd = rawInput
+                amountVes = rawInput * rate
+            }
+
             dbHelper.addCharge(
                 debtorId = debtor.id,
                 amountUsd = amountUsd,
@@ -1943,7 +2056,11 @@ class MainActivity : AppCompatActivity() {
                 notes = concept.ifBlank { "Compra fiada" }
             )
 
-            Toast.makeText(this, "✅ Cargo registrado a ${debtor.name}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                String.format(Locale.US, "✅ Fiado registrado a %s ($%.2f / Bs. %.2f)", debtor.name, amountUsd, amountVes),
+                Toast.LENGTH_SHORT
+            ).show()
             dialog.dismiss()
             loadDebtors()
         }
@@ -1960,22 +2077,24 @@ class MainActivity : AppCompatActivity() {
 
         val profile = PreferencesHelper.getUserProfile(this)
         val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+        var isPaymentVesMode = false
 
         dBinding.tvPaymentClientName.text = "Cliente: ${debtor.name}"
 
         if (debtor.isDebtor) {
             dBinding.tvPaymentCurrentDebt.text = String.format(
                 Locale.US,
-                "Deuda actual: $%.2f USD (≈ Bs. %.2f)",
+                "Deuda actual: $%.2f USD (≈ Bs. %.2f BCV)",
                 debtor.debtAmountUsd,
-                debtor.debtAmountUsd * rate
+                debtor.getEquivalentVes(rate)
             )
             dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#C62828"))
         } else if (debtor.hasCredit) {
             dBinding.tvPaymentCurrentDebt.text = String.format(
                 Locale.US,
-                "Saldo a favor actual: $%.2f USD",
-                debtor.creditAmountUsd
+                "Saldo a favor actual: $%.2f USD (≈ Bs. %.2f)",
+                debtor.creditAmountUsd,
+                debtor.getEquivalentVes(rate)
             )
             dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#2E7D32"))
         } else {
@@ -1983,47 +2102,106 @@ class MainActivity : AppCompatActivity() {
             dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#5E6C84"))
         }
 
+        fun updatePaymentConversion() {
+            val rawInput = dBinding.etPaymentAmountUsd.text?.toString()?.replace(',', '.')?.toDoubleOrNull() ?: 0.0
+            val inputUsd: Double
+            if (isPaymentVesMode) {
+                inputUsd = rawInput / rate
+                dBinding.tvPaymentEquivBs.text = String.format(Locale.US, "≈ $%.2f USD (Tasa BCV: %.2f)", inputUsd, rate)
+            } else {
+                inputUsd = rawInput
+                val equivBs = rawInput * rate
+                dBinding.tvPaymentEquivBs.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa BCV: %.2f)", equivBs, rate)
+            }
+
+            if (debtor.isDebtor && inputUsd > debtor.debtAmountUsd + 0.009) {
+                val excess = inputUsd - debtor.debtAmountUsd
+                dBinding.tvPaymentExcessHint.text = String.format(
+                    Locale.US,
+                    "💡 El excedente de $%.2f USD quedará como Saldo a Favor y el total entrará a Jornada.",
+                    excess
+                )
+            } else {
+                dBinding.tvPaymentExcessHint.text = "🟢 Este abono se registrará como entrada de dinero en tu Jornada de hoy para el reporte final."
+            }
+        }
+
+        dBinding.togglePaymentCurrency.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                isPaymentVesMode = (checkedId == R.id.btnPaymentCurrencyVes)
+                dBinding.tilPaymentAmount.hint = if (isPaymentVesMode) {
+                    "Monto a Abonar en Bolívares (Bs.) *"
+                } else {
+                    "Monto a Abonar en Dólares ($ USD) *"
+                }
+                updatePaymentConversion()
+            }
+        }
+
         dBinding.etPaymentAmountUsd.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val inputUsd = s?.toString()?.toDoubleOrNull() ?: 0.0
-                val equivBs = inputUsd * rate
-                dBinding.tvPaymentEquivBs.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa BCV: %.2f)", equivBs, rate)
-
-                if (debtor.isDebtor && inputUsd > debtor.debtAmountUsd) {
-                    val excess = inputUsd - debtor.debtAmountUsd
-                    dBinding.tvPaymentExcessHint.visibility = View.VISIBLE
-                    dBinding.tvPaymentExcessHint.text = String.format(
-                        Locale.US,
-                        "💡 El excedente de $%.2f USD quedará guardado como Saldo a Favor del cliente.",
-                        excess
-                    )
-                }
+                updatePaymentConversion()
             }
             override fun afterTextChanged(s: Editable?) {}
         })
 
         dBinding.btnConfirmPayment.setOnClickListener {
-            val amountUsd = dBinding.etPaymentAmountUsd.text.toString().toDoubleOrNull() ?: 0.0
+            val rawInput = dBinding.etPaymentAmountUsd.text.toString().replace(',', '.').toDoubleOrNull() ?: 0.0
             val note = dBinding.etPaymentNote.text.toString().trim()
 
-            if (amountUsd <= 0.0) {
+            if (rawInput <= 0.0) {
                 dBinding.etPaymentAmountUsd.error = "Ingresa un monto válido"
                 return@setOnClickListener
             }
 
-            val amountVes = amountUsd * rate
+            val amountUsd: Double
+            val amountVes: Double
+            if (isPaymentVesMode) {
+                amountVes = rawInput
+                // Si el pago en Bs cubre exactamente la deuda base o el monto de conciliación, saldar la deuda completa sin residuo de redondeo
+                val baseDebtVes = debtor.getEquivalentVes(rate)
+                val concilDebtVes = debtor.getConciliationVes(rate)
+                amountUsd = if (debtor.isDebtor && (Math.abs(rawInput - baseDebtVes) < 0.05 || Math.abs(rawInput - concilDebtVes) < 0.05)) {
+                    debtor.debtAmountUsd
+                } else {
+                    rawInput / rate
+                }
+            } else {
+                amountUsd = rawInput
+                amountVes = rawInput * rate
+            }
+
+            val cleanNote = note.ifBlank { "Abono a cuenta" }
+
+            // 1. Registrar en Jornada como Entrada de Dinero (INCOME) para que el reporte del día lo considere
+            val tx = Transaction(
+                amount = amountVes,
+                amountUsd = amountUsd,
+                reference = "",
+                senderName = debtor.name,
+                type = TransactionType.INCOME,
+                category = TransactionCategories.INCOME_ABONO_FIADO,
+                note = "Abono Fiado (${debtor.name}): $cleanNote",
+                timestamp = System.currentTimeMillis(),
+                isManual = true
+            )
+            val insertedTxId = dbHelper.insertTransaction(tx)
+
+            // 2. Registrar el abono en la Libreta vinculado a la transacción de Jornada
             dbHelper.addPayment(
                 debtorId = debtor.id,
                 amountUsd = amountUsd,
                 amountVes = amountVes,
                 bcvRate = rate,
-                notes = note.ifBlank { "Abono a cuenta" }
+                matchedTxId = if (insertedTxId > 0L) insertedTxId else null,
+                notes = cleanNote
             )
 
-            Toast.makeText(this, "✅ Abono registrado a ${debtor.name}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "✅ Abono de ${debtor.name} registrado y sumado a Jornada", Toast.LENGTH_SHORT).show()
             dialog.dismiss()
             loadDebtors()
+            loadTodayLedger()
         }
 
         dialog.show()
@@ -2039,18 +2217,52 @@ class MainActivity : AppCompatActivity() {
         }
 
         val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
-        val qrUri = profile.qrImageUri?.let { Uri.parse(it) }
+        val targetBankCode = activeCashierBankCode.ifBlank { profile.bankCode }
+        val targetBankName = activeCashierBankName.ifBlank { profile.bankName }
+        val qrUriString = PreferencesHelper.getBankQrUri(this, targetBankCode) ?: profile.qrImageUri
+        val qrUri = qrUriString?.let { Uri.parse(it) }
+        val autoConcilAllowed = PlanCapabilityManager.canUseAutoConciliation(this)
 
         if (debtor.isDebtor) {
-            val msg = WhatsAppHelper.generateDebtReminderMessage(
-                profile = profile,
-                debtorName = debtor.name,
-                balanceUsd = debtor.debtAmountUsd,
-                bcvRate = rate,
-                bankName = activeCashierBankName.ifBlank { profile.bankName },
-                bankCode = activeCashierBankCode.ifBlank { profile.bankCode }
+            val totalUsd = debtor.debtAmountUsd
+            val totalVes = debtor.getEquivalentVes(rate)
+            val totalConcilVes = if (autoConcilAllowed) debtor.getConciliationVes(rate) else totalVes
+
+            val options = arrayOf(
+                String.format(
+                    Locale.US,
+                    "💵 Cobrar Deuda Total ($%.2f USD → Bs. %.2f)",
+                    totalUsd,
+                    totalConcilVes
+                ),
+                "🤝 Acordar Abono Parcial (Monto específico)"
             )
-            WhatsAppHelper.sendViaWhatsApp(this, phone, msg, qrUri)
+
+            AlertDialog.Builder(this)
+                .setTitle("💬 Cobrar a ${debtor.name}")
+                .setItems(options) { _, which ->
+                    if (which == 0) {
+                        if (autoConcilAllowed) {
+                            PreferencesHelper.savePendingDebtorConciliation(this, debtor.id, totalConcilVes, totalUsd)
+                        }
+                        val msg = WhatsAppHelper.generateDebtReminderMessage(
+                            profile = profile,
+                            debtorName = debtor.name,
+                            balanceUsd = debtor.debtAmountUsd,
+                            bcvRate = rate,
+                            bankName = targetBankName,
+                            bankCode = targetBankCode,
+                            conciliationCents = debtor.conciliationCents,
+                            requestedAmountUsd = null,
+                            includeConciliationCents = autoConcilAllowed
+                        )
+                        WhatsAppHelper.sendViaWhatsApp(this, phone, msg, qrUri)
+                    } else {
+                        showPartialWhatsAppChargeDialog(debtor, rate, targetBankName, targetBankCode, qrUri, phone)
+                    }
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
         } else if (debtor.hasCredit) {
             val msg = WhatsAppHelper.generateCreditNoticeMessage(
                 profile = profile,
@@ -2062,6 +2274,64 @@ class MainActivity : AppCompatActivity() {
         } else {
             Toast.makeText(this, "El cliente está al día ($0.00)", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun showPartialWhatsAppChargeDialog(
+        debtor: Debtor,
+        rate: Double,
+        targetBankName: String,
+        targetBankCode: String,
+        qrUri: Uri?,
+        phone: String
+    ) {
+        val profile = PreferencesHelper.getUserProfile(this)
+        val autoConcilAllowed = PlanCapabilityManager.canUseAutoConciliation(this)
+
+        val input = EditText(this).apply {
+            hint = String.format(Locale.US, "Monto en $ USD (Deuda: $%.2f)", debtor.debtAmountUsd)
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setPadding(48, 36, 48, 36)
+        }
+
+        val concilNotice = if (autoConcilAllowed) {
+            "\n\n✨ Se sumarán +Bs. ${String.format(Locale.US, "%.2f", debtor.conciliationCents)} de céntimos de conciliación para que cuando caiga el Pago Móvil se descuente automáticamente."
+        } else ""
+
+        AlertDialog.Builder(this)
+            .setTitle("🤝 Acordar Abono Parcial")
+            .setMessage("Ingresa el monto en dólares ($ USD) que ${debtor.name} acordó abonar hoy:$concilNotice")
+            .setView(input)
+            .setPositiveButton("Enviar por WhatsApp") { _, _ ->
+                val raw = input.text.toString().replace(",", ".").trim()
+                val partialUsd = raw.toDoubleOrNull() ?: 0.0
+                if (partialUsd <= 0.0) {
+                    Toast.makeText(this, "Ingresa un monto válido mayor a 0", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                val baseVes = Math.round(partialUsd * rate * 100.0) / 100.0
+                val exactConcilVes = if (autoConcilAllowed) {
+                    Math.round((baseVes + debtor.conciliationCents) * 100.0) / 100.0
+                } else baseVes
+
+                if (autoConcilAllowed) {
+                    PreferencesHelper.savePendingDebtorConciliation(this, debtor.id, exactConcilVes, partialUsd)
+                }
+
+                val msg = WhatsAppHelper.generateDebtReminderMessage(
+                    profile = profile,
+                    debtorName = debtor.name,
+                    balanceUsd = debtor.debtAmountUsd,
+                    bcvRate = rate,
+                    bankName = targetBankName,
+                    bankCode = targetBankCode,
+                    conciliationCents = debtor.conciliationCents,
+                    requestedAmountUsd = partialUsd,
+                    includeConciliationCents = autoConcilAllowed
+                )
+                WhatsAppHelper.sendViaWhatsApp(this, phone, msg, qrUri)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
     private fun showDebtorDetailDialog(debtor: Debtor) {
@@ -2077,7 +2347,15 @@ class MainActivity : AppCompatActivity() {
         dBinding.tvDetailDebtorName.text = debtor.name
         val phone = debtor.phone ?: "Sin WhatsApp"
         val idDoc = if (!debtor.identification.isNullOrBlank()) " • ${debtor.identification}" else ""
-        dBinding.tvDetailDebtorMeta.text = "$phone$idDoc"
+        val concilText = if (debtor.isDebtor) {
+            String.format(
+                Locale.US,
+                "\nBs. %.2f (BCV) • Monto exacto a conciliar: Bs. %.2f",
+                debtor.getEquivalentVes(rate),
+                debtor.getConciliationVes(rate)
+            )
+        } else ""
+        dBinding.tvDetailDebtorMeta.text = "$phone$idDoc$concilText"
 
         when {
             debtor.isDebtor -> {
@@ -2135,6 +2413,27 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Estado del botón de Estado de Cuenta PDF según plan
+        if (PlanCapabilityManager.canExportDebtorPdf(this)) {
+            dBinding.btnDetailSharePdf.text = "📄 Enviar Estado de Cuenta Detallado (PDF)"
+        } else {
+            dBinding.btnDetailSharePdf.text = "📄 Estado de Cuenta Detallado en PDF (PRO ⚡)"
+        }
+
+        dBinding.btnDetailSharePdf.setOnClickListener {
+            if (!PlanCapabilityManager.canExportDebtorPdf(this)) {
+                dialog.dismiss()
+                showProUpgradeDialog("el envío de Estados de Cuenta detallados en PDF")
+                return@setOnClickListener
+            }
+            val pdfFile = ReportHelper.generateDebtorStatementPdf(this, profile, debtor, entries)
+            if (pdfFile != null) {
+                ReportHelper.shareDebtorStatementPdf(this, pdfFile, debtor.name, debtor.phone)
+            } else {
+                Toast.makeText(this, "No se pudo generar el PDF del estado de cuenta", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         dBinding.btnDetailEdit.setOnClickListener {
             showEditDebtorDialog(debtor, dialog)
         }
@@ -2166,6 +2465,18 @@ class MainActivity : AppCompatActivity() {
         dBinding.etEditDebtorName.setText(debtor.name)
         dBinding.etEditDebtorPhone.setText(debtor.phone ?: "")
         dBinding.etEditDebtorId.setText(debtor.identification ?: "")
+
+        dBinding.btnPickContactEditDebtor.setOnClickListener {
+            launchPhoneContactPicker { pickedName, pickedPhone ->
+                if (pickedName.isNotEmpty()) {
+                    dBinding.etEditDebtorName.setText(pickedName)
+                }
+                if (pickedPhone.isNotEmpty()) {
+                    dBinding.etEditDebtorPhone.setText(pickedPhone)
+                }
+                Toast.makeText(this, "📇 Datos cargados desde tus contactos", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         dBinding.btnCancelEditDebtor.setOnClickListener { dialog.dismiss() }
 
@@ -2267,8 +2578,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onQuickFiarClicked() {
-        val amount = currentInput.toDoubleOrNull() ?: 0.0
-        val actualAmount = amount / 100.0
+        val actualAmount = currentInput.toDoubleOrNull() ?: 0.0
 
         if (actualAmount <= 0.0) {
             Toast.makeText(this, "Ingresa un monto en la caja primero", Toast.LENGTH_SHORT).show()
@@ -2412,6 +2722,8 @@ class MainActivity : AppCompatActivity() {
                     val catDisplay = TransactionCategories.getCategoryDisplayName(tx.category)
                     itemBinding.tvTxTitle.text = when {
                         isCrypto -> "Binance Pay (Cripto)"
+                        tx.category == TransactionCategories.INCOME_ABONO_FIADO ->
+                            if (tx.bankName.isNotEmpty()) "📒 Abono Fiado (${tx.bankName})" else "📒 Abono de Fiado (Libreta)"
                         tx.isManual -> "Ingreso: $catDisplay"
                         else -> "Pago Móvil ${tx.bankName}"
                     }
@@ -2583,12 +2895,37 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
         val isIncome = tx.type == TransactionType.INCOME
-        dialogBinding.tvEditTxTitle.text = if (isIncome) "Editar Ingreso" else "Editar Gasto"
+        dialogBinding.tvEditTxTitle.text = if (isIncome) "Detalle de Ingreso" else "Detalle de Gasto"
         dialogBinding.tvEditTxSubtitle.text = if (tx.isManual) "Registro manual agregado por ti" else "Detectado automáticamente de ${tx.bankName}"
         dialogBinding.etEditTxAmount.setText(String.format(Locale.US, "%.2f", tx.amount))
         dialogBinding.etEditTxCategory.setText(TransactionCategories.getCategoryDisplayName(tx.category))
         dialogBinding.etEditTxReference.setText(tx.reference)
         dialogBinding.etEditTxNote.setText(tx.note)
+
+        // Si es un Ingreso (Pago Móvil / Cobro), mostrar sección para conciliar con un Fiado de la Libreta
+        if (isIncome) {
+            dialogBinding.layoutTxFiadoSection.visibility = View.VISIBLE
+            val linkedEntry = dbHelper.getLedgerEntryByTransactionId(tx.id)
+            if (linkedEntry != null) {
+                val linkedDebtor = dbHelper.getDebtorById(linkedEntry.debtorId)
+                val debtorName = linkedDebtor?.name ?: "Cliente"
+                dialogBinding.tvTxFiadoStatus.text = String.format(
+                    Locale.US,
+                    "✅ Aplicado como pago de fiado a: %s ($%.2f USD descontados)",
+                    debtorName,
+                    linkedEntry.amountUsd
+                )
+                dialogBinding.btnAssignTxToFiado.visibility = View.GONE
+            } else {
+                dialogBinding.tvTxFiadoStatus.text = "📒 ¿Existe duda o este pago corresponde a un Fiado de la Libreta?"
+                dialogBinding.btnAssignTxToFiado.visibility = View.VISIBLE
+                dialogBinding.btnAssignTxToFiado.setOnClickListener {
+                    showAssignTransactionToDebtorDialog(tx, dialog)
+                }
+            }
+        } else {
+            dialogBinding.layoutTxFiadoSection.visibility = View.GONE
+        }
 
         dialogBinding.btnSaveEditTx.setOnClickListener {
             val amount = dialogBinding.etEditTxAmount.text.toString().replace(',', '.').toDoubleOrNull() ?: 0.0
@@ -2619,6 +2956,7 @@ class MainActivity : AppCompatActivity() {
                     dbHelper.deleteTransaction(tx.id)
                     dialog.dismiss()
                     loadTodayLedger()
+                    loadDebtors()
                     Toast.makeText(this, "Movimiento eliminado", Toast.LENGTH_SHORT).show()
                 }
                 .setNegativeButton("Cancelar", null)
@@ -2626,6 +2964,114 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    /**
+     * Permite considerar cualquier ingreso o Pago Móvil de Jornada como el pago/abono de un fiado,
+     * descontándolo de la deuda del cliente seleccionado en la Libreta.
+     */
+    private fun showAssignTransactionToDebtorDialog(tx: Transaction, parentTxDialog: Dialog) {
+        val allDebtors = dbHelper.getAllDebtors()
+        if (allDebtors.isEmpty()) {
+            Toast.makeText(this, "No tienes clientes registrados en la Libreta aún", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val profile = PreferencesHelper.getUserProfile(this)
+        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+
+        // Ordenar priorizando deudores con deuda activa
+        val sortedDebtors = allDebtors.sortedWith(
+            compareByDescending<Debtor> { it.isDebtor }
+                .thenByDescending { it.debtAmountUsd }
+                .thenBy { it.name }
+        )
+
+        val items = sortedDebtors.map { d ->
+            when {
+                d.isDebtor -> String.format(
+                    Locale.US,
+                    "🔴 %s — Debe $%.2f (Bs. %.2f)",
+                    d.name,
+                    d.debtAmountUsd,
+                    d.getEquivalentVes(rate)
+                )
+                d.hasCredit -> String.format(
+                    Locale.US,
+                    "🟢 %s — A favor $%.2f",
+                    d.name,
+                    d.creditAmountUsd
+                )
+                else -> "⚪ ${d.name} — Al día ($0.00)"
+            }
+        }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("📒 Considerar Pago de un Fiado")
+            .setItems(items) { _, which ->
+                val selectedDebtor = sortedDebtors[which]
+                val baseDebtVes = selectedDebtor.getEquivalentVes(rate)
+                val concilDebtVes = selectedDebtor.getConciliationVes(rate)
+
+                // Si el monto en Bs coincide con la deuda base o el monto de conciliación (margen 1.00 Bs), saldar deuda exacta
+                val discountUsd = if (selectedDebtor.isDebtor &&
+                    (Math.abs(tx.amount - baseDebtVes) <= 1.0 || Math.abs(tx.amount - concilDebtVes) <= 1.0)
+                ) {
+                    selectedDebtor.debtAmountUsd
+                } else if (tx.amountUsd > 0.0) {
+                    tx.amountUsd
+                } else {
+                    tx.amount / rate
+                }
+
+                val refLabel = if (tx.reference.isNotBlank()) "Ref: ${tx.reference}" else "S/R"
+                val bankLabel = tx.bankName.ifBlank { "Jornada" }
+
+                dbHelper.addPayment(
+                    debtorId = selectedDebtor.id,
+                    amountUsd = discountUsd,
+                    amountVes = tx.amount,
+                    bcvRate = rate,
+                    matchedTxId = tx.id,
+                    notes = "Aplicado desde Jornada ($bankLabel • $refLabel)"
+                )
+
+                val newSender = if (tx.senderName.isNotBlank() && !tx.senderName.contains(selectedDebtor.name)) {
+                    "${selectedDebtor.name} (${tx.senderName})"
+                } else {
+                    selectedDebtor.name
+                }
+                val newNote = if (tx.note.isNotBlank()) {
+                    "${tx.note} • ✅ Fiado: ${selectedDebtor.name}"
+                } else {
+                    "✅ Pago de Fiado: ${selectedDebtor.name}"
+                }
+
+                val updatedTx = tx.copy(
+                    category = TransactionCategories.INCOME_ABONO_FIADO,
+                    senderName = newSender,
+                    note = newNote
+                )
+                dbHelper.updateTransaction(updatedTx)
+
+                parentTxDialog.dismiss()
+                loadTodayLedger()
+                loadDebtors()
+
+                Toast.makeText(
+                    this,
+                    String.format(
+                        Locale.US,
+                        "✅ Pago de Bs. %.2f ($%.2f) descontado de la deuda de %s",
+                        tx.amount,
+                        discountUsd,
+                        selectedDebtor.name
+                    ),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
     private fun getTimeRangeForDay(cal: Calendar): Pair<Long, Long> {
@@ -3378,7 +3824,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (PlanCapabilityManager.PLAY_STORE_REVIEW_MODE) {
+        if (PlanCapabilityManager.isReviewMode(this)) {
             binding.tvSettingsWalletsProBadge.visibility = View.GONE
         } else {
             binding.tvSettingsWalletsProBadge.visibility = View.VISIBLE
@@ -3565,6 +4011,7 @@ class MainActivity : AppCompatActivity() {
                     binding.etSettingsBcvRate.setText(formatted)
                     BcvRateHelper.applyRateToProfile(this@MainActivity, result.rate)
                     updateDisplayAmount()
+                    loadDebtors()
                     Toast.makeText(this@MainActivity, "✅ Tasa oficial BCV actualizada: Bs. $formatted", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this@MainActivity, "⚠️ No se pudo obtener tasa BCV: ${result.errorMessage}", Toast.LENGTH_SHORT).show()
@@ -3631,11 +4078,10 @@ class MainActivity : AppCompatActivity() {
 
         // Botón Generar Código de Acceso para Zeasy Dashboard PC
         binding.btnGenerateDashboardPin.setOnClickListener {
-            val plan = PlanCapabilityManager.getPlanType(this)
-            val isPro = (plan != PlanType.FREE) || PlanCapabilityManager.PLAY_STORE_REVIEW_MODE
+            val isPro = PlanCapabilityManager.isPro(this)
 
             if (!isPro) {
-                showProUpgradeDialog("Zeasy Dashboard PC y Auditoría Contable ($2.99/mes)")
+                showProUpgradeDialog("Zeasy Dashboard PC y Auditoría Contable")
                 return@setOnClickListener
             }
 
@@ -3819,8 +4265,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Estado del Plan Zeasy PRO y seguimiento de prueba / renovación
-        if (PlanCapabilityManager.PLAY_STORE_REVIEW_MODE) {
+        // Estado del Plan Zeasy PRO y seguimiento de código de activación
+        if (PlanCapabilityManager.isReviewMode(this)) {
             binding.tvSettingsPlanBadge.text = "Zeasy Edición Completa ⭐"
             binding.tvSettingsPlanDescription.text = "Acceso ilimitado a todas las herramientas: Multibanco, Soundbox por voz, Binance Pay y Reportes."
             binding.cardTrialPaymentAlert.visibility = View.GONE
@@ -3837,25 +4283,24 @@ class MainActivity : AppCompatActivity() {
         val hasHadPaidPro = PlanCapabilityManager.hasHadPaidPro(this)
 
         binding.tvSettingsPlanBadge.text = when (planType) {
-            PlanType.FREE -> if (hasHadPaidPro) "Plan Básico (PRO Vencido)" else "Plan Básico Gratuito"
+            PlanType.FREE -> if (hasHadPaidPro) "Plan Básico (Credencial Vencida)" else "Plan Básico Gratuito"
             PlanType.PRO_TRIAL -> "Prueba PRO ($daysRemaining días)"
             PlanType.PRO_ACTIVE -> "Zeasy PRO Activo ⭐"
         }
         binding.tvSettingsPlanDescription.text = when (planType) {
-            PlanType.FREE -> if (hasHadPaidPro) "Tu mes de Zeasy PRO culminó. Continúas en modo básico gratuito con 1 banco activo." else "Cobro básico ilimitado gratuito con 1 banco activo."
+            PlanType.FREE -> if (hasHadPaidPro) "Tu credencial Zeasy PRO culminó. Continúas en modo básico gratuito con 1 banco y Libreta activa." else "Cobro básico y Libreta de Clientes ilimitada con 1 banco activo."
             PlanType.PRO_TRIAL -> "Disfrutas de todas las funciones PRO por cortesía de prueba ($daysRemaining días restantes)."
-            PlanType.PRO_ACTIVE -> "Suscripción activa con acceso ilimitado a todas las funciones ($daysRemaining días restantes)."
+            PlanType.PRO_ACTIVE -> "Credencial PRO activa con acceso ilimitado a todas las funciones ($daysRemaining días restantes)."
         }
 
         when (planType) {
             PlanType.PRO_ACTIVE -> {
                 if (daysRemaining <= 3) {
-                    // Aviso preventivo para renovar antes de que expire el mes
                     binding.cardTrialPaymentAlert.visibility = View.VISIBLE
-                    binding.tvTrialPaymentAlertMessage.text = "⚠️ Tu suscripción Zeasy PRO vence en $daysRemaining día(s). Puedes renovar tu mes con anticipación para continuar sin interrupciones."
-                    binding.btnTrialRequestPaymentLink.text = "💳 Renovar Suscripción Zeasy PRO"
+                    binding.tvTrialPaymentAlertMessage.text = "⚠️ Tu credencial Zeasy PRO vence en $daysRemaining día(s). Solicita tu nuevo código de activación a soporte para continuar sin interrupciones."
+                    binding.btnTrialRequestPaymentLink.text = "🔑 Ingresar o Solicitar Código PRO"
                     binding.btnManagePlanPro.visibility = View.VISIBLE
-                    binding.btnManagePlanPro.text = "💳 Renovar Suscripción PRO"
+                    binding.btnManagePlanPro.text = "🔑 Extender Credencial PRO"
                 } else {
                     binding.cardTrialPaymentAlert.visibility = View.GONE
                     binding.btnManagePlanPro.visibility = View.GONE
@@ -3864,38 +4309,35 @@ class MainActivity : AppCompatActivity() {
             PlanType.PRO_TRIAL -> {
                 if (daysRemaining <= 2) {
                     binding.cardTrialPaymentAlert.visibility = View.VISIBLE
-                    binding.tvTrialPaymentAlertMessage.text = "⚠️ Tu prueba Zeasy PRO vence en $daysRemaining días. Solicita tu enlace de pago para no perder la sincronización ni el multibanco."
-                    binding.btnTrialRequestPaymentLink.text = "💳 Solicitar Link de Pago PRO"
+                    binding.tvTrialPaymentAlertMessage.text = "⚠️ Tu prueba Zeasy PRO vence en $daysRemaining días. Solicita tu código de activación a soporte para mantener todas las herramientas."
+                    binding.btnTrialRequestPaymentLink.text = "🔑 Solicitar Código de Activación PRO"
                     binding.btnManagePlanPro.visibility = View.VISIBLE
-                    binding.btnManagePlanPro.text = "✨ Activar Zeasy PRO"
+                    binding.btnManagePlanPro.text = "🔑 Activar Código Zeasy PRO"
                 } else {
                     binding.cardTrialPaymentAlert.visibility = View.GONE
                     binding.btnManagePlanPro.visibility = View.VISIBLE
-                    binding.btnManagePlanPro.text = "✨ Ver Beneficios o Activar Zeasy PRO"
+                    binding.btnManagePlanPro.text = "🔑 Ver Beneficios o Ingresar Código PRO"
                 }
             }
             PlanType.FREE -> {
                 if (hasHadPaidPro) {
-                    // Cliente cuya suscripción mensual acaba de expirar
                     binding.cardTrialPaymentAlert.visibility = View.VISIBLE
-                    binding.tvTrialPaymentAlertMessage.text = "⏰ Tu suscripción mensual Zeasy PRO ha finalizado. Tu app sigue operando en modo Básico. Solicita tu enlace para reactivar PRO."
-                    binding.btnTrialRequestPaymentLink.text = "💳 Renovar Suscripción Zeasy PRO"
+                    binding.tvTrialPaymentAlertMessage.text = "⏰ Tu período Zeasy PRO ha finalizado. Tu app sigue operando en modo Básico. Ingresa o solicita tu código de activación para reactivar PRO."
+                    binding.btnTrialRequestPaymentLink.text = "🔑 Ingresar o Solicitar Código PRO"
                     binding.btnManagePlanPro.visibility = View.VISIBLE
-                    binding.btnManagePlanPro.text = "💳 Renovar Suscripción Zeasy PRO"
+                    binding.btnManagePlanPro.text = "🔑 Reactivar con Código PRO"
                 } else if (!hasUsedTrial) {
-                    // Usuario nuevo que aún no ha iniciado los 7 días de prueba
                     binding.cardTrialPaymentAlert.visibility = View.VISIBLE
-                    binding.tvTrialPaymentAlertMessage.text = "🎁 ¡Pruébalo gratis por 7 días! Disfruta de cobro multibanco, Binance Pay, alertas de voz en Soundbox y reportes en PDF/Excel sin costo."
+                    binding.tvTrialPaymentAlertMessage.text = "🎁 ¡Pruébalo gratis por 7 días! Disfruta de cobro multibanco, Binance Pay, alertas de voz, conciliación automática y estados de cuenta PDF."
                     binding.btnTrialRequestPaymentLink.text = "✨ Activar 7 Días de Prueba Gratis"
                     binding.btnManagePlanPro.visibility = View.VISIBLE
-                    binding.btnManagePlanPro.text = "✨ Ver Beneficios de Zeasy PRO"
+                    binding.btnManagePlanPro.text = "🔑 Ver Beneficios o Ingresar Código PRO"
                 } else {
-                    // Usuario cuya prueba gratis de 7 días ya finalizó
                     binding.cardTrialPaymentAlert.visibility = View.VISIBLE
-                    binding.tvTrialPaymentAlertMessage.text = "ℹ️ Tu prueba Zeasy PRO ha finalizado. Solicita tu enlace de pago para reactivar todas las funciones avanzadas."
-                    binding.btnTrialRequestPaymentLink.text = "💳 Activar Plan Zeasy PRO"
+                    binding.tvTrialPaymentAlertMessage.text = "ℹ️ Tu prueba Zeasy PRO ha finalizado. Solicita tu código de activación al equipo de soporte CIEM para habilitar todas las funciones avanzadas."
+                    binding.btnTrialRequestPaymentLink.text = "🔑 Solicitar o Ingresar Código PRO"
                     binding.btnManagePlanPro.visibility = View.VISIBLE
-                    binding.btnManagePlanPro.text = "✨ Activar Zeasy PRO"
+                    binding.btnManagePlanPro.text = "🔑 Activar con Código PRO"
                 }
             }
         }
@@ -3907,7 +4349,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateLicenseBadge() {
         val deviceId = PlanCapabilityManager.getDeviceId(this)
 
-        if (PlanCapabilityManager.PLAY_STORE_REVIEW_MODE) {
+        if (PlanCapabilityManager.isReviewMode(this)) {
             binding.tvSubscriptionFooter.text = "Zeasy v${BuildConfig.VERSION_NAME} • Ciem tech solutions C.A • ID: $deviceId"
             binding.tvHeaderSubtitle.text = "⭐ Zeasy Edición Completa"
             binding.tvHeaderSubtitle.setOnClickListener(null)
@@ -3933,14 +4375,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showProUpgradeDialog(featureName: String) {
-        if (PlanCapabilityManager.PLAY_STORE_REVIEW_MODE) {
+        if (PlanCapabilityManager.isReviewMode(this)) {
             return
         }
 
         val planType = PlanCapabilityManager.getPlanType(this)
         val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
         if (planType == PlanType.PRO_ACTIVE && daysRemaining > 3) {
-            Toast.makeText(this, "⭐ Tu plan Zeasy PRO está activo ($daysRemaining días restantes). Podrás renovar cuando falten 3 días.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "⭐ Tu credencial Zeasy PRO está activa ($daysRemaining días restantes).", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -3949,49 +4391,7 @@ class MainActivity : AppCompatActivity() {
             .setView(dialogBinding.root)
             .create()
 
-        dialogBinding.tvProReasonSubtitle.text = "Desbloquea $featureName con Zeasy PRO ⚡"
-
-        // Precios dinámicos sincronizados remotamente desde el panel admin
-        val p1 = PreferencesHelper.getPrice1m(this)
-        val p3 = PreferencesHelper.getPrice3m(this)
-        val p12 = PreferencesHelper.getPrice12m(this)
-
-        dialogBinding.tvPrice1m.text = String.format(java.util.Locale.US, "$%.2f", p1)
-        dialogBinding.tvPrice3m.text = String.format(java.util.Locale.US, "$%.2f", p3)
-        dialogBinding.tvPrice12m.text = String.format(java.util.Locale.US, "$%.2f", p12)
-
-        var selectedMonths = 12
-
-        val density = resources.displayMetrics.density
-        val strokeActive = (2 * density).toInt()
-        val strokeInactive = (1 * density).toInt()
-        val colorActiveGreen = androidx.core.content.ContextCompat.getColor(this, R.color.accent_green)
-        val colorActiveBlue = androidx.core.content.ContextCompat.getColor(this, R.color.accent_blue)
-        val colorBorderSubtle = androidx.core.content.ContextCompat.getColor(this, R.color.border_subtle)
-        val colorCardDefault = androidx.core.content.ContextCompat.getColor(this, R.color.card_background)
-
-        fun updatePackageSelection(months: Int) {
-            selectedMonths = months
-            // 1m
-            dialogBinding.cardPackage1m.strokeWidth = if (months == 1) strokeActive else strokeInactive
-            dialogBinding.cardPackage1m.strokeColor = if (months == 1) colorActiveBlue else colorBorderSubtle
-            dialogBinding.cardPackage1m.setCardBackgroundColor(if (months == 1) android.graphics.Color.parseColor("#EBF0F7") else colorCardDefault)
-
-            // 3m
-            dialogBinding.cardPackage3m.strokeWidth = if (months == 3) strokeActive else strokeInactive
-            dialogBinding.cardPackage3m.strokeColor = if (months == 3) colorActiveBlue else colorBorderSubtle
-            dialogBinding.cardPackage3m.setCardBackgroundColor(if (months == 3) android.graphics.Color.parseColor("#EBF0F7") else colorCardDefault)
-
-            // 12m
-            dialogBinding.cardPackage12m.strokeWidth = if (months == 12) strokeActive else strokeInactive
-            dialogBinding.cardPackage12m.strokeColor = if (months == 12) colorActiveGreen else colorBorderSubtle
-            dialogBinding.cardPackage12m.setCardBackgroundColor(if (months == 12) android.graphics.Color.parseColor("#F0FDF4") else colorCardDefault)
-        }
-
-        dialogBinding.cardPackage1m.setOnClickListener { updatePackageSelection(1) }
-        dialogBinding.cardPackage3m.setOnClickListener { updatePackageSelection(3) }
-        dialogBinding.cardPackage12m.setOnClickListener { updatePackageSelection(12) }
-        updatePackageSelection(12)
+        dialogBinding.tvProReasonSubtitle.text = "Habilita $featureName con tu código Zeasy PRO ⚡"
 
         val hasUsedTrial = PlanCapabilityManager.hasUsedTrial(this)
         if (hasUsedTrial) {
@@ -4013,6 +4413,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     loadSettings()
                     loadTodayLedger()
+                    loadDebtors()
                     updateLicenseBadge()
                     updateBinanceSettingsCard()
                     renderCashierBankCards()
@@ -4021,14 +4422,54 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        dialogBinding.btnProWhatsapp.setOnClickListener {
-            dialog.dismiss()
-            handleRequestPaymentLinkOption(selectedMonths)
+        // Validar código directamente desde el campo integrado en el modal
+        dialogBinding.btnProRedeemCode.setOnClickListener {
+            val code = dialogBinding.etProActivationCode.text?.toString()?.trim() ?: ""
+            if (code.isEmpty()) {
+                dialogBinding.etProActivationCode.error = "Ingresa tu código de activación o solicítalo abajo"
+                dialogBinding.etProActivationCode.requestFocus()
+                return@setOnClickListener
+            }
+
+            dialogBinding.btnProRedeemCode.isEnabled = false
+            dialogBinding.btnProRedeemCode.text = "⏳ Validando código..."
+            lifecycleScope.launch {
+                val result = ZeasySyncManager.redeemActivationCode(this@MainActivity, code)
+                runOnUiThread {
+                    dialogBinding.btnProRedeemCode.isEnabled = true
+                    dialogBinding.btnProRedeemCode.text = "🔑 Validar y Activar Código"
+                    if (result.success) {
+                        dialog.dismiss()
+                        loadSettings()
+                        loadTodayLedger()
+                        loadDebtors()
+                        updateLicenseBadge()
+                        updateBinanceSettingsCard()
+                        renderCashierBankCards()
+                        showProActivatedCelebrationDialog(result.remainingDays)
+                    } else {
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("Código no válido")
+                            .setMessage(result.message)
+                            .setPositiveButton("Aceptar", null)
+                            .setNeutralButton("💬 Solicitar por WhatsApp") { _, _ ->
+                                dialog.dismiss()
+                                openSupportWhatsAppForPro(featureName)
+                            }
+                            .show()
+                    }
+                }
+            }
         }
 
-        dialogBinding.btnProRedeemCode.setOnClickListener {
+        dialogBinding.btnProWhatsapp.setOnClickListener {
             dialog.dismiss()
-            showRedeemCodeDialog()
+            openSupportWhatsAppForPro(featureName)
+        }
+
+        dialogBinding.btnProEmail.setOnClickListener {
+            dialog.dismiss()
+            openSupportEmailForPro(featureName)
         }
 
         dialogBinding.tvProDismiss.setOnClickListener {
@@ -4045,10 +4486,10 @@ class MainActivity : AppCompatActivity() {
 
         AlertDialog.Builder(this)
             .setTitle("🎉 ¡Prueba de 7 Días Activada!")
-            .setMessage("Tienes acceso a todas las funciones PRO (Multibanco, QR simultáneo, Copia de Seguridad y Exportación).\n\nPara brindarte soporte prioritario y enviarte tu enlace de pago cuando finalice tu prueba, registra tu comercio por WhatsApp con Ciem tech solutions C.A.")
+            .setMessage("Tienes acceso completo a todas las funciones PRO (Multibanco, Soundbox por Voz, Conciliación Automática de Libreta y Reportes PDF).\n\n¿Deseas registrar tu terminal con el equipo de soporte de Ciem tech solutions C.A por WhatsApp para recibir asistencia prioritaria?")
             .setPositiveButton("💬 Registrar por WhatsApp") { dialog, _ ->
                 dialog.dismiss()
-                val text = Uri.encode("Hola Ciem tech solutions C.A, acabo de activar mi prueba gratis de 7 días de Zeasy PRO. Negocio: '$businessName' (ID Dispositivo: $deviceId). Quedo atento a su soporte y al link de pago al terminar.")
+                val text = Uri.encode("Hola Ciem tech solutions C.A, acabo de activar mis 7 días de prueba de Zeasy PRO. Comercio: '$businessName' (ID de Terminal: $deviceId). Quedo atento a su soporte y asistencia para mi código de activación.")
                 val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
                 startActivity(Intent(Intent.ACTION_VIEW, uri))
             }
@@ -4061,42 +4502,67 @@ class MainActivity : AppCompatActivity() {
     private fun showSubscriptionExpiredPrompt() {
         AlertDialog.Builder(this)
             .setTitle("⏰ Tu período Zeasy PRO ha finalizado")
-            .setMessage("Tu aplicación continúa funcionando con normalidad en el Plan Básico Gratuito (Pago Móvil, tasa BCV y cuadre de caja).\n\nPara reactivar la detección multibanco simultánea, dictado por voz y migración de datos, renueva tu suscripción.")
-            .setPositiveButton("💳 Renovar Suscripción") { _, _ ->
-                handleRequestPaymentLinkOption()
+            .setMessage("Tu aplicación continúa funcionando con normalidad en el Plan Básico Gratuito (Pago Móvil, tasa BCV, cuadre de caja y Libreta de Clientes).\n\nPara reactivar la detección multibanco, voz, conciliación automática y estados de cuenta PDF, ingresa o solicita tu código de activación.")
+            .setPositiveButton("🔑 Ingresar / Solicitar Código") { _, _ ->
+                showProUpgradeDialog("todas las funciones de Zeasy PRO")
             }
             .setNegativeButton("Continuar en Básico", null)
             .show()
     }
 
-    private fun handleRequestPaymentLinkOption(months: Int = 1) {
-        val planType = PlanCapabilityManager.getPlanType(this)
-        val daysRemaining = PlanCapabilityManager.getDaysRemaining(this)
-        if (planType == PlanType.PRO_ACTIVE && daysRemaining > 3) {
-            Toast.makeText(this, "⭐ Tu plan Zeasy PRO está activo ($daysRemaining días restantes). Podrás renovar cuando falten 3 días.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // Abre directamente el contacto de WhatsApp con CIEM Tech para solicitar el enlace oficial de CobrixPay
-        openSupportWhatsAppForPro(months)
+    private fun handleRequestPaymentLinkOption() {
+        showProUpgradeDialog("todas las funciones de Zeasy PRO")
     }
 
-    private fun openSupportWhatsAppForPro(months: Int = 1) {
+    private fun openSupportWhatsAppForPro(featureName: String = "Zeasy PRO") {
         val profile = PreferencesHelper.getUserProfile(this)
         val deviceId = PlanCapabilityManager.getDeviceId(this)
         val businessName = profile.merchantName.ifEmpty { "Mi Negocio" }
         val rif = if (profile.idCard.isNotEmpty()) " (${profile.idCard})" else ""
 
-        val (monthsText, priceVal) = when (months) {
-            12 -> "1 Año (Anual con 2 meses gratis)" to PreferencesHelper.getPrice12m(this)
-            3 -> "3 Meses (Trimestral con ahorro)" to PreferencesHelper.getPrice3m(this)
-            else -> "1 Mes" to PreferencesHelper.getPrice1m(this)
-        }
-        val priceStr = String.format(java.util.Locale.US, "$%.2f", priceVal)
-
-        val text = Uri.encode("Hola Ciem tech solutions C.A, deseo activar o renovar el Plan Zeasy PRO por $monthsText ($priceStr USD) para mi negocio '$businessName'$rif (ID Dispositivo: $deviceId). Por favor envíenme el link de pago oficial de CobrixPay.")
+        val text = Uri.encode(
+            "Hola Ciem tech solutions C.A, solicito un código de activación Zeasy PRO para habilitar $featureName en mi negocio '$businessName'$rif.\n\n" +
+            "🔑 ID de mi Terminal: $deviceId\n" +
+            "📱 Teléfono: ${profile.phoneNumber.ifEmpty { "No indicado" }}"
+        )
         val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
-        startActivity(Intent(Intent.ACTION_VIEW, uri))
+        try {
+            startActivity(Intent.ACTION_VIEW.let { Intent(it, uri) })
+        } catch (_: Exception) {
+            Toast.makeText(this, "WhatsApp Soporte: ${PlanCapabilityManager.SUPPORT_PHONE_DISPLAY}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun openSupportEmailForPro(featureName: String = "Zeasy PRO") {
+        val profile = PreferencesHelper.getUserProfile(this)
+        val deviceId = PlanCapabilityManager.getDeviceId(this)
+        val businessName = profile.merchantName.ifEmpty { "Mi Negocio" }
+        val rif = if (profile.idCard.isNotEmpty()) profile.idCard else "No indicado"
+
+        val subject = "Solicitud de Código de Activación Zeasy PRO - $businessName ($deviceId)"
+        val body = """
+            Hola equipo de Ciem tech solutions C.A,
+            
+            Solicito un código de activación para habilitar las funciones de Zeasy PRO ($featureName) en mi dispositivo:
+            
+            • ID de Terminal: $deviceId
+            • Nombre del Comercio: $businessName
+            • Cédula / RIF: $rif
+            • Teléfono de Contacto: ${profile.phoneNumber.ifEmpty { "No indicado" }}
+            
+            Quedo atento a sus indicaciones. ¡Muchas gracias!
+        """.trimIndent()
+
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:${PlanCapabilityManager.SUPPORT_EMAIL}")
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, body)
+        }
+        try {
+            startActivity(Intent.createChooser(intent, "Solicitar Código por Correo"))
+        } catch (_: Exception) {
+            Toast.makeText(this, "Correo de soporte: ${PlanCapabilityManager.SUPPORT_EMAIL}", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun showRedeemCodeDialog() {
@@ -4179,6 +4645,7 @@ class MainActivity : AppCompatActivity() {
                     PreferencesHelper.setLastBcvSyncTime(this@MainActivity, System.currentTimeMillis())
 
                     updateDisplayAmount()
+                    loadDebtors()
                     val formatted = String.format(Locale.US, "%.2f", result.rate)
                     binding.etSettingsBcvRate.setText(formatted)
                     if (Math.abs(oldRate - result.rate) > 0.01) {
@@ -4195,22 +4662,23 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {}
 
         AlertDialog.Builder(this)
-            .setTitle("🎉 ¡Plan Zeasy PRO Activado! ⚡")
+            .setTitle("🎉 ¡Credencial Zeasy PRO Activada! ⚡")
             .setMessage(
-                "¡Tu suscripción ha sido confirmada con éxito!\n\n" +
+                "¡Tu código de activación ha sido validado con éxito!\n\n" +
                 "📅 Vigencia: $daysRemaining día${if (daysRemaining > 1) "s" else ""} restante${if (daysRemaining > 1) "s" else ""}.\n\n" +
                 "🚀 Ya puedes disfrutar de todas las funciones PRO:\n" +
                 "• Detección y confirmación Multibanco simultánea\n" +
-                "• Cobro y conversión de Divisas con Tasa BCV\n" +
-                "• Soundbox con voz parlante y altavoz Bluetooth\n" +
-                "• Carga rápida de ventas y gastos por voz\n" +
-                "• Copia de seguridad y exportación de reportes\n\n" +
+                "• Conciliación automática de Fiados al llegar Pago Móvil\n" +
+                "• Estados de Cuenta detallados en PDF para clientes\n" +
+                "• Soundbox con voz parlante y carga rápida por voz\n" +
+                "• Copia de seguridad, Binance Pay y reportes PDF/Excel\n\n" +
                 "¡Gracias por confiar en Ciem tech solutions C.A!"
             )
             .setPositiveButton("¡Empezar a Usar PRO!") { dialog, _ ->
                 dialog.dismiss()
                 loadSettings()
                 loadTodayLedger()
+                loadDebtors()
                 setupCashierBankSelector()
                 updateLicenseBadge()
             }

@@ -60,10 +60,16 @@ class DebtorsAdapter(
                 debtor.isDebtor -> {
                     val debtUsd = debtor.debtAmountUsd
                     val debtVes = debtor.getEquivalentVes(bcvRate)
+                    val concilVes = debtor.getConciliationVes(bcvRate)
                     binding.tvDebtorStatusBadge.text = String.format(Locale.US, "🔴 Debe $%.2f", debtUsd)
                     binding.tvDebtorStatusBadge.setTextColor(Color.parseColor("#C62828"))
                     binding.tvDebtorStatusBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFEBEE"))
-                    binding.tvDebtorBalanceVes.text = String.format(Locale.US, "Equivalente: Bs. %.2f (BCV)", debtVes)
+                    binding.tvDebtorBalanceVes.text = String.format(
+                        Locale.US,
+                        "Bs. %.2f (BCV) • Conciliar: Bs. %.2f",
+                        debtVes,
+                        concilVes
+                    )
                     binding.tvDebtorBalanceVes.setTextColor(Color.parseColor("#D32F2F"))
                     binding.btnItemWhatsApp.visibility = View.VISIBLE
                     binding.btnItemWhatsApp.text = "💬 Cobrar"

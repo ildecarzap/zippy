@@ -41,6 +41,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
         const val EXTRA_REF = "extra_ref"
         const val EXTRA_BANK = "extra_bank"
         const val EXTRA_PHONE = "extra_phone"
+        const val EXTRA_RECONCILED_DEBTOR = "extra_reconciled_debtor"
         private const val CHANNEL_ID = "cobrix_pocket_alerts"
 
         @Volatile
@@ -271,28 +272,71 @@ class PocketNotificationListenerService : NotificationListenerService() {
             "Detectado automáticamente de ${parsedPayment.bancoCodigo.displayName}"
         }
 
+        // 6. Verificar Conciliación Automática con Libreta de Fiados (por monto exacto con céntimos adicionales - Función PRO)
+        val concilMatch = if (!isUsdt && profile.bcvRate > 0 && PlanCapabilityManager.canUseAutoConciliation(this)) {
+            dbHelper.findDebtorForAutoConciliation(
+                context = this,
+                amountVes = amountVes,
+                bcvRate = profile.bcvRate,
+                senderPhone = parsedPayment.telefonoOrigen
+            )
+        } else null
+        val matchedDebtor = concilMatch?.debtor
+
+        val finalSenderDetails = if (matchedDebtor != null) {
+            if (senderDetails.isNotBlank()) "${matchedDebtor.name} ($senderDetails)" else matchedDebtor.name
+        } else {
+            senderDetails
+        }
+
+        val finalNoteText = if (matchedDebtor != null) {
+            val tipoConcil = if (concilMatch?.isPartialAgreed == true) "Abono acordado conciliado" else "Fiado conciliado"
+            "$noteText • ✅ $tipoConcil: ${matchedDebtor.name}"
+        } else {
+            noteText
+        }
+
         val tx = Transaction(
             amount = amountVes,
             amountUsd = amountUsd,
             reference = parsedPayment.referenciaUltimos4,
             bankCode = parsedPayment.bancoCodigo.sudebanCode,
             bankName = parsedPayment.bancoCodigo.displayName,
-            senderName = senderDetails,
+            senderName = finalSenderDetails,
             type = TransactionType.INCOME,
-            category = if (isUsdt) "Cripto / Binance Pay" else com.cobrix.pocket.data.model.TransactionCategories.INCOME_AUTO_PAGO_MOVIL,
-            note = noteText,
+            category = when {
+                isUsdt -> "Cripto / Binance Pay"
+                matchedDebtor != null -> com.cobrix.pocket.data.model.TransactionCategories.INCOME_ABONO_FIADO
+                else -> com.cobrix.pocket.data.model.TransactionCategories.INCOME_AUTO_PAGO_MOVIL
+            },
+            note = finalNoteText,
             timestamp = System.currentTimeMillis(),
             isManual = false
         )
-        dbHelper.insertTransaction(tx)
+        val insertedTxId = dbHelper.insertTransaction(tx)
+
+        if (matchedDebtor != null && concilMatch != null && insertedTxId > 0L) {
+            // Descontar deuda total o el monto del abono parcial acordado
+            val discountUsd = concilMatch.discountUsd
+            dbHelper.addPayment(
+                debtorId = matchedDebtor.id,
+                amountUsd = discountUsd,
+                amountVes = amountVes,
+                bcvRate = profile.bcvRate,
+                matchedTxId = insertedTxId,
+                notes = "Conciliación automática Pago Móvil ${parsedPayment.bancoCodigo.displayName} (Ref: ${parsedPayment.referenciaUltimos4})"
+            )
+            PreferencesHelper.clearPendingDebtorConciliation(this, matchedDebtor.id)
+            Log.i(TAG, "✅ Deuda de ${matchedDebtor.name} ($discountUsd USD) conciliada y descontada automáticamente con Pago Móvil Bs. $amountVes")
+        }
 
         // 7. Alerta Sonora y Voz según el modo de Soundbox configurado y capacidades del plan
         if (playSound) {
             if (profile.soundboxMode == "VOICE" && PlanCapabilityManager.canUseVoiceSoundbox(this)) {
-                if (isUsdt) {
-                    soundHelper?.announceCryptoPayment(parsedPayment.monto, "dólares")
-                } else {
-                    soundHelper?.announcePayment(parsedPayment.monto)
+                when {
+                    isUsdt -> soundHelper?.announceCryptoPayment(parsedPayment.monto, "dólares")
+                    matchedDebtor != null -> soundHelper?.announceReconciledPayment(parsedPayment.monto, matchedDebtor.name)
+                    else -> soundHelper?.announcePayment(parsedPayment.monto)
                 }
             } else if (profile.soundboxMode != "MUTED") {
                 soundHelper?.playCashRegisterSound()
@@ -311,7 +355,8 @@ class PocketNotificationListenerService : NotificationListenerService() {
             montoUsd = amountUsd,
             isUsdt = isUsdt,
             ref4 = parsedPayment.referenciaUltimos4,
-            banco = displayBankName
+            banco = displayBankName,
+            reconciledDebtorName = matchedDebtor?.name
         )
 
         // 9. Guardar para celebración si la app se abre justo después
@@ -320,7 +365,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
             amount = amountVes,
             ref = parsedPayment.referenciaUltimos4,
             bank = displayBankName,
-            phone = senderDetails,
+            phone = finalSenderDetails,
             amountUsd = amountUsd,
             isCrypto = isUsdt
         )
@@ -333,7 +378,8 @@ class PocketNotificationListenerService : NotificationListenerService() {
             putExtra(EXTRA_IS_CRYPTO, isUsdt)
             putExtra(EXTRA_REF, parsedPayment.referenciaUltimos4)
             putExtra(EXTRA_BANK, displayBankName)
-            putExtra(EXTRA_PHONE, senderDetails)
+            putExtra(EXTRA_PHONE, finalSenderDetails)
+            putExtra(EXTRA_RECONCILED_DEBTOR, matchedDebtor?.name ?: "")
         }
         sendBroadcast(broadcastIntent)
         return true
@@ -412,19 +458,26 @@ class PocketNotificationListenerService : NotificationListenerService() {
         montoUsd: Double,
         isUsdt: Boolean,
         ref4: String,
-        banco: String
+        banco: String,
+        reconciledDebtorName: String? = null
     ) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val title = if (isUsdt) {
-            "✅ Pago Recibido: $${String.format(Locale.US, "%.2f", montoUsd)} USDT"
-        } else {
-            "✅ Pago Recibido: Bs. ${String.format(Locale.US, "%.2f", montoVes)}"
+        val title = when {
+            !reconciledDebtorName.isNullOrBlank() ->
+                "✅ Fiado Pagado ($reconciledDebtorName): Bs. ${String.format(Locale.US, "%.2f", montoVes)}"
+            isUsdt ->
+                "✅ Pago Recibido: $${String.format(Locale.US, "%.2f", montoUsd)} USDT"
+            else ->
+                "✅ Pago Recibido: Bs. ${String.format(Locale.US, "%.2f", montoVes)}"
         }
 
-        val content = if (isUsdt) {
-            "$banco • Ref: $ref4 (Bs. ${String.format(Locale.US, "%.2f", montoVes)})"
-        } else {
-            "$banco • Ref terminada en $ref4"
+        val content = when {
+            !reconciledDebtorName.isNullOrBlank() ->
+                "Deuda descontada en Libreta • $banco (Ref: $ref4)"
+            isUsdt ->
+                "$banco • Ref: $ref4 (Bs. ${String.format(Locale.US, "%.2f", montoVes)})"
+            else ->
+                "$banco • Ref terminada en $ref4"
         }
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)

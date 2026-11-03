@@ -56,7 +56,7 @@ object WhatsAppHelper {
 
     /**
      * Mensaje de cobro cordial para cuentas por cobrar / fiados pendientes.
-     * Incluye datos bancarios y especifica que se adjunta el QR.
+     * Soporta cobro de deuda total o abono parcial acordado, con céntimos de conciliación automática.
      */
     fun generateDebtReminderMessage(
         profile: UserProfile,
@@ -65,21 +65,56 @@ object WhatsAppHelper {
         bcvRate: Double,
         recentConcept: String = "",
         bankName: String = profile.bankName,
-        bankCode: String = profile.bankCode
+        bankCode: String = profile.bankCode,
+        conciliationCents: Double = 0.01,
+        requestedAmountUsd: Double? = null,
+        includeConciliationCents: Boolean = true
     ): String {
-        val absUsd = Math.abs(balanceUsd)
+        val totalDebtUsd = Math.abs(balanceUsd)
+        val targetUsd = (requestedAmountUsd ?: totalDebtUsd).coerceAtLeast(0.01)
+        val isPartial = targetUsd < totalDebtUsd - 0.005
         val rate = if (bcvRate > 0) bcvRate else 1.0
-        val vesFormatted = String.format(Locale.US, "%.2f", absUsd * rate)
-        val usdFormatted = String.format(Locale.US, "%.2f", absUsd)
+
+        val totalDebtVes = Math.round(totalDebtUsd * rate * 100.0) / 100.0
+        val targetBaseVes = Math.round(targetUsd * rate * 100.0) / 100.0
+        val concilVes = if (includeConciliationCents) {
+            Math.round((targetBaseVes + conciliationCents) * 100.0) / 100.0
+        } else {
+            targetBaseVes
+        }
+
+        val totalDebtUsdFmt = String.format(Locale.US, "%.2f", totalDebtUsd)
+        val totalDebtVesFmt = String.format(Locale.US, "%.2f", totalDebtVes)
+        val targetUsdFmt = String.format(Locale.US, "%.2f", targetUsd)
+        val concilVesFmt = String.format(Locale.US, "%.2f", concilVes)
+        val centsFmt = String.format(Locale.US, "%.2f", conciliationCents)
         val noteSection = if (recentConcept.isNotBlank()) "📝 *Concepto:* $recentConcept\n" else ""
         val merchant = if (profile.merchantName.isNotBlank()) profile.merchantName else "tu comercio amigo"
+
+        val amountBlock = if (isPartial) {
+            val centsLine = if (includeConciliationCents) {
+                "\n_(Incluye +Bs. $centsFmt de céntimos para descontar tu abono automáticamente al llegar el Pago Móvil)_"
+            } else ""
+            """
+            💵 *Saldo total pendiente:* $$totalDebtUsdFmt USD (Bs. $totalDebtVesFmt BCV)
+            🤝 *Abono acordado hoy:* $$targetUsdFmt USD
+            👉 *Monto exacto a transferir:* *Bs. $concilVesFmt*$centsLine
+            """.trimIndent()
+        } else {
+            val centsLine = if (includeConciliationCents) {
+                "\n_(Incluye +Bs. $centsFmt de céntimos para descontar tu deuda automáticamente al llegar el Pago Móvil)_"
+            } else ""
+            """
+            💵 *Saldo adeudado:* $$totalDebtUsdFmt USD (Bs. $totalDebtVesFmt BCV)
+            👉 *Monto exacto a transferir:* *Bs. $concilVesFmt*$centsLine
+            """.trimIndent()
+        }
 
         return """
             👋 Hola *$debtorName*, un cordial saludo de *$merchant*.
             
-            Le recordamos con todo aprecio su estado de cuenta pendiente:
-            💵 *Saldo adeudado:* $$usdFormatted USD
-            👉 *Equivalente en Bs (Tasa BCV):* Bs. $vesFormatted
+            Le compartimos con todo aprecio su detalle de pago:
+            $amountBlock
             $noteSection
             🏦 *Datos para Pago Móvil:*
             • *Banco:* $bankName ($bankCode)

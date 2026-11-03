@@ -75,6 +75,9 @@ def check_license(
     }
 
     if not license_obj:
+        from app.models import SystemSetting
+        rev_setting = db.query(SystemSetting).filter(SystemSetting.key == "play_store_review_mode").first()
+        review_mode = (rev_setting.value.lower() == "true") if rev_setting else False
         return {
             "device_id": device_id,
             "registered": False,
@@ -84,6 +87,7 @@ def check_license(
             "is_active": True,
             "activation_code": None,
             "message": "Dispositivo en Plan Básico gratuito",
+            "play_store_review_mode": review_mode,
             "pricing": pricing_payload
         }
 
@@ -139,6 +143,10 @@ def check_license(
 
     effective_plan = "PRO" if license_obj.is_pro_active and license_obj.plan_type == "PRO" else ("TRIAL" if license_obj.is_pro_active else "BASIC")
 
+    from app.models import SystemSetting
+    rev_setting = db.query(SystemSetting).filter(SystemSetting.key == "play_store_review_mode").first()
+    review_mode = (rev_setting.value.lower() == "true") if rev_setting else False
+
     return {
         "device_id": license_obj.device_id,
         "merchant_name": license_obj.merchant_name,
@@ -155,6 +163,7 @@ def check_license(
         "activation_code": license_obj.activation_code,
         "is_active": license_obj.is_active,
         "server_time": datetime.utcnow().isoformat(),
+        "play_store_review_mode": review_mode,
         "pricing": pricing_payload
     }
 
@@ -250,7 +259,7 @@ def activate_trial(
             plan_type="TRIAL",
             trial_ends_at=trial_ends,
             is_active=True,
-            app_version="1.3.0",
+            app_version="1.3.7",
             activation_code=generate_activation_code(payload.device_id),
             last_sync_at=now
         )
@@ -331,25 +340,26 @@ def redeem_license_code(
     is_valid = False
     days_to_add = 30
 
-    # 1. Código específico asignado al dispositivo en admin
+    # Bloquear explícitamente si intentan enviar su propio ID de dispositivo
+    if code == device_id.upper() or code == device_id.replace("-", "").upper():
+        raise HTTPException(status_code=400, detail="Ese es el ID de tu teléfono, no un código de activación PRO")
+
+    # 1. Código específico asignado al dispositivo en el Portal Admin
     if license_obj.activation_code and code == license_obj.activation_code.strip().upper():
         is_valid = True
-    # 2. Clave universal o promocional (soporta ZEASY y ZIPPY para retrocompatibilidad)
-    elif code in ("ZEASYPRO2026", "ZEASY-PRO-LIFETIME", "ZIPPYPRO2026", "ZIPPY-PRO-LIFETIME"):
+    # 2. Clave maestra administrativa de soporte CIEM
+    elif code in ("ZEASYPRO2026", "ZIPPYPRO2026"):
         is_valid = True
         days_to_add = 365
-    elif code in ("ZEASY30", "ZEASY-PRO-30", "ZIPPY30", "ZIPPY-PRO-30"):
+    elif code == "ZEASY-PRO-30-CIEM":
         is_valid = True
         days_to_add = 30
-    elif code in ("ZEASY90", "ZEASY-PRO-90", "ZIPPY90", "ZIPPY-PRO-90"):
+    elif code == "ZEASY-PRO-90-CIEM":
         is_valid = True
         days_to_add = 90
-    elif code in ("ZEASY365", "ZEASY-PRO-365", "ZIPPY365", "ZIPPY-PRO-365"):
+    elif code == "ZEASY-PRO-365-CIEM":
         is_valid = True
         days_to_add = 365
-    elif (code.startswith("ZEA-") or code.startswith("ZIP-")) and (device_id[-4:].upper() in code):
-        is_valid = True
-        days_to_add = 30
 
     if not is_valid:
         raise HTTPException(status_code=400, detail="Código de activación inválido o no corresponde a este dispositivo")
