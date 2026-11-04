@@ -28,6 +28,7 @@ try:
             ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS pending_payment_url VARCHAR(500);
             ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS pending_link_expires_at TIMESTAMP WITH TIME ZONE;
             ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS activation_code VARCHAR(50);
+            ALTER TABLE zippy_device_licenses ADD COLUMN IF NOT EXISTS country_code VARCHAR(10) DEFAULT 'VE';
             CREATE INDEX IF NOT EXISTS ix_zippy_device_licenses_activation_code ON zippy_device_licenses (activation_code);
             CREATE TABLE IF NOT EXISTS zippy_system_settings (
                 key VARCHAR(100) PRIMARY KEY,
@@ -51,7 +52,7 @@ except Exception as e:
 app = FastAPI(
     title=settings.APP_NAME,
     description="Portal Web, Instructivo y Panel de Control de Licencias Zeasy - CIEM Tech Solutions C.A",
-    version="1.3.7",
+    version="1.4.0",
     docs_url=None if not settings.DEBUG else "/docs",
     redoc_url=None
 )

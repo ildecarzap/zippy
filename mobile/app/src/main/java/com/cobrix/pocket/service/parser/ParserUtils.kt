@@ -13,12 +13,12 @@ object ParserUtils {
     private const val AMOUNT_NUMBER_REGEX =
         """(?:[0-9]{1,3}(?:[.,][0-9]{3})+(?:[.,][0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)(?!\d)"""
 
-    // Extrae montos en formatos: 1.250,50 | 1.800,00 | 1800,00 | 1800.00 | 1.800 | 1800 | 50,00 | 50.00 precedidos o seguidos de Bs / VES
+    // Extrae montos en formatos: 1.250,50 | 1.800,00 | 1800,00 | 1800.00 | 1.800 | 1800 | 50,00 | 50.00 precedidos o seguidos de Bs / VES / $ / COP / ARS
     private val AMOUNT_PATTERNS = listOf(
-        Pattern.compile("""(?:bs\.?|bsd\.?|bss\.?|ves|bsf\.?)\s*[:.]?\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("""($AMOUNT_NUMBER_REGEX)\s*[:.]?\s*(?:bs\.?|bsd\.?|bss\.?|ves)""", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("""(?:monto|por|valor|importe)\s*[:.]?\s*(?:bs\.?|ves)?\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("""(?:recibido|recibiste|abono|acreditado|acreditada)\s*(?:de|por)?\s*[:.]?\s*(?:bs\.?|ves)?\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("""(?:bs\.?|bsd\.?|bss\.?|ves|bsf\.?|cop|ars|\$)\s*[:.]?\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("""($AMOUNT_NUMBER_REGEX)\s*[:.]?\s*(?:bs\.?|bsd\.?|bss\.?|ves|cop|ars|pesos)""", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("""(?:monto|por|valor|importe)\s*[:.]?\s*(?:bs\.?|ves|cop|ars|\$)?\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("""(?:recibido|recibiste|abono|acreditado|acreditada|te envi[oó]|te transfirieron|enviaste|pagaste|compraste|transferiste|debitamos|retiraste)\s*(?:de|por)?\s*[:.]?\s*(?:bs\.?|ves|cop|ars|\$)?\s*($AMOUNT_NUMBER_REGEX)""", Pattern.CASE_INSENSITIVE)
     )
 
     // Extrae referencias de 4 a 16 dígitos
@@ -270,8 +270,61 @@ object ParserUtils {
         "pago tdc",
         "salida de fondos",
         "recarga realizada",
-        "pago de servicio"
+        "pago de servicio",
+        "pagaste",
+        "compraste",
+        "transferencia exitosa a",
+        "enviaste plata",
+        "pasaste plata",
+        "retiraste",
+        "debitamos"
     )
+
+    // Palabras clave de publicidad, promociones, préstamos, seguridad o rechazos (Anti-Falsos Positivos)
+    private val PROMO_OR_NON_PAYMENT_KEYWORDS = listOf(
+        "descuento",
+        "cashback",
+        "regalo",
+        "gana hasta",
+        "participa",
+        "sorteo",
+        "prestamo",
+        "préstamo",
+        "credito preaprobado",
+        "crédito preaprobado",
+        "cupo disponible",
+        "limite disponible",
+        "límite disponible",
+        "aprovecha",
+        "oferta",
+        "promocion",
+        "promoción",
+        "beneficio",
+        "cupon",
+        "cupón",
+        "rendimiento",
+        "rendimientos",
+        "clave dinamica",
+        "clave dinámica",
+        "codigo de seguridad",
+        "código de seguridad",
+        "rechazad",
+        "fallid",
+        "pendiente de pago",
+        "vence hoy",
+        "vencimiento",
+        "resumen de cuenta",
+        "estado de cuenta"
+    )
+
+    /**
+     * Filtra notificaciones publicitarias, ofertas de préstamos, claves dinámicas,
+     * rendimientos de billetera o transacciones rechazadas para evitar falsos positivos.
+     */
+    fun isPromotionalOrNonPaymentNotification(text: String): Boolean {
+        val lower = text.lowercase(Locale.ROOT)
+        return PROMO_OR_NON_PAYMENT_KEYWORDS.any { lower.contains(it) }
+    }
 
     // Palabras inequívocas de que la transacción es un crédito o dinero recibido
     private val INCOMING_KEYWORDS = listOf(
@@ -290,6 +343,10 @@ object ParserUtils {
         "te ha transferido",
         "te transfirio",
         "te transfirió",
+        "te transfirieron",
+        "te envio",
+        "te envió",
+        "cobro aprobado",
         "pago recibido",
         "pago confirmado",
         "transferencia recibida",

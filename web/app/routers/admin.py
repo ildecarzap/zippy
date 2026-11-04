@@ -443,6 +443,7 @@ async def get_license_details(
         "phone": device.phone,
         "doc_id": device.doc_id or "",
         "email": device.email or "",
+        "country_code": (getattr(device, "country_code", "VE") or "VE").upper(),
         "plan_type": device.plan_type,
         "is_pro_active": device.is_pro_active,
         "is_active": device.is_active,
@@ -457,6 +458,33 @@ async def get_license_details(
         "pending_debt_id": device.pending_debt_id,
         "transactions": tx_list
     })
+
+
+@router.post("/licenses/{license_id}/change-country")
+async def change_device_country(
+    license_id: int,
+    country_code: str = Form(...),
+    current_admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Cambia el país de operación de un comercio desde el panel administrativo a solicitud de Atención al Cliente."""
+    device = db.query(DeviceLicense).filter(DeviceLicense.id == license_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
+
+    target_country = (country_code or "VE").strip().upper()
+    if target_country not in ("VE", "CO", "AR"):
+        raise HTTPException(status_code=400, detail="Código de país inválido")
+
+    old_country = getattr(device, "country_code", "VE") or "VE"
+    device.country_code = target_country
+    db.commit()
+
+    logger.info(f"🌎 [ADMIN] País de operación cambiado de {old_country} a {target_country} para #{device.id} ({device.merchant_name}) por {current_admin.username}")
+    return RedirectResponse(
+        url=f"/{settings.ADMIN_SECRET_PATH}/dashboard?success=country_updated",
+        status_code=status.HTTP_303_SEE_OTHER
+    )
 
 
 @router.post("/change-password")

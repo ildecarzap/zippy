@@ -2,6 +2,7 @@ package com.cobrix.pocket.utils
 
 import android.content.Context
 import android.util.Log
+import com.cobrix.pocket.data.model.CountryCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -67,6 +68,7 @@ object ZeasySyncManager {
                 put("phone", profile.phoneNumber)
                 put("doc_id", profile.idCard)
                 put("email", profile.email)
+                put("country_code", PreferencesHelper.getCountryCode(context).isoCode)
                 put("app_version", com.cobrix.pocket.BuildConfig.VERSION_NAME)
             }
 
@@ -79,7 +81,7 @@ object ZeasySyncManager {
             regConn.disconnect()
             Log.d(TAG, "Registro de dispositivo $deviceId en Zeasy Hub: código $regCode")
 
-            // 2. Consulta y validación remota de estado de licencia
+            // 2. Consulta y validación remota de estado de licencia y país asignado
             val checkUrl = URL("$baseUrl/api/v1/license/check?device_id=$deviceId")
             val checkConn = checkUrl.openConnection() as HttpURLConnection
             checkConn.requestMethod = "GET"
@@ -98,6 +100,21 @@ object ZeasySyncManager {
                 checkConn.disconnect()
 
                 val json = JSONObject(sb.toString())
+
+                // Sincronizar País de Operación si fue modificado desde el Panel Web Admin
+                var countryChangedByServer = false
+                if (!PreferencesHelper.isFirstLaunch(context) && json.has("country_code")) {
+                    val serverCountryIso = json.optString("country_code", "").trim().uppercase(Locale.ROOT)
+                    if (serverCountryIso in setOf("VE", "CO", "AR")) {
+                        val remoteCountry = CountryCode.fromIso(serverCountryIso)
+                        val localCountry = PreferencesHelper.getCountryCode(context)
+                        if (remoteCountry != localCountry) {
+                            PreferencesHelper.setCountryCode(context, remoteCountry)
+                            countryChangedByServer = true
+                            Log.i(TAG, "🌎 País actualizado remotamente desde el Panel Web Admin: ${localCountry.isoCode} -> ${remoteCountry.isoCode}")
+                        }
+                    }
+                }
 
                 // Sincronizar precios y paquetes remotos de Zippy PRO configurados en el panel admin
                 val pricingJson = json.optJSONObject("pricing")
@@ -118,7 +135,7 @@ object ZeasySyncManager {
                 // En modo revisión de Google Play, no permitir degradación a plan básico ni marcar vencimiento
                 if (PlanCapabilityManager.isReviewMode(context)) {
                     Log.i(TAG, "⭐ Modo Revisión Google Play activo: Conservando estado PRO ilimitado sin degradación.")
-                    return@withContext false
+                    return@withContext countryChangedByServer
                 }
 
                 val isPro = json.optBoolean("is_pro", false)
@@ -145,7 +162,7 @@ object ZeasySyncManager {
                         PlanCapabilityManager.setServerProExpiration(context, expirationMs)
                         Log.i(TAG, "⭐ Zippy PRO verificado en el servidor: $remainingDays días restantes")
                     }
-                    return@withContext !wasPro
+                    return@withContext (!wasPro) || countryChangedByServer
                 } else if (!isPro) {
                     // Si el dispositivo tiene una prueba local activa no sincronizada aún con el backend, intentamos reportarla
                     if (PlanCapabilityManager.isTrial(context)) {
@@ -163,6 +180,7 @@ object ZeasySyncManager {
                         return@withContext true
                     }
                 }
+                return@withContext countryChangedByServer
             } else {
                 checkConn.disconnect()
             }
@@ -171,6 +189,49 @@ object ZeasySyncManager {
             Log.w(TAG, "Backend Zippy Hub no disponible en $baseUrl (${e.localizedMessage}). Continuando en modo local.")
         }
         return@withContext false
+    }
+
+    /**
+     * Registra en el servidor el país seleccionado por el usuario en la primera instalación.
+     */
+    suspend fun updateInitialCountryOnServer(context: Context, countryCode: CountryCode): Boolean = withContext(Dispatchers.IO) {
+        val deviceId = PlanCapabilityManager.getDeviceId(context)
+        val profile = PreferencesHelper.getUserProfile(context)
+        val baseUrl = getServerUrl(context)
+
+        try {
+            val registerUrl = URL("$baseUrl/api/v1/license/register")
+            val regConn = registerUrl.openConnection() as HttpURLConnection
+            regConn.requestMethod = "POST"
+            regConn.setRequestProperty("Content-Type", "application/json")
+            regConn.setRequestProperty("Accept", "application/json")
+            regConn.connectTimeout = 5000
+            regConn.readTimeout = 5000
+            regConn.doOutput = true
+
+            val regPayload = JSONObject().apply {
+                put("device_id", deviceId)
+                put("merchant_name", profile.merchantName.ifEmpty { "Comercio Zeasy" })
+                put("phone", profile.phoneNumber)
+                put("doc_id", profile.idCard)
+                put("email", profile.email)
+                put("country_code", countryCode.isoCode)
+                put("force_country", true)
+                put("app_version", com.cobrix.pocket.BuildConfig.VERSION_NAME)
+            }
+
+            val writer = OutputStreamWriter(regConn.outputStream)
+            writer.write(regPayload.toString())
+            writer.flush()
+            writer.close()
+
+            val code = regConn.responseCode
+            regConn.disconnect()
+            code in 200..299
+        } catch (e: Exception) {
+            Log.w(TAG, "No se pudo sincronizar país inicial con servidor: ${e.message}")
+            false
+        }
     }
 
     data class PaymentLinkResult(

@@ -1,60 +1,118 @@
 package com.cobrix.pocket.data.model
 
 /**
- * Catálogo de bancos venezolanos e identificadores para filtrado y enrutamiento inteligente.
+ * Catálogo multipaís de bancos y billeteras (Venezuela, Colombia, Argentina)
+ * e identificadores para filtrado y enrutamiento inteligente de notificaciones.
  */
 enum class BankCode(
     val sudebanCode: String,
     val displayName: String,
     val defaultKeywords: List<String>,
-    val knownPackageNames: List<String>
+    val knownPackageNames: List<String>,
+    val country: CountryCode = CountryCode.VE
 ) {
+    // --- VENEZUELA (VE) ---
     MERCANTIL(
         sudebanCode = "0105",
         displayName = "Banco Mercantil",
         defaultKeywords = listOf("tpago", "mercantil"),
-        knownPackageNames = listOf("com.mercantilbanco.android.movil")
+        knownPackageNames = listOf("com.mercantilbanco.android.movil"),
+        country = CountryCode.VE
     ),
     BANESCO(
         sudebanCode = "0134",
         displayName = "Banesco",
         defaultKeywords = listOf("banesco", "pago móvil", "pago movil"),
-        knownPackageNames = listOf("com.banesco.banescomovil")
+        knownPackageNames = listOf("com.banesco.banescomovil"),
+        country = CountryCode.VE
     ),
     BDV(
         sudebanCode = "0102",
         displayName = "Banco de Venezuela",
         defaultKeywords = listOf("bdv", "pagoclave", "pago clave", "venezuela"),
-        knownPackageNames = listOf("com.bancodevenezuela.bdvdigital")
+        knownPackageNames = listOf("com.bancodevenezuela.bdvdigital"),
+        country = CountryCode.VE
     ),
     PROVINCIAL(
         sudebanCode = "0108",
         displayName = "BBVA Provincial",
         defaultKeywords = listOf("provincial", "bbva"),
-        knownPackageNames = listOf("com.bbva.provincial.android")
+        knownPackageNames = listOf("com.bbva.provincial.android"),
+        country = CountryCode.VE
     ),
     BNC(
         sudebanCode = "0191",
         displayName = "Banco Nacional de Crédito",
         defaultKeywords = listOf("bnc", "banco nacional de credito"),
-        knownPackageNames = listOf("com.bnc.movil")
+        knownPackageNames = listOf("com.bnc.movil"),
+        country = CountryCode.VE
     ),
     BANCAMIGA(
         sudebanCode = "0172",
         displayName = "Bancamiga",
         defaultKeywords = listOf("bancamiga"),
-        knownPackageNames = listOf("com.bancamiga.movil")
+        knownPackageNames = listOf("com.bancamiga.movil"),
+        country = CountryCode.VE
     ),
     UBII(
         sudebanCode = "0178",
         displayName = "Ubii App",
         defaultKeywords = listOf("ubii", "ubiipagos", "pago móvil", "pago movil", "0178"),
-        knownPackageNames = listOf("com.ubiipagos.app", "com.ubii.app", "com.ubii.ubiipagos", "com.ubii")
+        knownPackageNames = listOf("com.ubiipagos.app", "com.ubii.app", "com.ubii.ubiipagos", "com.ubii"),
+        country = CountryCode.VE
     ),
+
+    // --- COLOMBIA (CO) ---
+    CO_NEQUI(
+        sudebanCode = "CO_NEQUI",
+        displayName = "Nequi",
+        defaultKeywords = listOf("nequi", "recibiste", "te envió", "te envio", "envio"),
+        knownPackageNames = listOf("com.nequi.MobileApp"),
+        country = CountryCode.CO
+    ),
+    CO_DAVIPLATA(
+        sudebanCode = "CO_DAVI",
+        displayName = "DaviPlata",
+        defaultKeywords = listOf("daviplata", "recibio", "recibiste", "pasar plata"),
+        knownPackageNames = listOf("com.davivienda.daviplataapp"),
+        country = CountryCode.CO
+    ),
+    CO_BANCOLOMBIA(
+        sudebanCode = "CO_BCOL",
+        displayName = "Bancolombia",
+        defaultKeywords = listOf("bancolombia", "recibiste una transferencia", "transferencia", "qr bancolombia"),
+        knownPackageNames = listOf("KT.Bancolombia", "com.todo1.mobile", "com.bancolombia.alamanov2"),
+        country = CountryCode.CO
+    ),
+
+    // --- ARGENTINA (AR) ---
+    AR_MERCADOPAGO(
+        sudebanCode = "AR_MP",
+        displayName = "Mercado Pago",
+        defaultKeywords = listOf("mercado pago", "mercadopago", "te transfirieron", "recibiste", "cobro aprobado"),
+        knownPackageNames = listOf("com.mercadopago.wallet"),
+        country = CountryCode.AR
+    ),
+    AR_CUENTADNI(
+        sudebanCode = "AR_CDNI",
+        displayName = "Cuenta DNI",
+        defaultKeywords = listOf("cuenta dni", "recibiste una transferencia", "banco provincia", "acredit"),
+        knownPackageNames = listOf("ar.com.bapro.cuentadni"),
+        country = CountryCode.AR
+    ),
+    AR_BNA_MAS(
+        sudebanCode = "AR_BNA",
+        displayName = "BNA+ (Banco Nación)",
+        defaultKeywords = listOf("bna+", "banco nacion", "recibiste", "transferencia recibida", "modo"),
+        knownPackageNames = listOf("com.bna.bnamas"),
+        country = CountryCode.AR
+    ),
+
+    // --- TRANSVERSALES (SMS & BINANCE PAY) ---
     SMS(
         sudebanCode = "0000",
         displayName = "Mensajes SMS",
-        defaultKeywords = listOf("recibiste", "pago recibido", "tpago", "ref", "bs"),
+        defaultKeywords = listOf("recibiste", "pago recibido", "tpago", "ref", "bs", "transferencia"),
         knownPackageNames = listOf(
             "com.google.android.apps.messaging",
             "com.samsung.android.messaging",
@@ -74,7 +132,7 @@ enum class BankCode(
         }
 
         fun fromSudeban(code: String?): BankCode? {
-            return values().firstOrNull { it.sudebanCode == code }
+            return values().firstOrNull { it.sudebanCode.equals(code, ignoreCase = true) }
         }
     }
 }
@@ -82,56 +140,95 @@ enum class BankCode(
 data class BankCatalogEntry(
     val code: String,
     val name: String,
-    val hasAutoDetection: Boolean
+    val hasAutoDetection: Boolean,
+    val country: CountryCode = CountryCode.VE
 ) {
+    val shortTag: String get() = getShortName()
     override fun toString(): String = "$code - $name"
     fun getShortName(): String = BankCatalog.getShortName(code)
     fun getBrandColor(): Int = BankCatalog.getBrandColor(code)
 }
 
 object BankCatalog {
-    val ALL_BANKS = listOf(
-        BankCatalogEntry("0178", "Ubii App", true),
-        BankCatalogEntry("0134", "Banesco Banco Universal", true),
-        BankCatalogEntry("0102", "Banco de Venezuela (BDV)", true),
-        BankCatalogEntry("0105", "Banco Mercantil", true),
-        BankCatalogEntry("0108", "BBVA Provincial", true),
-        BankCatalogEntry("0191", "Banco Nacional de Crédito (BNC)", true),
-        BankCatalogEntry("0172", "Bancamiga", true),
-        BankCatalogEntry("0114", "Bancaribe", false),
-        BankCatalogEntry("0174", "Banplus", false),
-        BankCatalogEntry("0138", "Banco Plaza", false),
-        BankCatalogEntry("0175", "Banco Bicentenario", false),
-        BankCatalogEntry("0163", "Banco del Tesoro", false),
-        BankCatalogEntry("0151", "BFC Banco Fondo Común", false),
-        BankCatalogEntry("0115", "Banco Exterior", false),
-        BankCatalogEntry("0156", "100% Banco", false),
-        BankCatalogEntry("0171", "Banco Activo", false),
-        BankCatalogEntry("0104", "Venezolano de Crédito", false)
+
+    val VE_BANKS = listOf(
+        BankCatalogEntry("0178", "Ubii App", true, CountryCode.VE),
+        BankCatalogEntry("0134", "Banesco Banco Universal", true, CountryCode.VE),
+        BankCatalogEntry("0102", "Banco de Venezuela (BDV)", true, CountryCode.VE),
+        BankCatalogEntry("0105", "Banco Mercantil", true, CountryCode.VE),
+        BankCatalogEntry("0108", "BBVA Provincial", true, CountryCode.VE),
+        BankCatalogEntry("0191", "Banco Nacional de Crédito (BNC)", true, CountryCode.VE),
+        BankCatalogEntry("0172", "Bancamiga", true, CountryCode.VE),
+        BankCatalogEntry("0114", "Bancaribe", false, CountryCode.VE),
+        BankCatalogEntry("0174", "Banplus", false, CountryCode.VE),
+        BankCatalogEntry("0138", "Banco Plaza", false, CountryCode.VE),
+        BankCatalogEntry("0175", "Banco Bicentenario", false, CountryCode.VE),
+        BankCatalogEntry("0163", "Banco del Tesoro", false, CountryCode.VE),
+        BankCatalogEntry("0151", "BFC Banco Fondo Común", false, CountryCode.VE),
+        BankCatalogEntry("0115", "Banco Exterior", false, CountryCode.VE),
+        BankCatalogEntry("0156", "100% Banco", false, CountryCode.VE),
+        BankCatalogEntry("0171", "Banco Activo", false, CountryCode.VE),
+        BankCatalogEntry("0104", "Venezolano de Crédito", false, CountryCode.VE)
     )
 
+    val CO_BANKS = listOf(
+        BankCatalogEntry("CO_NEQUI", "Nequi Colombia", true, CountryCode.CO),
+        BankCatalogEntry("CO_DAVI", "DaviPlata", true, CountryCode.CO),
+        BankCatalogEntry("CO_BCOL", "Bancolombia / A la Mano", true, CountryCode.CO),
+        BankCatalogEntry("CO_DAVIV", "Banco Davivienda", false, CountryCode.CO),
+        BankCatalogEntry("CO_BBVA", "BBVA Colombia", false, CountryCode.CO),
+        BankCatalogEntry("CO_BOG", "Banco de Bogotá", false, CountryCode.CO)
+    )
+
+    val AR_BANKS = listOf(
+        BankCatalogEntry("AR_MP", "Mercado Pago", true, CountryCode.AR),
+        BankCatalogEntry("AR_CDNI", "Cuenta DNI (Banco Provincia)", true, CountryCode.AR),
+        BankCatalogEntry("AR_BNA", "BNA+ (Banco Nación / MODO)", true, CountryCode.AR),
+        BankCatalogEntry("AR_GAL", "Banco Galicia", false, CountryCode.AR),
+        BankCatalogEntry("AR_BRU", "Brubank", false, CountryCode.AR),
+        BankCatalogEntry("AR_SANT", "Banco Santander Argentina", false, CountryCode.AR)
+    )
+
+    val ALL_BANKS = VE_BANKS + CO_BANKS + AR_BANKS
+
+    fun getBanksForCountry(country: CountryCode): List<BankCatalogEntry> {
+        return when (country) {
+            CountryCode.VE -> VE_BANKS
+            CountryCode.CO -> CO_BANKS
+            CountryCode.AR -> AR_BANKS
+        }
+    }
+
+    fun getDefaultBankForCountry(country: CountryCode): BankCatalogEntry {
+        return when (country) {
+            CountryCode.VE -> VE_BANKS.first { it.code == "0102" } // BDV
+            CountryCode.CO -> CO_BANKS.first { it.code == "CO_NEQUI" } // Nequi
+            CountryCode.AR -> AR_BANKS.first { it.code == "AR_MP" } // Mercado Pago
+        }
+    }
+
     fun findByCode(code: String): BankCatalogEntry? {
-        return ALL_BANKS.firstOrNull { it.code == code }
+        return ALL_BANKS.firstOrNull { it.code.equals(code, ignoreCase = true) }
     }
 
     fun findByNameOrCode(query: String): BankCatalogEntry? {
         val raw = query.trim()
         if (raw.isEmpty()) return null
-        val codeCandidate = if (raw.contains(" - ")) raw.substringBefore(" - ").trim() else raw.take(4).trim()
+        val codeCandidate = if (raw.contains(" - ")) raw.substringBefore(" - ").trim() else raw.take(8).trim()
         val byCode = findByCode(codeCandidate)
         if (byCode != null) return byCode
 
         val q = raw.lowercase()
         return ALL_BANKS.firstOrNull { entry ->
-            entry.code == q ||
+            entry.code.lowercase() == q ||
             entry.name.lowercase().contains(q) ||
-            q.contains(entry.code) ||
+            q.contains(entry.code.lowercase()) ||
             q.contains(entry.name.lowercase())
         }
     }
 
     fun getShortName(code: String): String {
-        return when (code) {
+        return when (code.uppercase()) {
             "0178" -> "Ubii App"
             "0134" -> "Banesco"
             "0102" -> "BDV"
@@ -149,12 +246,24 @@ object BankCatalog {
             "0156" -> "100% Banco"
             "0171" -> "Activo"
             "0104" -> "Venezolano de Crédito"
+            "CO_NEQUI" -> "Nequi"
+            "CO_DAVI" -> "DaviPlata"
+            "CO_BCOL" -> "Bancolombia"
+            "CO_DAVIV" -> "Davivienda"
+            "CO_BBVA" -> "BBVA CO"
+            "CO_BOG" -> "B. Bogotá"
+            "AR_MP" -> "Mercado Pago"
+            "AR_CDNI" -> "Cuenta DNI"
+            "AR_BNA" -> "BNA+"
+            "AR_GAL" -> "Galicia"
+            "AR_BRU" -> "Brubank"
+            "AR_SANT" -> "Santander AR"
             else -> findByCode(code)?.name ?: code
         }
     }
 
     fun getBrandColor(code: String): Int {
-        return when (code) {
+        return when (code.uppercase()) {
             "0178" -> android.graphics.Color.parseColor("#00B2FE") // Ubii Cyan
             "0134" -> android.graphics.Color.parseColor("#00875A") // Banesco Green
             "0102" -> android.graphics.Color.parseColor("#D32F2F") // BDV Red
@@ -165,6 +274,12 @@ object BankCatalog {
             "0114" -> android.graphics.Color.parseColor("#0277BD") // Bancaribe
             "0174" -> android.graphics.Color.parseColor("#C2185B") // Banplus
             "0138" -> android.graphics.Color.parseColor("#E65100") // Plaza
+            "CO_NEQUI" -> android.graphics.Color.parseColor("#DA0081") // Nequi Magenta
+            "CO_DAVI" -> android.graphics.Color.parseColor("#ED1C24") // DaviPlata Red
+            "CO_BCOL" -> android.graphics.Color.parseColor("#00448D") // Bancolombia Blue
+            "AR_MP" -> android.graphics.Color.parseColor("#009EE3") // Mercado Pago Cyan
+            "AR_CDNI" -> android.graphics.Color.parseColor("#00875A") // Cuenta DNI Green
+            "AR_BNA" -> android.graphics.Color.parseColor("#00529B") // BNA+ Blue
             else -> android.graphics.Color.parseColor("#0A2540")
         }
     }

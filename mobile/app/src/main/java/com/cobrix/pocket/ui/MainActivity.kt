@@ -22,6 +22,7 @@ import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
@@ -35,6 +36,8 @@ import com.cobrix.pocket.BuildConfig
 import com.cobrix.pocket.R
 import com.cobrix.pocket.data.db.PocketDatabaseHelper
 import com.cobrix.pocket.data.model.BankCatalog
+import com.cobrix.pocket.data.model.CountryCode
+import com.cobrix.pocket.data.model.CountryProfileCatalog
 import com.cobrix.pocket.data.model.LicenseState
 import com.cobrix.pocket.data.model.Transaction
 import com.cobrix.pocket.data.model.TransactionCategories
@@ -49,11 +52,13 @@ import com.cobrix.pocket.databinding.ItemTransactionBinding
 import com.cobrix.pocket.service.PocketNotificationListenerService
 import com.cobrix.pocket.utils.BiometricHelper
 import com.cobrix.pocket.utils.LicenseManager
+import com.cobrix.pocket.utils.LicenseRepository
 import com.cobrix.pocket.utils.PreferencesHelper
 import com.cobrix.pocket.utils.QrValidator
 import com.cobrix.pocket.utils.ReportHelper
 import com.cobrix.pocket.utils.SoundHelper
 import com.cobrix.pocket.utils.WhatsAppHelper
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.chip.Chip
 import androidx.lifecycle.lifecycleScope
 import com.cobrix.pocket.data.model.PlanType
@@ -93,9 +98,11 @@ import com.cobrix.pocket.databinding.DialogAddChargeBinding
 import com.cobrix.pocket.databinding.DialogAddPaymentBinding
 import com.cobrix.pocket.databinding.DialogDebtorDetailBinding
 import com.cobrix.pocket.databinding.DialogQuickFiarSelectBinding
+import com.cobrix.pocket.databinding.DialogSetupWizardBinding
 import com.cobrix.pocket.databinding.ItemDebtorBinding
 import com.cobrix.pocket.databinding.ItemLedgerEntryBinding
 import com.cobrix.pocket.ui.DebtorsAdapter
+import com.google.android.material.button.MaterialButton
 
 class MainActivity : AppCompatActivity() {
 
@@ -105,6 +112,12 @@ class MainActivity : AppCompatActivity() {
 
     private var currentInput = "0"
     private var isVesMode = true // Por defecto: Bolívares (VES)
+
+    // Asistente de Configuración Paso a Paso (Alta Accesibilidad + Guardado Progresivo)
+    private var setupWizardDialog: Dialog? = null
+    private var setupWizardBinding: DialogSetupWizardBinding? = null
+    private var currentWizardStep: Int = 1
+    private var isWizardMandatory: Boolean = false
 
     // Estado para Libreta de Clientes y Fiados
     private lateinit var debtorsAdapter: DebtorsAdapter
@@ -242,6 +255,9 @@ class MainActivity : AppCompatActivity() {
             setupCashierBankSelector()
             renderCashierBankCards()
             updateSelectedBankConfigCard()
+            if (setupWizardDialog?.isShowing == true) {
+                refreshSetupWizardStepUi()
+            }
             Toast.makeText(this, "✅ QR para $bankDisplayName guardado con éxito", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, "Error al guardar imagen de QR: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -358,10 +374,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Receptor en tiempo real para cuando el servicio captura un pago
+    // Receptor en tiempo real para cuando el servicio captura un pago o salida bancaria
     private val paymentReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == PocketNotificationListenerService.ACTION_PAYMENT_RECEIVED) {
+                val isOutgoing = intent.getBooleanExtra(PocketNotificationListenerService.EXTRA_IS_OUTGOING, false)
+                if (isOutgoing) {
+                    runOnUiThread {
+                        loadTodayLedger()
+                    }
+                    return
+                }
+
                 val amount = intent.getDoubleExtra(PocketNotificationListenerService.EXTRA_AMOUNT, 0.0)
                 val amountUsd = intent.getDoubleExtra(PocketNotificationListenerService.EXTRA_AMOUNT_USD, 0.0)
                 val isCrypto = intent.getBooleanExtra(PocketNotificationListenerService.EXTRA_IS_CRYPTO, false)
@@ -425,6 +449,7 @@ class MainActivity : AppCompatActivity() {
         setupSettings()
         setupLedgerActions()
         setupDebtorsModule()
+        applyCountryProfileToUi()
         updateLicenseBadge()
         checkNotificationPermission()
         checkBiometricAuthOnStart()
@@ -471,9 +496,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        if (PreferencesHelper.isFirstLaunch(this)) {
-            PreferencesHelper.setFirstLaunch(this, false)
-            showWelcomeOnboardingDialog()
+        if (setupWizardDialog?.isShowing == true) {
+            refreshSetupWizardStepUi()
+        } else if (!PreferencesHelper.isOnboardingCompleted(this)) {
+            showSetupWizardDialog(
+                isMandatory = true,
+                startStep = PreferencesHelper.getOnboardingStep(this)
+            )
         }
         updateShiftUI()
         loadTodayLedger()
@@ -718,11 +747,12 @@ class MainActivity : AppCompatActivity() {
     private fun setupCurrencyToggle() {
         binding.toggleGroupCurrency.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
+                val countryProfile = PreferencesHelper.getCountryProfile(this)
                 isVesMode = (checkedId == R.id.btnCurrencyVes)
                 currentInput = "0"
                 if (isVesMode) {
-                    binding.tvDisplayLabel.text = "MONTO EN BOLÍVARES"
-                    binding.tvCurrencySymbol.text = "Bs."
+                    binding.tvDisplayLabel.text = "MONTO EN ${countryProfile.localCurrencyVoiceName.uppercase(Locale.ROOT)}"
+                    binding.tvCurrencySymbol.text = countryProfile.localCurrencySymbol
                 } else {
                     binding.tvDisplayLabel.text = "MONTO EN DÓLARES"
                     binding.tvCurrencySymbol.text = "$"
@@ -730,6 +760,61 @@ class MainActivity : AppCompatActivity() {
                 updateDisplayAmount()
             }
         }
+    }
+
+    /**
+     * Aplica dinámicamente las etiquetas, monedas, hints de documento/teléfono
+     * y visibilidad de tasa cambiaria según el País de Operación (VE, CO, AR).
+     */
+    private fun applyCountryProfileToUi() {
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+
+        // Mostrar País de Operación fijo en Ajustes
+        binding.tvSettingsActiveCountry.text = if (countryProfile.supportsExchangeRate) {
+            "${countryProfile.flagEmoji} ${countryProfile.displayName} (Bolívares Bs. / USD)"
+        } else {
+            "${countryProfile.flagEmoji} ${countryProfile.displayName} (${countryProfile.localCurrencyDisplay})"
+        }
+
+        // Actualizar selector oculto por compatibilidad
+        val targetToggleId = when (countryProfile.code) {
+            CountryCode.VE -> R.id.btnCountryVe
+            CountryCode.CO -> R.id.btnCountryCo
+            CountryCode.AR -> R.id.btnCountryAr
+        }
+        if (binding.toggleGroupCountry.checkedButtonId != targetToggleId) {
+            binding.toggleGroupCountry.check(targetToggleId)
+        }
+
+        // Visibilidad de fila BCV en Ajustes (solo Venezuela requiere tasa bimoneda BCV)
+        binding.layoutSettingsBcvRow.visibility = if (countryProfile.supportsExchangeRate) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+
+        // Hints de teléfono e identificación fiscal adaptados al país
+        binding.tilSettingsPhone.hint = "Teléfono / ${countryProfile.instantPaymentSystemName} (${countryProfile.phonePlaceholder})"
+        binding.tilSettingsId.hint = "${countryProfile.nationalIdLabel} (${countryProfile.nationalIdPlaceholder})"
+
+        // Configurar el selector de moneda en Caja
+        binding.btnCurrencyVes.text = "${countryProfile.localCurrencySymbol} ${countryProfile.localCurrencyCode}"
+        if (countryProfile.supportsExchangeRate) {
+            binding.toggleGroupCurrency.visibility = View.VISIBLE
+        } else {
+            binding.toggleGroupCurrency.visibility = View.GONE
+            isVesMode = true
+        }
+
+        if (isVesMode) {
+            binding.tvDisplayLabel.text = "MONTO EN ${countryProfile.localCurrencyVoiceName.uppercase(Locale.ROOT)}"
+            binding.tvCurrencySymbol.text = countryProfile.localCurrencySymbol
+        } else {
+            binding.tvDisplayLabel.text = "MONTO EN DÓLARES"
+            binding.tvCurrencySymbol.text = "$"
+        }
+
+        updateDisplayAmount()
     }
 
     // --- GESTIÓN CENTRALIZADA Y SEGURA DE GUARDADO DE AJUSTES ---
@@ -1100,8 +1185,14 @@ class MainActivity : AppCompatActivity() {
     private fun updateDisplayAmount() {
         val amount = currentInput.toDoubleOrNull() ?: 0.0
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
 
         binding.tvDisplayAmount.text = currentInput
+
+        if (!countryProfile.supportsExchangeRate) {
+            binding.tvConvertedAmount.text = "${countryProfile.flagEmoji} ${countryProfile.displayName} • ${countryProfile.localCurrencyCode}"
+            return
+        }
 
         if (isVesMode) {
             val amountUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
@@ -1203,7 +1294,8 @@ class MainActivity : AppCompatActivity() {
                 amountVes = amountVes,
                 amountUsd = amountUsd,
                 bankName = activeCashierBankName,
-                bankCode = activeCashierBankCode
+                bankCode = activeCashierBankCode,
+                countryProfile = PreferencesHelper.getCountryProfile(this)
             )
             val qrUri = PreferencesHelper.getBankQrUri(this, activeCashierBankCode)?.let { Uri.parse(it) }
             WhatsAppHelper.sendViaWhatsApp(this, "", message, qrUri)
@@ -1367,27 +1459,47 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
         var wsBankCode = activeCashierBankCode
         var wsBankName = activeCashierBankName
         var isWsVesMode = true
         var wsInput = if (currentInput != "0") currentInput else "0"
 
+        dialogBinding.tilWsClientPhone.hint = "Teléfono del cliente (opcional, ${countryProfile.phonePlaceholder})"
+        dialogBinding.btnWsCurrencyVes.text = "${countryProfile.localCurrencySymbol} ${countryProfile.localCurrencyCode}"
+        if (!countryProfile.supportsExchangeRate) {
+            dialogBinding.toggleGroupWsCurrency.visibility = View.GONE
+            isWsVesMode = true
+        }
+
         fun updateWsDisplay() {
             dialogBinding.tvWsDisplayAmount.text = wsInput
-            dialogBinding.tvWsCurrencySymbol.text = if (isWsVesMode) "Bs." else "$"
+            val isBinanceSelected = (wsBankCode == "BINANCE")
 
-            val amount = wsInput.toDoubleOrNull() ?: 0.0
-            if (isWsVesMode) {
-                val usd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
-                dialogBinding.tvWsConvertedAmount.text = String.format(Locale.US, "≈ $%.2f USD (Tasa BCV: %.2f)", usd, profile.bcvRate)
+            if (isBinanceSelected) {
+                dialogBinding.tvWsCurrencySymbol.text = "$"
+                dialogBinding.tvWsConvertedAmount.text = "Cobro en Cripto (USDT • Binance Pay)"
+            } else if (!countryProfile.supportsExchangeRate) {
+                dialogBinding.tvWsCurrencySymbol.text = countryProfile.localCurrencySymbol
+                dialogBinding.tvWsConvertedAmount.text = "${countryProfile.flagEmoji} ${countryProfile.displayName} (${countryProfile.localCurrencyCode})"
             } else {
-                val ves = amount * profile.bcvRate
-                dialogBinding.tvWsConvertedAmount.text = String.format(Locale.US, "≈ Bs. %.2f VES (Tasa BCV: %.2f)", ves, profile.bcvRate)
+                dialogBinding.tvWsCurrencySymbol.text = if (isWsVesMode) "Bs." else "$"
+                val amount = wsInput.toDoubleOrNull() ?: 0.0
+                if (isWsVesMode) {
+                    val usd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
+                    dialogBinding.tvWsConvertedAmount.text = String.format(Locale.US, "≈ $%.2f USD (Tasa BCV: %.2f)", usd, profile.bcvRate)
+                } else {
+                    val ves = amount * profile.bcvRate
+                    dialogBinding.tvWsConvertedAmount.text = String.format(Locale.US, "≈ Bs. %.2f VES (Tasa BCV: %.2f)", ves, profile.bcvRate)
+                }
             }
-            if (wsBankCode == "BINANCE") {
+
+            if (isBinanceSelected) {
                 val payId = PreferencesHelper.getBinancePayId(this)
                 val displayId = if (payId.isNotBlank()) "Pay ID: $payId" else "Billetera Binance"
                 dialogBinding.tvWsSelectedBankSubtitle.text = "🟡 $displayId (Cobro en USDT)"
+            } else if (!countryProfile.supportsExchangeRate) {
+                dialogBinding.tvWsSelectedBankSubtitle.text = "Datos de: $wsBankName (${countryProfile.flagEmoji} ${countryProfile.localCurrencyCode})"
             } else {
                 dialogBinding.tvWsSelectedBankSubtitle.text = "Datos de: $wsBankName ($wsBankCode)"
             }
@@ -1535,7 +1647,8 @@ class MainActivity : AppCompatActivity() {
                 amountVes = amountVes,
                 amountUsd = amountUsd,
                 bankName = wsBankName,
-                bankCode = wsBankCode
+                bankCode = wsBankCode,
+                countryProfile = countryProfile
             )
             val qrUri = PreferencesHelper.getBankQrUri(this, wsBankCode)?.let { Uri.parse(it) }
             WhatsAppHelper.sendViaWhatsApp(this, clientPhone, message, qrUri)
@@ -1562,18 +1675,20 @@ class MainActivity : AppCompatActivity() {
 
         val isMultibank = PlanCapabilityManager.canUseMultibank(this)
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        val countryBanks = BankCatalog.getBanksForCountry(countryProfile.code)
 
         dialogBinding.tvSelectBankSubtitle.text = if (isMultibank) {
-            "Elige un banco para activar y recibir pagos móviles con QR:"
+            "Elige un banco o billetera de ${countryProfile.flagEmoji} ${countryProfile.displayName} para activar:"
         } else {
-            "Elige tu banco para el Plan Básico (1 banco activo a la vez):"
+            "Elige tu banco de ${countryProfile.flagEmoji} ${countryProfile.displayName} (Plan Básico: 1 banco activo):"
         }
 
         dialogBinding.btnSelectBankClose.setOnClickListener {
             dialog.dismiss()
         }
 
-        BankCatalog.ALL_BANKS.forEach { bank ->
+        countryBanks.forEach { bank ->
             val itemBinding = ItemBankSelectBinding.inflate(layoutInflater, dialogBinding.layoutBankListContainer, false)
             val brandColor = bank.getBrandColor()
             val shortName = bank.getShortName()
@@ -1581,7 +1696,11 @@ class MainActivity : AppCompatActivity() {
             itemBinding.tvBankItemBadge.text = shortName
             itemBinding.tvBankItemBadge.backgroundTintList = ColorStateList.valueOf(brandColor)
             itemBinding.tvBankItemName.text = bank.name
-            itemBinding.tvBankItemCode.text = "Código Sudeban: ${bank.code}"
+            itemBinding.tvBankItemCode.text = if (countryProfile.code == CountryCode.VE) {
+                "Código Sudeban: ${bank.code}"
+            } else {
+                "${countryProfile.flagEmoji} ${countryProfile.displayName} • ${bank.shortTag}"
+            }
 
             val isPrimary = (bank.code == profile.bankCode)
             val hasQr = PreferencesHelper.getBankQrUri(this, bank.code) != null
@@ -1672,8 +1791,9 @@ class MainActivity : AppCompatActivity() {
      * Permite colocar un monto específico antes de mostrar el QR en pantalla grande.
      */
     private fun showAmountForQrDialog(bankCode: String, bankName: String) {
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
         val input = EditText(this).apply {
-            hint = "Monto en Bolívares (ej. 150.00)"
+            hint = "Monto en ${countryProfile.localCurrencyDisplay} (ej. 150.00)"
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
             setPadding(40, 30, 40, 30)
         }
@@ -1757,9 +1877,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun showWhatsAppPromptDialog(amountVes: Double, amountUsd: Double) {
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
 
         val input = EditText(this).apply {
-            hint = "04141234567 (o dejar vacío)"
+            hint = "${countryProfile.phonePlaceholder} (o dejar vacío)"
             inputType = android.text.InputType.TYPE_CLASS_PHONE
             setPadding(40, 30, 40, 30)
         }
@@ -1775,7 +1896,8 @@ class MainActivity : AppCompatActivity() {
                     amountVes = amountVes,
                     amountUsd = amountUsd,
                     bankName = activeCashierBankName,
-                    bankCode = activeCashierBankCode
+                    bankCode = activeCashierBankCode,
+                    countryProfile = countryProfile
                 )
                 val qrUri = PreferencesHelper.getBankQrUri(this, activeCashierBankCode)?.let { Uri.parse(it) }
                 WhatsAppHelper.sendViaWhatsApp(this, phone, message, qrUri)
@@ -1897,13 +2019,30 @@ class MainActivity : AppCompatActivity() {
         allDebtorsList = dbHelper.getAllDebtors()
         val summary = dbHelper.getDebtorsSummary()
         val profile = PreferencesHelper.getUserProfile(this)
-        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        val rate = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) profile.bcvRate else 1.0
 
-        binding.tvDebtorsTotalStreetUsd.text = String.format(Locale.US, "$ %.2f", summary.totalDebtUsd)
-        binding.tvDebtorsTotalStreetVes.text = String.format(Locale.US, "≈ Bs. %.2f", summary.totalDebtUsd * rate)
+        binding.tvDebtorsTotalStreetUsd.text = if (countryProfile.supportsExchangeRate) {
+            String.format(Locale.US, "$ %.2f", summary.totalDebtUsd)
+        } else {
+            String.format(Locale.US, "%s %.2f", countryProfile.localCurrencySymbol, summary.totalDebtUsd)
+        }
+        binding.tvDebtorsTotalStreetVes.text = if (countryProfile.supportsExchangeRate) {
+            String.format(Locale.US, "≈ Bs. %.2f", summary.totalDebtUsd * rate)
+        } else {
+            "${countryProfile.flagEmoji} ${countryProfile.localCurrencyCode}"
+        }
 
-        binding.tvDebtorsTotalCreditUsd.text = String.format(Locale.US, "$ %.2f", summary.totalCreditUsd)
-        binding.tvDebtorsTotalCreditVes.text = String.format(Locale.US, "≈ Bs. %.2f", summary.totalCreditUsd * rate)
+        binding.tvDebtorsTotalCreditUsd.text = if (countryProfile.supportsExchangeRate) {
+            String.format(Locale.US, "$ %.2f", summary.totalCreditUsd)
+        } else {
+            String.format(Locale.US, "%s %.2f", countryProfile.localCurrencySymbol, summary.totalCreditUsd)
+        }
+        binding.tvDebtorsTotalCreditVes.text = if (countryProfile.supportsExchangeRate) {
+            String.format(Locale.US, "≈ Bs. %.2f", summary.totalCreditUsd * rate)
+        } else {
+            "${countryProfile.flagEmoji} ${countryProfile.localCurrencyCode}"
+        }
 
         filterAndDisplayDebtors()
     }
@@ -1943,13 +2082,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAddDebtorDialog() {
-        val dialog = Dialog(this)
+        val dialog = BottomSheetDialog(this)
         val dBinding = DialogAddDebtorBinding.inflate(layoutInflater)
         dialog.setContentView(dBinding.root)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
         dBinding.btnPickContactNewDebtor.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             launchPhoneContactPicker { pickedName, pickedPhone ->
                 if (pickedName.isNotEmpty()) {
                     dBinding.etNewDebtorName.setText(pickedName)
@@ -1962,6 +2100,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         dBinding.btnSaveNewDebtor.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             val name = dBinding.etNewDebtorName.text.toString().trim()
             val phone = dBinding.etNewDebtorPhone.text.toString().trim().ifBlank { null }
             val idDoc = dBinding.etNewDebtorId.text.toString().trim().ifBlank { null }
@@ -1990,23 +2129,29 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAddChargeDialog(debtor: Debtor) {
-        val dialog = Dialog(this)
+        val dialog = BottomSheetDialog(this)
         val dBinding = DialogAddChargeBinding.inflate(layoutInflater)
         dialog.setContentView(dBinding.root)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
         val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
         var isChargeVesMode = false // Por defecto $ USD, seleccionable a Bs. Bolívares
 
         dBinding.tvChargeClientName.text = "Cliente: ${debtor.name}"
+        dBinding.btnChargeCurrencyVes.text = "${countryProfile.localCurrencySymbol} ${countryProfile.localCurrencyCode}"
+
+        if (!countryProfile.supportsExchangeRate) {
+            dBinding.toggleChargeCurrency.visibility = View.GONE
+            dBinding.tilChargeAmount.hint = "Monto a Fiar en ${countryProfile.localCurrencyCode} (${countryProfile.localCurrencySymbol}) *"
+            dBinding.tvChargeEquivBs.text = "${countryProfile.flagEmoji} ${countryProfile.displayName} (${countryProfile.localCurrencyCode})"
+        }
 
         if (debtor.hasCredit) {
             dBinding.layoutCreditNoticeBanner.visibility = View.VISIBLE
             dBinding.tvCreditNoticeText.text = String.format(
                 Locale.US,
-                "🟢 Este cliente tiene $%.2f USD de saldo a favor. Al fiar, se descontará de este saldo.",
+                "🟢 Este cliente tiene $%.2f de saldo a favor. Al fiar, se descontará de este saldo.",
                 debtor.creditAmountUsd
             )
         } else {
@@ -2014,6 +2159,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         fun updateChargeConversion() {
+            if (!countryProfile.supportsExchangeRate) return
             val rawInput = dBinding.etChargeAmountUsd.text?.toString()?.replace(',', '.')?.toDoubleOrNull() ?: 0.0
             if (isChargeVesMode) {
                 val equivUsd = rawInput / rate
@@ -2038,7 +2184,7 @@ class MainActivity : AppCompatActivity() {
             if (isChecked) {
                 isChargeVesMode = (checkedId == R.id.btnChargeCurrencyVes)
                 dBinding.tilChargeAmount.hint = if (isChargeVesMode) {
-                    "Monto a Fiar en Bolívares (Bs.) *"
+                    "Monto a Fiar en ${countryProfile.localCurrencyVoiceName.replaceFirstChar { it.uppercase() }} (${countryProfile.localCurrencySymbol}) *"
                 } else {
                     "Monto a Fiar en Dólares ($ USD) *"
                 }
@@ -2055,6 +2201,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         dBinding.btnConfirmCharge.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             val rawInput = dBinding.etChargeAmountUsd.text.toString().replace(',', '.').toDoubleOrNull() ?: 0.0
             val concept = dBinding.etChargeConcept.text.toString().trim()
 
@@ -2065,7 +2212,7 @@ class MainActivity : AppCompatActivity() {
 
             val amountUsd: Double
             val amountVes: Double
-            if (isChargeVesMode) {
+            if (isChargeVesMode && countryProfile.supportsExchangeRate) {
                 amountVes = rawInput
                 amountUsd = rawInput / rate
             } else {
@@ -2083,7 +2230,7 @@ class MainActivity : AppCompatActivity() {
 
             Toast.makeText(
                 this,
-                String.format(Locale.US, "✅ Fiado registrado a %s ($%.2f / Bs. %.2f)", debtor.name, amountUsd, amountVes),
+                String.format(Locale.US, "✅ Fiado registrado a %s ($%.2f)", debtor.name, amountUsd),
                 Toast.LENGTH_SHORT
             ).show()
             dialog.dismiss()
@@ -2094,56 +2241,84 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAddPaymentDialog(debtor: Debtor) {
-        val dialog = Dialog(this)
+        val dialog = BottomSheetDialog(this)
         val dBinding = DialogAddPaymentBinding.inflate(layoutInflater)
         dialog.setContentView(dBinding.root)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
         val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
         var isPaymentVesMode = false
 
         dBinding.tvPaymentClientName.text = "Cliente: ${debtor.name}"
+        dBinding.btnPaymentCurrencyVes.text = "${countryProfile.localCurrencySymbol} ${countryProfile.localCurrencyCode}"
+
+        if (!countryProfile.supportsExchangeRate) {
+            dBinding.togglePaymentCurrency.visibility = View.GONE
+            dBinding.tilPaymentAmount.hint = "Monto a Abonar en ${countryProfile.localCurrencyCode} (${countryProfile.localCurrencySymbol}) *"
+            dBinding.tvPaymentEquivBs.text = "${countryProfile.flagEmoji} ${countryProfile.displayName} (${countryProfile.localCurrencyCode})"
+        }
 
         if (debtor.isDebtor) {
-            dBinding.tvPaymentCurrentDebt.text = String.format(
-                Locale.US,
-                "Deuda actual: $%.2f USD (≈ Bs. %.2f BCV)",
-                debtor.debtAmountUsd,
-                debtor.getEquivalentVes(rate)
-            )
-            dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#C62828"))
+            dBinding.tvPaymentCurrentDebt.text = if (countryProfile.supportsExchangeRate) {
+                String.format(
+                    Locale.US,
+                    "Deuda actual: $%.2f USD (≈ Bs. %.2f BCV)",
+                    debtor.debtAmountUsd,
+                    debtor.getEquivalentVes(rate)
+                )
+            } else {
+                String.format(
+                    Locale.US,
+                    "Deuda actual: %s %.2f (%s)",
+                    countryProfile.localCurrencySymbol,
+                    debtor.debtAmountUsd,
+                    countryProfile.localCurrencyCode
+                )
+            }
+            dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#B91C1C"))
         } else if (debtor.hasCredit) {
-            dBinding.tvPaymentCurrentDebt.text = String.format(
-                Locale.US,
-                "Saldo a favor actual: $%.2f USD (≈ Bs. %.2f)",
-                debtor.creditAmountUsd,
-                debtor.getEquivalentVes(rate)
-            )
-            dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#2E7D32"))
+            dBinding.tvPaymentCurrentDebt.text = if (countryProfile.supportsExchangeRate) {
+                String.format(
+                    Locale.US,
+                    "Saldo a favor actual: $%.2f USD (≈ Bs. %.2f)",
+                    debtor.creditAmountUsd,
+                    debtor.getEquivalentVes(rate)
+                )
+            } else {
+                String.format(
+                    Locale.US,
+                    "Saldo a favor actual: %s %.2f (%s)",
+                    countryProfile.localCurrencySymbol,
+                    debtor.creditAmountUsd,
+                    countryProfile.localCurrencyCode
+                )
+            }
+            dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#15803D"))
         } else {
             dBinding.tvPaymentCurrentDebt.text = "Cuenta al día ($0.00)"
-            dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#5E6C84"))
+            dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#334155"))
         }
 
         fun updatePaymentConversion() {
             val rawInput = dBinding.etPaymentAmountUsd.text?.toString()?.replace(',', '.')?.toDoubleOrNull() ?: 0.0
             val inputUsd: Double
-            if (isPaymentVesMode) {
+            if (isPaymentVesMode && countryProfile.supportsExchangeRate) {
                 inputUsd = rawInput / rate
                 dBinding.tvPaymentEquivBs.text = String.format(Locale.US, "≈ $%.2f USD (Tasa BCV: %.2f)", inputUsd, rate)
             } else {
                 inputUsd = rawInput
-                val equivBs = rawInput * rate
-                dBinding.tvPaymentEquivBs.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa BCV: %.2f)", equivBs, rate)
+                if (countryProfile.supportsExchangeRate) {
+                    val equivBs = rawInput * rate
+                    dBinding.tvPaymentEquivBs.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa BCV: %.2f)", equivBs, rate)
+                }
             }
 
             if (debtor.isDebtor && inputUsd > debtor.debtAmountUsd + 0.009) {
                 val excess = inputUsd - debtor.debtAmountUsd
                 dBinding.tvPaymentExcessHint.text = String.format(
                     Locale.US,
-                    "💡 El excedente de $%.2f USD quedará como Saldo a Favor y el total entrará a Jornada.",
+                    "💡 El excedente de $%.2f quedará como Saldo a Favor y el total entrará a Jornada.",
                     excess
                 )
             } else {
@@ -2155,7 +2330,7 @@ class MainActivity : AppCompatActivity() {
             if (isChecked) {
                 isPaymentVesMode = (checkedId == R.id.btnPaymentCurrencyVes)
                 dBinding.tilPaymentAmount.hint = if (isPaymentVesMode) {
-                    "Monto a Abonar en Bolívares (Bs.) *"
+                    "Monto a Abonar en ${countryProfile.localCurrencyVoiceName.replaceFirstChar { it.uppercase() }} (${countryProfile.localCurrencySymbol}) *"
                 } else {
                     "Monto a Abonar en Dólares ($ USD) *"
                 }
@@ -2172,6 +2347,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         dBinding.btnConfirmPayment.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             val rawInput = dBinding.etPaymentAmountUsd.text.toString().replace(',', '.').toDoubleOrNull() ?: 0.0
             val note = dBinding.etPaymentNote.text.toString().trim()
 
@@ -2234,6 +2410,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendWhatsAppReminderToDebtor(debtor: Debtor) {
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
         val phone = debtor.phone
 
         if (phone.isNullOrBlank()) {
@@ -2241,7 +2418,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+        val rate = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) profile.bcvRate else 1.0
         val targetBankCode = activeCashierBankCode.ifBlank { profile.bankCode }
         val targetBankName = activeCashierBankName.ifBlank { profile.bankName }
         val qrUriString = PreferencesHelper.getBankQrUri(this, targetBankCode) ?: profile.qrImageUri
@@ -2253,13 +2430,24 @@ class MainActivity : AppCompatActivity() {
             val totalVes = debtor.getEquivalentVes(rate)
             val totalConcilVes = if (autoConcilAllowed) debtor.getConciliationVes(rate) else totalVes
 
-            val options = arrayOf(
+            val firstOption = if (countryProfile.supportsExchangeRate) {
                 String.format(
                     Locale.US,
                     "💵 Cobrar Deuda Total ($%.2f USD → Bs. %.2f)",
                     totalUsd,
                     totalConcilVes
-                ),
+                )
+            } else {
+                String.format(
+                    Locale.US,
+                    "💵 Cobrar Deuda Total (%s %.2f)",
+                    countryProfile.localCurrencySymbol,
+                    totalConcilVes
+                )
+            }
+
+            val options = arrayOf(
+                firstOption,
                 "🤝 Acordar Abono Parcial (Monto específico)"
             )
 
@@ -2279,7 +2467,8 @@ class MainActivity : AppCompatActivity() {
                             bankCode = targetBankCode,
                             conciliationCents = debtor.conciliationCents,
                             requestedAmountUsd = null,
-                            includeConciliationCents = autoConcilAllowed
+                            includeConciliationCents = autoConcilAllowed,
+                            countryProfile = countryProfile
                         )
                         WhatsAppHelper.sendViaWhatsApp(this, phone, msg, qrUri)
                     } else {
@@ -2293,11 +2482,12 @@ class MainActivity : AppCompatActivity() {
                 profile = profile,
                 debtorName = debtor.name,
                 creditUsd = debtor.creditAmountUsd,
-                bcvRate = rate
+                bcvRate = rate,
+                countryProfile = countryProfile
             )
             WhatsAppHelper.sendViaWhatsApp(this, phone, msg, null)
         } else {
-            Toast.makeText(this, "El cliente está al día ($0.00)", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "El cliente está al día (${countryProfile.localCurrencySymbol} 0.00)", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -2310,21 +2500,28 @@ class MainActivity : AppCompatActivity() {
         phone: String
     ) {
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
         val autoConcilAllowed = PlanCapabilityManager.canUseAutoConciliation(this)
 
         val input = EditText(this).apply {
-            hint = String.format(Locale.US, "Monto en $ USD (Deuda: $%.2f)", debtor.debtAmountUsd)
+            hint = if (countryProfile.supportsExchangeRate) {
+                String.format(Locale.US, "Monto en $ USD (Deuda: $%.2f)", debtor.debtAmountUsd)
+            } else {
+                String.format(Locale.US, "Monto en %s (Deuda: %s %.2f)", countryProfile.localCurrencyCode, countryProfile.localCurrencySymbol, debtor.debtAmountUsd)
+            }
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
             setPadding(48, 36, 48, 36)
         }
 
         val concilNotice = if (autoConcilAllowed) {
-            "\n\n✨ Se sumarán +Bs. ${String.format(Locale.US, "%.2f", debtor.conciliationCents)} de céntimos de conciliación para que cuando caiga el Pago Móvil se descuente automáticamente."
+            "\n\n✨ Se sumarán +${countryProfile.localCurrencySymbol} ${String.format(Locale.US, "%.2f", debtor.conciliationCents)} de centavos de conciliación para descontar automáticamente al llegar el pago."
         } else ""
+
+        val currencyLabel = if (countryProfile.supportsExchangeRate) "dólares ($ USD)" else "${countryProfile.localCurrencyDisplay}"
 
         AlertDialog.Builder(this)
             .setTitle("🤝 Acordar Abono Parcial")
-            .setMessage("Ingresa el monto en dólares ($ USD) que ${debtor.name} acordó abonar hoy:$concilNotice")
+            .setMessage("Ingresa el monto en $currencyLabel que ${debtor.name} acordó abonar hoy:$concilNotice")
             .setView(input)
             .setPositiveButton("Enviar por WhatsApp") { _, _ ->
                 val raw = input.text.toString().replace(",", ".").trim()
@@ -2351,7 +2548,8 @@ class MainActivity : AppCompatActivity() {
                     bankCode = targetBankCode,
                     conciliationCents = debtor.conciliationCents,
                     requestedAmountUsd = partialUsd,
-                    includeConciliationCents = autoConcilAllowed
+                    includeConciliationCents = autoConcilAllowed,
+                    countryProfile = countryProfile
                 )
                 WhatsAppHelper.sendViaWhatsApp(this, phone, msg, qrUri)
             }
@@ -2367,36 +2565,55 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
         val profile = PreferencesHelper.getUserProfile(this)
-        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        val rate = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) profile.bcvRate else 1.0
 
         dBinding.tvDetailDebtorName.text = debtor.name
         val phone = debtor.phone ?: "Sin WhatsApp"
         val idDoc = if (!debtor.identification.isNullOrBlank()) " • ${debtor.identification}" else ""
         val concilText = if (debtor.isDebtor) {
-            String.format(
-                Locale.US,
-                "\nBs. %.2f (BCV) • Monto exacto a conciliar: Bs. %.2f",
-                debtor.getEquivalentVes(rate),
-                debtor.getConciliationVes(rate)
-            )
+            if (countryProfile.supportsExchangeRate) {
+                String.format(
+                    Locale.US,
+                    "\nBs. %.2f (BCV) • Monto exacto a conciliar: Bs. %.2f",
+                    debtor.getEquivalentVes(rate),
+                    debtor.getConciliationVes(rate)
+                )
+            } else {
+                String.format(
+                    Locale.US,
+                    "\nMonto exacto a conciliar: %s %.2f (%s)",
+                    countryProfile.localCurrencySymbol,
+                    debtor.getConciliationVes(rate),
+                    countryProfile.localCurrencyCode
+                )
+            }
         } else ""
         dBinding.tvDetailDebtorMeta.text = "$phone$idDoc$concilText"
 
         when {
             debtor.isDebtor -> {
-                dBinding.tvDetailBalanceBadge.text = String.format(Locale.US, "🔴 Debe $%.2f", debtor.debtAmountUsd)
+                dBinding.tvDetailBalanceBadge.text = if (countryProfile.supportsExchangeRate) {
+                    String.format(Locale.US, "🔴 Debe $%.2f", debtor.debtAmountUsd)
+                } else {
+                    String.format(Locale.US, "🔴 Debe %s %.2f", countryProfile.localCurrencySymbol, debtor.debtAmountUsd)
+                }
                 dBinding.tvDetailBalanceBadge.setTextColor(Color.parseColor("#C62828"))
                 dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFEBEE"))
                 dBinding.btnDetailShareWhatsApp.text = "💬 Cobrar con QR"
             }
             debtor.hasCredit -> {
-                dBinding.tvDetailBalanceBadge.text = String.format(Locale.US, "🟢 A favor $%.2f", debtor.creditAmountUsd)
+                dBinding.tvDetailBalanceBadge.text = if (countryProfile.supportsExchangeRate) {
+                    String.format(Locale.US, "🟢 A favor $%.2f", debtor.creditAmountUsd)
+                } else {
+                    String.format(Locale.US, "🟢 A favor %s %.2f", countryProfile.localCurrencySymbol, debtor.creditAmountUsd)
+                }
                 dBinding.tvDetailBalanceBadge.setTextColor(Color.parseColor("#2E7D32"))
                 dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E8F5E9"))
                 dBinding.btnDetailShareWhatsApp.text = "💬 Avisar por WhatsApp"
             }
             else -> {
-                dBinding.tvDetailBalanceBadge.text = "⚪ Al Día ($0.00)"
+                dBinding.tvDetailBalanceBadge.text = "⚪ Al Día (${countryProfile.localCurrencySymbol} 0.00)"
                 dBinding.tvDetailBalanceBadge.setTextColor(Color.parseColor("#5E6C84"))
                 dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F4F5F7"))
                 dBinding.btnDetailShareWhatsApp.visibility = View.GONE
@@ -2426,13 +2643,29 @@ class MainActivity : AppCompatActivity() {
                 rowBinding.tvEntryDate.text = dateFormat.format(Date(entry.timestamp))
 
                 if (isCharge) {
-                    rowBinding.tvEntryAmountUsd.text = String.format(Locale.US, "-$%.2f", entry.amountUsd)
+                    rowBinding.tvEntryAmountUsd.text = if (countryProfile.supportsExchangeRate) {
+                        String.format(Locale.US, "-$%.2f", entry.amountUsd)
+                    } else {
+                        String.format(Locale.US, "-%s %.2f", countryProfile.localCurrencySymbol, entry.amountUsd)
+                    }
                     rowBinding.tvEntryAmountUsd.setTextColor(Color.parseColor("#DE350B"))
-                    rowBinding.tvEntryAmountBs.text = String.format(Locale.US, "Bs. %.2f", entry.amountVes)
+                    rowBinding.tvEntryAmountBs.text = if (countryProfile.supportsExchangeRate) {
+                        String.format(Locale.US, "Bs. %.2f", entry.amountVes)
+                    } else {
+                        countryProfile.localCurrencyCode
+                    }
                 } else {
-                    rowBinding.tvEntryAmountUsd.text = String.format(Locale.US, "+$%.2f", entry.amountUsd)
+                    rowBinding.tvEntryAmountUsd.text = if (countryProfile.supportsExchangeRate) {
+                        String.format(Locale.US, "+$%.2f", entry.amountUsd)
+                    } else {
+                        String.format(Locale.US, "+%s %.2f", countryProfile.localCurrencySymbol, entry.amountUsd)
+                    }
                     rowBinding.tvEntryAmountUsd.setTextColor(Color.parseColor("#00875A"))
-                    rowBinding.tvEntryAmountBs.text = String.format(Locale.US, "Bs. %.2f", entry.amountVes)
+                    rowBinding.tvEntryAmountBs.text = if (countryProfile.supportsExchangeRate) {
+                        String.format(Locale.US, "Bs. %.2f", entry.amountVes)
+                    } else {
+                        countryProfile.localCurrencyCode
+                    }
                 }
                 dBinding.layoutLedgerEntriesContainer.addView(rowBinding.root)
             }
@@ -2611,10 +2844,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         val profile = PreferencesHelper.getUserProfile(this)
-        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        val rate = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) profile.bcvRate else 1.0
 
         // Calcular equivalencias según modo VES / USD actual
-        val (amountUsd, amountVes) = if (isVesMode) {
+        val (amountUsd, amountVes) = if (isVesMode && countryProfile.supportsExchangeRate) {
             Pair(actualAmount / rate, actualAmount)
         } else {
             Pair(actualAmount, actualAmount * rate)
@@ -2626,12 +2860,22 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
-        dBinding.tvQuickFiarAmountSummary.text = String.format(
-            Locale.US,
-            "Monto a fiar: $%.2f USD (Bs. %.2f)",
-            amountUsd,
-            amountVes
-        )
+        dBinding.tvQuickFiarAmountSummary.text = if (countryProfile.supportsExchangeRate) {
+            String.format(
+                Locale.US,
+                "Monto a fiar: $%.2f USD (Bs. %.2f)",
+                amountUsd,
+                amountVes
+            )
+        } else {
+            String.format(
+                Locale.US,
+                "Monto a fiar: %s %.2f (%s)",
+                countryProfile.localCurrencySymbol,
+                amountVes,
+                countryProfile.localCurrencyCode
+            )
+        }
 
         // Configurar autocompletado de clientes existentes
         val existingDebtors = dbHelper.getAllDebtors()
@@ -2700,14 +2944,20 @@ class MainActivity : AppCompatActivity() {
         val (income, expense, count) = dbHelper.getTodaySummary(startTime, endTime)
         val net = income - expense
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        val localSym = countryProfile.localCurrencySymbol
 
         val netUsd = if (profile.bcvRate > 0) net / profile.bcvRate else 0.0
 
-        binding.tvTotalIncomeVes.text = String.format(Locale.US, "Bs. %.2f", income)
+        binding.tvTotalIncomeVes.text = String.format(Locale.US, "%s %.2f", localSym, income)
         binding.tvIncomeCount.text = "🟢 Cobrado ($count)"
-        binding.tvTotalExpenseVes.text = String.format(Locale.US, "Bs. %.2f", expense)
-        binding.tvNetProfitVes.text = String.format(Locale.US, "Bs. %.2f", net)
-        binding.tvNetProfitUsd.text = String.format(Locale.US, "≈ $%.2f USD", netUsd)
+        binding.tvTotalExpenseVes.text = String.format(Locale.US, "%s %.2f", localSym, expense)
+        binding.tvNetProfitVes.text = String.format(Locale.US, "%s %.2f", localSym, net)
+        binding.tvNetProfitUsd.text = if (countryProfile.supportsExchangeRate) {
+            String.format(Locale.US, "≈ $%.2f USD", netUsd)
+        } else {
+            "${countryProfile.flagEmoji} ${countryProfile.displayName} (${countryProfile.localCurrencyCode})"
+        }
         updateCashierHeaderSummary()
 
         // Optimización de rendimiento: Si la pestaña de Historial no está visible, no re-inflar toda la lista
@@ -2750,12 +3000,13 @@ class MainActivity : AppCompatActivity() {
                         tx.category == TransactionCategories.INCOME_ABONO_FIADO ->
                             if (tx.bankName.isNotEmpty()) "📒 Abono Fiado (${tx.bankName})" else "📒 Abono de Fiado (Libreta)"
                         tx.isManual -> "Ingreso: $catDisplay"
-                        else -> "Pago Móvil ${tx.bankName}"
+                        countryProfile.supportsExchangeRate -> "Pago Móvil ${tx.bankName}"
+                        else -> "Cobro ${tx.bankName}"
                     }
                     itemBinding.tvTxAmount.text = if (isCrypto && tx.amountUsd > 0.0) {
                         String.format(Locale.US, "+ $%.2f USDT", tx.amountUsd)
                     } else {
-                        String.format(Locale.US, "+ Bs. %.2f", tx.amount)
+                        String.format(Locale.US, "+ %s %.2f", localSym, tx.amount)
                     }
                     itemBinding.tvTxAmount.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
                 } else {
@@ -2763,8 +3014,12 @@ class MainActivity : AppCompatActivity() {
                     itemBinding.ivTxIcon.setColorFilter(ContextCompat.getColor(this, R.color.expense_red))
                     itemBinding.ivTxIcon.backgroundTintList = ContextCompat.getColorStateList(this, R.color.expense_red_bg)
                     val catDisplay = TransactionCategories.getCategoryDisplayName(tx.category)
-                    itemBinding.tvTxTitle.text = "Gasto: $catDisplay"
-                    itemBinding.tvTxAmount.text = String.format(Locale.US, "- Bs. %.2f", tx.amount)
+                    itemBinding.tvTxTitle.text = if (!tx.isManual && tx.bankName.isNotEmpty()) {
+                        "Salida ${tx.bankName}"
+                    } else {
+                        "Gasto: $catDisplay"
+                    }
+                    itemBinding.tvTxAmount.text = String.format(Locale.US, "- %s %.2f", localSym, tx.amount)
                     itemBinding.tvTxAmount.setTextColor(ContextCompat.getColor(this, R.color.expense_red))
                 }
 
@@ -2792,16 +3047,28 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
         var isIncomeVes = true
 
+        if (!countryProfile.supportsExchangeRate) {
+            dialogBinding.toggleIncomeCurrency.visibility = View.GONE
+            dialogBinding.chipEfectivoUsd.visibility = View.GONE
+            dialogBinding.chipEfectivoBs.text = "💵 Efectivo ${countryProfile.localCurrencyCode}"
+            dialogBinding.chipPagoMovilManual.text = "📱 ${countryProfile.instantPaymentSystemName}"
+            dialogBinding.tilIncomeAmount.hint = "Monto Recibido (${countryProfile.localCurrencySymbol})"
+            dialogBinding.tvIncomeConverted.text = "${countryProfile.flagEmoji} ${countryProfile.displayName} (${countryProfile.localCurrencyCode})"
+        }
+
         val updateConversion = {
-            val raw = dialogBinding.etIncomeAmount.text.toString().replace(',', '.').toDoubleOrNull() ?: 0.0
-            if (isIncomeVes) {
-                val usd = if (profile.bcvRate > 0) raw / profile.bcvRate else 0.0
-                dialogBinding.tvIncomeConverted.text = String.format(Locale.US, "≈ $%.2f USD (Tasa %.2f)", usd, profile.bcvRate)
-            } else {
-                val ves = raw * profile.bcvRate
-                dialogBinding.tvIncomeConverted.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa %.2f)", ves, profile.bcvRate)
+            if (countryProfile.supportsExchangeRate) {
+                val raw = dialogBinding.etIncomeAmount.text.toString().replace(',', '.').toDoubleOrNull() ?: 0.0
+                if (isIncomeVes) {
+                    val usd = if (profile.bcvRate > 0) raw / profile.bcvRate else 0.0
+                    dialogBinding.tvIncomeConverted.text = String.format(Locale.US, "≈ $%.2f USD (Tasa %.2f)", usd, profile.bcvRate)
+                } else {
+                    val ves = raw * profile.bcvRate
+                    dialogBinding.tvIncomeConverted.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa %.2f)", ves, profile.bcvRate)
+                }
             }
         }
 
@@ -2873,6 +3140,9 @@ class MainActivity : AppCompatActivity() {
         dialog.setContentView(dialogBinding.root)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        dialogBinding.tilExpenseAmount.hint = "Monto en ${countryProfile.localCurrencyDisplay}"
 
         dialogBinding.btnSaveExpense.setOnClickListener {
             val amount = dialogBinding.etExpenseAmount.text.toString().replace(',', '.').toDoubleOrNull() ?: 0.0
@@ -3207,8 +3477,12 @@ class MainActivity : AppCompatActivity() {
             dialogBinding.tvReportPeriodLabel.text = "📅 Periodo: $filterPeriodLabel"
 
             val financials = ReportHelper.calculateFinancials(currentFilteredTransactions, profile.bcvRate)
-            dialogBinding.tvReportSummaryBadge.text =
+            val countryProfile = PreferencesHelper.getCountryProfile(this)
+            dialogBinding.tvReportSummaryBadge.text = if (countryProfile.supportsExchangeRate) {
                 "${currentFilteredTransactions.size} movimientos • Bs. ${String.format(Locale.US, "%.2f", financials.totalIncomeVes)} ($${String.format(Locale.US, "%.2f", financials.totalIncomeUsd)}) • Tasa BCV: Bs. ${String.format(Locale.US, "%.2f", profile.bcvRate)}"
+            } else {
+                "${currentFilteredTransactions.size} movimientos • ${countryProfile.localCurrencySymbol} ${String.format(Locale.US, "%.2f", financials.totalIncomeVes)} (${countryProfile.localCurrencyCode})"
+            }
         }
 
         dialogBinding.chipGroupReportPeriod.setOnCheckedStateChangeListener { _, _ ->
@@ -3641,6 +3915,8 @@ class MainActivity : AppCompatActivity() {
             binding.btnAddAnotherBank.text = "➕ Agregar otro banco y código QR"
         }
 
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+
         bankCodes.forEach { code ->
             val itemBinding = ItemConfiguredBankSettingBinding.inflate(layoutInflater, binding.llConfiguredBanksContainer, false)
             val bank = BankCatalog.findByCode(code)
@@ -3651,7 +3927,11 @@ class MainActivity : AppCompatActivity() {
             itemBinding.tvBankItemBadge.text = shortName
             itemBinding.tvBankItemBadge.backgroundTintList = ColorStateList.valueOf(brandColor)
             itemBinding.tvBankItemName.text = bankName
-            itemBinding.tvBankItemCode.text = "Código Sudeban: $code"
+            itemBinding.tvBankItemCode.text = if (countryProfile.code == CountryCode.VE) {
+                "Código Sudeban: $code"
+            } else {
+                "${countryProfile.flagEmoji} ${countryProfile.displayName} • ${bank?.shortTag ?: code}"
+            }
 
             val isPrimary = (code == profile.bankCode)
             if (isPrimary) {
@@ -3892,6 +4172,38 @@ class MainActivity : AppCompatActivity() {
 
     // --- TAB AJUSTES ---
     private fun setupSettings() {
+        binding.btnRequestCountryChange.setOnClickListener {
+            val profile = PreferencesHelper.getUserProfile(this)
+            val currentCountry = PreferencesHelper.getCountryProfile(this)
+            val deviceId = PlanCapabilityManager.getDeviceId(this)
+            val businessName = profile.merchantName.ifEmpty { "Mi Negocio" }
+
+            AlertDialog.Builder(this)
+                .setTitle("🌎 Solicitar Cambio de País")
+                .setMessage(
+                    "El país de operación (${currentCountry.flagEmoji} ${currentCountry.displayName}) queda fijo al instalar la aplicación para proteger la contabilidad y moneda de tu caja.\n\n" +
+                    "Si necesitas cambiar tu terminal a otro país (Venezuela, Colombia o Argentina), nuestro equipo de Atención al Cliente lo actualizará de inmediato en el sistema.\n\n" +
+                    "🔑 ID de tu Terminal: $deviceId"
+                )
+                .setPositiveButton("💬 Contactar Atención al Cliente") { _, _ ->
+                    val text = Uri.encode(
+                        "Hola equipo de Atención al Cliente Zeasy, solicito el cambio de país de operación para mi terminal.\n\n" +
+                        "🏪 Comercio: $businessName\n" +
+                        "🔑 ID de Terminal: $deviceId\n" +
+                        "🌎 País actual: ${currentCountry.flagEmoji} ${currentCountry.displayName} (${currentCountry.localCurrencyCode})\n" +
+                        "👉 Deseo cambiar a: "
+                    )
+                    val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, uri))
+                    } catch (_: Exception) {
+                        Toast.makeText(this, "WhatsApp Soporte: ${PlanCapabilityManager.SUPPORT_PHONE_DISPLAY}", Toast.LENGTH_LONG).show()
+                    }
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
+        }
+
         binding.toggleGroupTheme.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 if (checkedId == R.id.btnThemeLight) {
@@ -3945,6 +4257,11 @@ class MainActivity : AppCompatActivity() {
         binding.etSettingsEmail.addTextChangedListener(draftWatcher)
         binding.etSettingsBcvRate.addTextChangedListener(draftWatcher)
         binding.etBinancePayId.addTextChangedListener(draftWatcher)
+
+        // Botón Asistente Paso a Paso (Guía Fácil para todas las edades)
+        binding.btnOpenSetupWizard.setOnClickListener {
+            showSetupWizardDialog(isMandatory = false, startStep = 1)
+        }
 
         // Botón Guía Web Oficial con Fotos y Ejemplos
         binding.btnOpenWebGuide.setOnClickListener {
@@ -4269,6 +4586,7 @@ class MainActivity : AppCompatActivity() {
             binding.switchBiometric.isChecked = profile.biometricSecurityEnabled
 
             updateNotificationPermissionUI()
+            applyCountryProfileToUi()
             setupSettingsBankManager()
             setupCashierBankSelector()
             setupSettingsWallets()
@@ -4416,7 +4734,7 @@ class MainActivity : AppCompatActivity() {
             .setView(dialogBinding.root)
             .create()
 
-        dialogBinding.tvProReasonSubtitle.text = "Habilita $featureName con tu código Zeasy PRO ⚡"
+        dialogBinding.tvProReasonSubtitle.text = "Habilita $featureName con tu licencia Zeasy PRO ⚡"
 
         val hasUsedTrial = PlanCapabilityManager.hasUsedTrial(this)
         if (hasUsedTrial) {
@@ -4447,11 +4765,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Validar código directamente desde el campo integrado en el modal
+        // Validar código directamente desde el campo integrado en el modal usando LicenseRepository
         dialogBinding.btnProRedeemCode.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             val code = dialogBinding.etProActivationCode.text?.toString()?.trim() ?: ""
             if (code.isEmpty()) {
-                dialogBinding.etProActivationCode.error = "Ingresa tu código de activación o solicítalo abajo"
+                dialogBinding.etProActivationCode.error = "Ingresa tu código de licencia o contacta a soporte"
                 dialogBinding.etProActivationCode.requestFocus()
                 return@setOnClickListener
             }
@@ -4459,10 +4778,10 @@ class MainActivity : AppCompatActivity() {
             dialogBinding.btnProRedeemCode.isEnabled = false
             dialogBinding.btnProRedeemCode.text = "⏳ Validando código..."
             lifecycleScope.launch {
-                val result = ZeasySyncManager.redeemActivationCode(this@MainActivity, code)
+                val result = LicenseRepository.redeemExternalLicenseCode(this@MainActivity, code)
                 runOnUiThread {
                     dialogBinding.btnProRedeemCode.isEnabled = true
-                    dialogBinding.btnProRedeemCode.text = "🔑 Validar y Activar Código"
+                    dialogBinding.btnProRedeemCode.text = "🔑 Canjear Código de Licencia"
                     if (result.success) {
                         dialog.dismiss()
                         loadSettings()
@@ -4477,7 +4796,7 @@ class MainActivity : AppCompatActivity() {
                             .setTitle("Código no válido")
                             .setMessage(result.message)
                             .setPositiveButton("Aceptar", null)
-                            .setNeutralButton("💬 Solicitar por WhatsApp") { _, _ ->
+                            .setNeutralButton("💬 Soporte Comercial") { _, _ ->
                                 dialog.dismiss()
                                 openSupportWhatsAppForPro(featureName)
                             }
@@ -4631,11 +4950,36 @@ class MainActivity : AppCompatActivity() {
     private fun syncLicenseStatus(showToastIfNoChange: Boolean = false) {
         lifecycleScope.launch {
             val wasPro = PlanCapabilityManager.isPro(this@MainActivity)
+            val prevCountry = PreferencesHelper.getCountryCode(this@MainActivity)
             val updated = ZeasySyncManager.syncWithBackend(this@MainActivity)
             val isProNow = PlanCapabilityManager.isPro(this@MainActivity)
+            val newCountry = PreferencesHelper.getCountryCode(this@MainActivity)
             val daysRemaining = PlanCapabilityManager.getDaysRemaining(this@MainActivity)
 
             runOnUiThread {
+                if (newCountry != prevCountry) {
+                    val newProfile = CountryProfileCatalog.getProfile(newCountry)
+                    val updatedUser = PreferencesHelper.getUserProfile(this@MainActivity)
+                    activeCashierBankCode = updatedUser.bankCode
+                    activeCashierBankName = updatedUser.bankName
+                    selectedBankConfigCode = updatedUser.bankCode
+                    selectedBankConfigName = updatedUser.bankName
+                    soundHelper?.shutdown()
+                    soundHelper = SoundHelper(this@MainActivity)
+                    applyCountryProfileToUi()
+                    renderConfiguredBanksList()
+                    setupCashierBankSelector()
+                    renderCashierBankCards()
+                    updateCashierHeaderSummary()
+                    loadTodayLedger()
+                    loadDebtors()
+                    Toast.makeText(
+                        this@MainActivity,
+                        "✅ Atención al Cliente actualizó tu país a ${newProfile.flagEmoji} ${newProfile.displayName} (${newProfile.localCurrencyCode})",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+
                 if (wasPro != isProNow || binding.viewSettings.visibility == View.VISIBLE) {
                     updatePlanUiInSettings()
                     updateBinanceSettingsCard()
@@ -4827,27 +5171,464 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showWelcomeOnboardingDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("👋 ¡Bienvenido a Zeasy Cobros!")
-            .setMessage("La herramienta que canta tus pagos en voz alta y te da tu código QR al instante.\n\nPara dejar tu caja 100% lista para cobrar:\n\n1️⃣ Configura tu Teléfono y Cédula de Pago Móvil.\n2️⃣ Activa los permisos de escucha bancaria y segundo plano.\n\n¿Deseas configurarlo ahora?")
-            .setPositiveButton("⚡ Configurar Ahora (Recomendado)") { dialog, _ ->
-                dialog.dismiss()
-                binding.bottomNavigation.selectedItemId = R.id.nav_settings
-                binding.etSettingsPhone.requestFocus()
+    /**
+     * Asistente de Configuración Paso a Paso de Alta Accesibilidad (pensado para todas las edades y adultos mayores).
+     * Al instalar la aplicación, guía obligatoriamente por los 5 pasos según el país elegido y guarda cada dato
+     * de forma progresiva e instantánea para evitar errores de configuración o pérdida de progreso.
+     */
+    private fun showSetupWizardDialog(isMandatory: Boolean = true, startStep: Int = 1) {
+        setupWizardDialog?.dismiss()
+        isWizardMandatory = isMandatory
+        currentWizardStep = startStep.coerceIn(1, 5)
 
-                // Invitar a activar los permisos tras ingresar a Ajustes
-                binding.etSettingsPhone.postDelayed({
+        val dialog = Dialog(this, android.R.style.Theme_DeviceDefault_Light_NoActionBar_Fullscreen)
+        val wBinding = DialogSetupWizardBinding.inflate(layoutInflater)
+        dialog.setContentView(wBinding.root)
+        dialog.setCancelable(!isMandatory)
+        setupWizardDialog = dialog
+        setupWizardBinding = wBinding
+
+        var selectedCountry = PreferencesHelper.getCountryCode(this)
+        val countryAlreadyLocked = PreferencesHelper.hasSelectedCountryOnFirstLaunch(this) && !isMandatory
+
+        fun updateCountrySelectionButtons(country: CountryCode) {
+            selectedCountry = country
+            val activeStroke = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent_cyan))
+            val inactiveStroke = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.border))
+            val activeBg = ColorStateList.valueOf(Color.parseColor("#1800D2C4"))
+            val inactiveBg = ColorStateList.valueOf(Color.TRANSPARENT)
+
+            listOf(
+                Pair(wBinding.btnWizardCountryVe, CountryCode.VE),
+                Pair(wBinding.btnWizardCountryCo, CountryCode.CO),
+                Pair(wBinding.btnWizardCountryAr, CountryCode.AR)
+            ).forEach { (btn, code) ->
+                val isSelected = (code == country)
+                btn.strokeColor = if (isSelected) activeStroke else inactiveStroke
+                btn.strokeWidth = if (isSelected) 6 else 3
+                btn.backgroundTintList = if (isSelected) activeBg else inactiveBg
+            }
+        }
+
+        updateCountrySelectionButtons(selectedCountry)
+
+        if (countryAlreadyLocked) {
+            val cProf = CountryProfileCatalog.getProfile(selectedCountry)
+            wBinding.btnWizardCountryVe.isEnabled = (selectedCountry == CountryCode.VE)
+            wBinding.btnWizardCountryCo.isEnabled = (selectedCountry == CountryCode.CO)
+            wBinding.btnWizardCountryAr.isEnabled = (selectedCountry == CountryCode.AR)
+            wBinding.tvWizardCountryLockNotice.text =
+                "🔒 Tu país actual es ${cProf.flagEmoji} ${cProf.displayName} (${cProf.localCurrencyCode}). Si necesitas cambiar de país, puedes solicitarlo a Atención al Cliente desde Ajustes."
+        } else {
+            wBinding.btnWizardCountryVe.setOnClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                updateCountrySelectionButtons(CountryCode.VE)
+            }
+            wBinding.btnWizardCountryCo.setOnClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                updateCountrySelectionButtons(CountryCode.CO)
+            }
+            wBinding.btnWizardCountryAr.setOnClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                updateCountrySelectionButtons(CountryCode.AR)
+            }
+        }
+
+        // Guardado progresivo instantáneo mientras el usuario escribe en el Paso 2
+        val progressiveWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (currentWizardStep == 2) {
+                    val name = wBinding.etWizardMerchantName.text?.toString()?.trim()
+                    val phone = wBinding.etWizardPhone.text?.toString()?.trim()
+                    val idDoc = wBinding.etWizardIdCard.text?.toString()?.trim()
+                    val bcv = wBinding.etWizardBcvRate.text?.toString()?.replace(',', '.')?.toDoubleOrNull()
+                    PreferencesHelper.saveProgressiveOnboardingData(
+                        context = this@MainActivity,
+                        merchantName = name,
+                        phone = phone,
+                        idCard = idDoc,
+                        bcvRate = bcv
+                    )
+                    wBinding.tvWizardAutoSaveBadge.text = "✅ Guardado al instante"
+                }
+            }
+        }
+        wBinding.etWizardMerchantName.addTextChangedListener(progressiveWatcher)
+        wBinding.etWizardPhone.addTextChangedListener(progressiveWatcher)
+        wBinding.etWizardIdCard.addTextChangedListener(progressiveWatcher)
+        wBinding.etWizardBcvRate.addTextChangedListener(progressiveWatcher)
+
+        wBinding.btnWizardFetchBcv.setOnClickListener {
+            wBinding.btnWizardFetchBcv.isEnabled = false
+            wBinding.btnWizardFetchBcv.text = "⏳ ..."
+            lifecycleScope.launch {
+                val res = BcvRateHelper.fetchOfficialRate()
+                wBinding.btnWizardFetchBcv.isEnabled = true
+                wBinding.btnWizardFetchBcv.text = "🔄 BCV Hoy"
+                if (res.isSuccess && res.rate > 0.0) {
+                    val fmt = String.format(Locale.US, "%.2f", res.rate)
+                    wBinding.etWizardBcvRate.setText(fmt)
+                    BcvRateHelper.applyRateToProfile(this@MainActivity, res.rate)
+                    Toast.makeText(this@MainActivity, "✅ Tasa BCV actualizada: Bs. $fmt", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@MainActivity, "Puedes escribir la tasa manualmente", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        wBinding.btnWizardUploadQr.setOnClickListener {
+            val currentBankCode = PreferencesHelper.getUserProfile(this).bankCode
+            if (currentBankCode.isNotEmpty()) {
+                launchCropForBank(currentBankCode)
+            } else {
+                Toast.makeText(this, "Primero toca tu banco en la lista de arriba", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        wBinding.btnWizardActivateNotif.setOnClickListener {
+            try {
+                val detailIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    Intent("android.settings.NOTIFICATION_LISTENER_DETAIL_SETTINGS").apply {
+                        putExtra(
+                            Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
+                            ComponentName(this@MainActivity, PocketNotificationListenerService::class.java).flattenToString()
+                        )
+                    }
+                } else {
+                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                }
+                startActivity(detailIntent)
+            } catch (e: Exception) {
+                try {
+                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                } catch (_: Exception) {
+                    Toast.makeText(this, "Abre Ajustes > Notificaciones > Acceso a notificaciones", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        wBinding.btnWizardActivateBattery.setOnClickListener {
+            requestBatteryOptimizationManual()
+        }
+
+        wBinding.btnWizardTestSound.setOnClickListener {
+            val isVoice = PlanCapabilityManager.canUseVoiceSoundbox(this)
+            if (isVoice) {
+                soundHelper?.announcePayment(150.0)
+            } else {
+                soundHelper?.playCashRegisterSound()
+            }
+            Toast.makeText(this, "🔊 Así sonará tu caja al recibir un pago", Toast.LENGTH_SHORT).show()
+        }
+
+        wBinding.btnWizardBack.setOnClickListener {
+            if (currentWizardStep > 1) {
+                currentWizardStep -= 1
+                PreferencesHelper.setOnboardingStep(this, currentWizardStep)
+                refreshSetupWizardStepUi()
+            } else if (!isMandatory) {
+                dialog.dismiss()
+            }
+        }
+
+        wBinding.btnWizardNext.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            when (currentWizardStep) {
+                1 -> {
+                    PreferencesHelper.setCountryCode(this, selectedCountry)
+                    lifecycleScope.launch {
+                        ZeasySyncManager.updateInitialCountryOnServer(this@MainActivity, selectedCountry)
+                    }
+                    val updatedUser = PreferencesHelper.getUserProfile(this)
+                    activeCashierBankCode = updatedUser.bankCode
+                    activeCashierBankName = updatedUser.bankName
+                    selectedBankConfigCode = updatedUser.bankCode
+                    selectedBankConfigName = updatedUser.bankName
+                    soundHelper?.shutdown()
+                    soundHelper = SoundHelper(this)
+                    applyCountryProfileToUi()
+                    setupCashierBankSelector()
+                    renderCashierBankCards()
+                    updateCashierHeaderSummary()
+                    loadTodayLedger()
+                    loadDebtors()
+
+                    currentWizardStep = 2
+                    PreferencesHelper.setOnboardingStep(this, 2)
+                    refreshSetupWizardStepUi()
+                }
+                2 -> {
+                    val cProf = PreferencesHelper.getCountryProfile(this)
+                    val name = wBinding.etWizardMerchantName.text?.toString()?.trim() ?: ""
+                    val phone = wBinding.etWizardPhone.text?.toString()?.trim() ?: ""
+                    val idDoc = wBinding.etWizardIdCard.text?.toString()?.trim() ?: ""
+                    val bcv = wBinding.etWizardBcvRate.text?.toString()?.replace(',', '.')?.toDoubleOrNull()
+                        ?: PreferencesHelper.getUserProfile(this).bcvRate
+
+                    if (name.length < 2 || name in DUMMY_DEFAULT_VALUES) {
+                        wBinding.etWizardMerchantName.error = "Escribe el nombre de tu negocio o taxi"
+                        wBinding.etWizardMerchantName.requestFocus()
+                        Toast.makeText(this, "✍️ Paso 1: Escribe el nombre de tu negocio o taxi", Toast.LENGTH_LONG).show()
+                        return@setOnClickListener
+                    }
+                    val cleanDigits = phone.replace(Regex("[^0-9]"), "")
+                    if (cleanDigits.length < 7 || phone in DUMMY_DEFAULT_VALUES) {
+                        wBinding.etWizardPhone.error = "Ingresa tu teléfono de cobro (${cProf.phonePlaceholder})"
+                        wBinding.etWizardPhone.requestFocus()
+                        Toast.makeText(this, "📱 Paso 2: Ingresa el número donde recibes tus pagos (${cProf.phonePlaceholder})", Toast.LENGTH_LONG).show()
+                        return@setOnClickListener
+                    }
+                    if (idDoc.length < 4 || idDoc in DUMMY_DEFAULT_VALUES) {
+                        wBinding.etWizardIdCard.error = "Ingresa tu ${cProf.nationalIdLabel} (${cProf.nationalIdPlaceholder})"
+                        wBinding.etWizardIdCard.requestFocus()
+                        Toast.makeText(this, "🪪 Paso 3: Ingresa tu ${cProf.nationalIdLabel}", Toast.LENGTH_LONG).show()
+                        return@setOnClickListener
+                    }
+
+                    // Guardar perfil de forma definitiva y progresiva
+                    val curProfile = PreferencesHelper.getUserProfile(this)
+                    val updatedProfile = curProfile.copy(
+                        merchantName = name,
+                        phoneNumber = phone,
+                        idCard = idDoc,
+                        bcvRate = if (bcv > 0.0) bcv else curProfile.bcvRate
+                    )
+                    PreferencesHelper.saveUserProfile(this, updatedProfile)
+                    PreferencesHelper.clearSettingsDraft(this)
+                    loadSettings(forceReload = true)
+
+                    currentWizardStep = 3
+                    PreferencesHelper.setOnboardingStep(this, 3)
+                    refreshSetupWizardStepUi()
+                }
+                3 -> {
+                    val curProfile = PreferencesHelper.getUserProfile(this)
+                    if (curProfile.bankCode.isBlank()) {
+                        Toast.makeText(this, "🏦 Por favor toca el banco donde recibes tus pagos", Toast.LENGTH_LONG).show()
+                        return@setOnClickListener
+                    }
+                    currentWizardStep = 4
+                    PreferencesHelper.setOnboardingStep(this, 4)
+                    refreshSetupWizardStepUi()
+                }
+                4 -> {
                     val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
                     val isListenerEnabled = enabledListeners != null && enabledListeners.contains(packageName)
                     if (!isListenerEnabled) {
-                        promptActivateNotificationListener()
+                        AlertDialog.Builder(this)
+                            .setTitle("🔔 Falta Activar la Lectura de Pagos")
+                            .setMessage("Para que Zeasy pueda escuchar cuando te llega un pago del banco y cantarlo en voz alta, necesitas prender el interruptor de Zeasy en la siguiente pantalla.\n\n¿Deseas activarlo ahora?")
+                            .setPositiveButton("👉 Sí, Activar Ahora") { _, _ ->
+                                wBinding.btnWizardActivateNotif.performClick()
+                            }
+                            .setNegativeButton("Pasar al último paso") { _, _ ->
+                                currentWizardStep = 5
+                                PreferencesHelper.setOnboardingStep(this, 5)
+                                refreshSetupWizardStepUi()
+                            }
+                            .show()
+                        return@setOnClickListener
                     }
-                }, 800)
+                    currentWizardStep = 5
+                    PreferencesHelper.setOnboardingStep(this, 5)
+                    refreshSetupWizardStepUi()
+                }
+                5 -> {
+                    PreferencesHelper.setOnboardingCompleted(this, true)
+                    PreferencesHelper.setOnboardingStep(this, 5)
+                    loadSettings(forceReload = true)
+                    setupCashierBankSelector()
+                    renderCashierBankCards()
+                    updateCashierHeaderSummary()
+                    loadTodayLedger()
+                    loadDebtors()
+                    lifecycleScope.launch {
+                        ZeasySyncManager.syncWithBackend(this@MainActivity)
+                    }
+                    dialog.dismiss()
+                    Toast.makeText(this, "🎉 ¡Todo listo! Tu caja Zeasy ya está configurada para cobrar.", Toast.LENGTH_LONG).show()
+                }
             }
-            .setNegativeButton("Explorar primero", null)
-            .setCancelable(false)
-            .show()
+        }
+
+        refreshSetupWizardStepUi()
+        dialog.show()
+    }
+
+    private fun refreshSetupWizardStepUi() {
+        val wBinding = setupWizardBinding ?: return
+        val cProf = PreferencesHelper.getCountryProfile(this)
+        val uProf = PreferencesHelper.getUserProfile(this)
+
+        wBinding.tvWizardStepBadge.text = "PASO $currentWizardStep DE 5"
+        wBinding.progressWizard.progress = currentWizardStep
+
+        wBinding.layoutWizardStep1.visibility = if (currentWizardStep == 1) View.VISIBLE else View.GONE
+        wBinding.layoutWizardStep2.visibility = if (currentWizardStep == 2) View.VISIBLE else View.GONE
+        wBinding.layoutWizardStep3.visibility = if (currentWizardStep == 3) View.VISIBLE else View.GONE
+        wBinding.layoutWizardStep4.visibility = if (currentWizardStep == 4) View.VISIBLE else View.GONE
+        wBinding.layoutWizardStep5.visibility = if (currentWizardStep == 5) View.VISIBLE else View.GONE
+
+        wBinding.btnWizardBack.visibility = if (currentWizardStep > 1 || !isWizardMandatory) View.VISIBLE else View.GONE
+        wBinding.btnWizardBack.text = if (currentWizardStep == 1 && !isWizardMandatory) "✖ Cerrar" else "⬅ Atrás"
+
+        when (currentWizardStep) {
+            1 -> {
+                wBinding.tvWizardStepTitle.text = "🌎 1. Selecciona tu País"
+                wBinding.tvWizardStepSubtitle.text = "Toca con tu dedo el país donde trabajas para ajustar tu moneda y tus bancos automáticamente."
+                wBinding.btnWizardNext.text = "Confirmar País y Continuar ➔"
+            }
+            2 -> {
+                wBinding.tvWizardStepTitle.text = "🏪 2. Tus Datos de Cobro (${cProf.flagEmoji} ${cProf.displayName})"
+                wBinding.tvWizardStepSubtitle.text = "Escribe los datos donde tus clientes te transfieren. Se van guardando solos mientras escribes."
+
+                wBinding.tvWizardPhoneLabel.text = when (cProf.code) {
+                    CountryCode.VE -> "2. Teléfono afiliado a Pago Móvil:"
+                    CountryCode.CO -> "2. Celular Nequi / DaviPlata o Cuenta:"
+                    CountryCode.AR -> "2. Celular o Alias / CVU de cobro:"
+                }
+                wBinding.tilWizardPhone.hint = "Ej: ${cProf.phonePlaceholder}"
+
+                wBinding.tvWizardIdLabel.text = "3. Tu ${cProf.nationalIdLabel}:"
+                wBinding.tilWizardIdCard.hint = "Ej: ${cProf.nationalIdPlaceholder}"
+
+                if (wBinding.etWizardMerchantName.text.isNullOrBlank() && uProf.merchantName.isNotBlank()) {
+                    wBinding.etWizardMerchantName.setText(uProf.merchantName)
+                }
+                if (wBinding.etWizardPhone.text.isNullOrBlank() && uProf.phoneNumber.isNotBlank()) {
+                    wBinding.etWizardPhone.setText(uProf.phoneNumber)
+                }
+                if (wBinding.etWizardIdCard.text.isNullOrBlank() && uProf.idCard.isNotBlank()) {
+                    wBinding.etWizardIdCard.setText(uProf.idCard)
+                }
+
+                if (cProf.supportsExchangeRate) {
+                    wBinding.layoutWizardBcvSection.visibility = View.VISIBLE
+                    if (wBinding.etWizardBcvRate.text.isNullOrBlank()) {
+                        wBinding.etWizardBcvRate.setText(String.format(Locale.US, "%.2f", uProf.bcvRate))
+                    }
+                    // Intentar actualizar la tasa BCV automáticamente en segundo plano
+                    lifecycleScope.launch {
+                        val res = BcvRateHelper.fetchOfficialRate()
+                        if (res.isSuccess && res.rate > 0.0) {
+                            BcvRateHelper.applyRateToProfile(this@MainActivity, res.rate)
+                            wBinding.etWizardBcvRate.setText(String.format(Locale.US, "%.2f", res.rate))
+                        }
+                    }
+                } else {
+                    wBinding.layoutWizardBcvSection.visibility = View.GONE
+                }
+
+                wBinding.btnWizardNext.text = "Guardar Datos y Continuar ➔"
+            }
+            3 -> {
+                wBinding.tvWizardStepTitle.text = "🏦 3. Elige tu Banco o Billetera"
+                wBinding.tvWizardStepSubtitle.text = "Toca el banco donde recibes tus pagos en ${cProf.displayName}."
+
+                val countryBanks = BankCatalog.getBanksForCountry(cProf.code).filter { it.code != "0000" }
+                val activeCode = uProf.bankCode.ifBlank { countryBanks.firstOrNull()?.code ?: "" }
+                val activeName = BankCatalog.findByCode(activeCode)?.name ?: uProf.bankName
+
+                wBinding.tvWizardSelectedBank.text = "✅ $activeName"
+
+                wBinding.layoutWizardBanksContainer.removeAllViews()
+                countryBanks.forEach { bankEntry ->
+                    val isSelected = bankEntry.code.equals(activeCode, ignoreCase = true)
+                    val btn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                        layoutParams = ViewGroup.MarginLayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            bottomMargin = (10 * resources.displayMetrics.density).toInt()
+                        }
+                        minHeight = (56 * resources.displayMetrics.density).toInt()
+                        isAllCaps = false
+                        textSize = 16f
+                        text = if (isSelected) "🟢  ${bankEntry.name} (Seleccionado)" else "🏦  ${bankEntry.name}"
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_primary))
+                        strokeColor = ColorStateList.valueOf(
+                            ContextCompat.getColor(
+                                this@MainActivity,
+                                if (isSelected) R.color.income_green else R.color.border
+                            )
+                        )
+                        strokeWidth = if (isSelected) 6 else 3
+                        backgroundTintList = ColorStateList.valueOf(
+                            if (isSelected) Color.parseColor("#1800875A") else Color.TRANSPARENT
+                        )
+                        setOnClickListener {
+                            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            if (!PlanCapabilityManager.canUseMultibank(this@MainActivity)) {
+                                PreferencesHelper.replaceBasicPlanBank(this@MainActivity, bankEntry.code, bankEntry.name)
+                            } else {
+                                PreferencesHelper.setPrimaryBank(this@MainActivity, bankEntry.code, bankEntry.name)
+                            }
+                            activeCashierBankCode = bankEntry.code
+                            activeCashierBankName = bankEntry.name
+                            selectedBankConfigCode = bankEntry.code
+                            selectedBankConfigName = bankEntry.name
+                            syncSelectedBank(bankEntry.code, bankEntry.name)
+                            refreshSetupWizardStepUi()
+                        }
+                    }
+                    wBinding.layoutWizardBanksContainer.addView(btn)
+                }
+
+                val hasQr = !PreferencesHelper.getBankQrUri(this, activeCode).isNullOrEmpty()
+                if (hasQr) {
+                    wBinding.tvWizardQrStatus.text = "✅ ¡Excelente! Ya subiste el código QR de $activeName"
+                    wBinding.tvWizardQrStatus.setTextColor(ContextCompat.getColor(this, R.color.income_green))
+                    wBinding.btnWizardUploadQr.text = "📸 Cambiar Imagen de mi QR"
+                } else {
+                    wBinding.tvWizardQrStatus.text = "📸 Código QR de $activeName (Opcional: puedes subirlo ahora o después)"
+                    wBinding.tvWizardQrStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                    wBinding.btnWizardUploadQr.text = "📸 Subir Imagen de mi QR"
+                }
+
+                wBinding.btnWizardNext.text = "Guardar Banco y Continuar ➔"
+            }
+            4 -> {
+                wBinding.tvWizardStepTitle.text = "🔔 4. Permiso para Cantar los Pagos"
+                wBinding.tvWizardStepSubtitle.text = "Este permiso es indispensable para que tu teléfono lea el aviso del banco y te cante el monto en voz alta."
+
+                val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+                val isListenerEnabled = enabledListeners != null && enabledListeners.contains(packageName)
+
+                if (isListenerEnabled) {
+                    wBinding.tvWizardNotifStatusBadge.text = "🟢 ¡Excelente! La lectura de pagos ya está ACTIVADA ✅"
+                    wBinding.tvWizardNotifStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.income_green))
+                    wBinding.btnWizardActivateNotif.text = "✅ Permiso Activado (Tocar si deseas revisarlo)"
+                    wBinding.btnWizardNext.text = "Continuar al Último Paso ➔"
+                } else {
+                    wBinding.tvWizardNotifStatusBadge.text = "🔴 Falta activar: Toca el botón azul de abajo y prende el interruptor de Zeasy"
+                    wBinding.tvWizardNotifStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.warning_orange))
+                    wBinding.btnWizardActivateNotif.text = "👉 1. Tocar Aquí para Activar Permiso"
+                    wBinding.btnWizardNext.text = "Ya lo activé, Siguiente Paso ➔"
+                }
+            }
+            5 -> {
+                wBinding.tvWizardStepTitle.text = "🔊 5. ¡Último Paso y Prueba de Sonido!"
+                wBinding.tvWizardStepSubtitle.text = "Asegura que tu teléfono no se duerma y escucha cómo te avisará cuando te paguen."
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+                    val isIgnoringBattery = pm?.isIgnoringBatteryOptimizations(packageName) == true
+                    if (isIgnoringBattery) {
+                        wBinding.tvWizardBatteryStatusBadge.text = "🟢 ¡Perfecto! Tu teléfono no suspenderá a Zeasy cuando se apague la pantalla ✅"
+                        wBinding.tvWizardBatteryStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.income_green))
+                        wBinding.btnWizardActivateBattery.text = "✅ Uso con Pantalla Apagada Activado"
+                    } else {
+                        wBinding.tvWizardBatteryStatusBadge.text = "⚠️ Toca el botón de abajo y elige 'Permitir' para que funcione con pantalla apagada:"
+                        wBinding.tvWizardBatteryStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.warning_orange))
+                        wBinding.btnWizardActivateBattery.text = "🔋 Permitir Uso con Pantalla Apagada"
+                    }
+                }
+
+                wBinding.btnWizardNext.text = "✅ ¡Terminar y Empezar a Cobrar!"
+            }
+        }
     }
 
     private fun setupClearDefaultOnTouch(editText: EditText, defaultVals: Set<String>) {
@@ -4900,15 +5681,23 @@ class MainActivity : AppCompatActivity() {
 
         val dialogBinding = DialogPaymentCelebrationBinding.inflate(layoutInflater)
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
 
         val isCryptoPayment = isCrypto || bank.contains("Binance", ignoreCase = true) || bank.contains("Cripto", ignoreCase = true)
         if (isCryptoPayment && amountUsd > 0.0) {
             dialogBinding.tvCelebrationAmountVes.text = String.format(Locale.US, "$%.2f USDT", amountUsd)
-            dialogBinding.tvCelebrationAmountUsd.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa %.2f)", amount, profile.bcvRate)
-        } else {
+            dialogBinding.tvCelebrationAmountUsd.text = if (countryProfile.supportsExchangeRate) {
+                String.format(Locale.US, "≈ Bs. %.2f (Tasa %.2f)", amount, profile.bcvRate)
+            } else {
+                String.format(Locale.US, "≈ %s %.2f %s", countryProfile.localCurrencySymbol, amount, countryProfile.localCurrencyCode)
+            }
+        } else if (countryProfile.supportsExchangeRate) {
             val calcUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
             dialogBinding.tvCelebrationAmountVes.text = String.format(Locale.US, "Bs. %.2f", amount)
             dialogBinding.tvCelebrationAmountUsd.text = String.format(Locale.US, "≈ $%.2f USD (Tasa %.2f)", calcUsd, profile.bcvRate)
+        } else {
+            dialogBinding.tvCelebrationAmountVes.text = String.format(Locale.US, "%s %.2f", countryProfile.localCurrencySymbol, amount)
+            dialogBinding.tvCelebrationAmountUsd.text = "${countryProfile.flagEmoji} Pago verificado en ${countryProfile.localCurrencyCode}"
         }
         dialogBinding.tvCelebrationBank.text = bank.ifEmpty { profile.bankName }
         dialogBinding.tvCelebrationRef.text = if (ref.isNotEmpty()) "Ref: •••• $ref" else "Ref confirmada"

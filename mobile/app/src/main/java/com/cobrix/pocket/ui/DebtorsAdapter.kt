@@ -2,12 +2,14 @@ package com.cobrix.pocket.ui
 
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.cobrix.pocket.data.model.Debtor
 import com.cobrix.pocket.databinding.ItemDebtorBinding
+import com.cobrix.pocket.utils.PreferencesHelper
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -46,6 +48,11 @@ class DebtorsAdapter(
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(debtor: Debtor) {
+            val ctx = binding.root.context
+            val countryProfile = PreferencesHelper.getCountryProfile(ctx)
+            val isBiCurrency = countryProfile.supportsExchangeRate
+            val localSym = countryProfile.localCurrencySymbol
+
             binding.tvDebtorName.text = debtor.name
 
             val phoneText = if (!debtor.phone.isNullOrBlank()) debtor.phone else "Sin WhatsApp"
@@ -61,16 +68,30 @@ class DebtorsAdapter(
                     val debtUsd = debtor.debtAmountUsd
                     val debtVes = debtor.getEquivalentVes(bcvRate)
                     val concilVes = debtor.getConciliationVes(bcvRate)
-                    binding.tvDebtorStatusBadge.text = String.format(Locale.US, "🔴 Debe $%.2f", debtUsd)
-                    binding.tvDebtorStatusBadge.setTextColor(Color.parseColor("#C62828"))
-                    binding.tvDebtorStatusBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFEBEE"))
-                    binding.tvDebtorBalanceVes.text = String.format(
-                        Locale.US,
-                        "Bs. %.2f (BCV) • Conciliar: Bs. %.2f",
-                        debtVes,
-                        concilVes
-                    )
-                    binding.tvDebtorBalanceVes.setTextColor(Color.parseColor("#D32F2F"))
+                    binding.tvDebtorStatusBadge.text = if (isBiCurrency) {
+                        String.format(Locale.US, "🔴 Debe $%.2f", debtUsd)
+                    } else {
+                        String.format(Locale.US, "🔴 Debe %s %.2f", localSym, debtVes)
+                    }
+                    binding.tvDebtorStatusBadge.setTextColor(Color.parseColor("#B91C1C"))
+                    binding.tvDebtorStatusBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FEE2E2"))
+                    binding.tvDebtorBalanceVes.text = if (isBiCurrency) {
+                        String.format(
+                            Locale.US,
+                            "Bs. %.2f (BCV) • Conciliar: Bs. %.2f",
+                            debtVes,
+                            concilVes
+                        )
+                    } else {
+                        String.format(
+                            Locale.US,
+                            "Monto a conciliar: %s %.2f (%s)",
+                            localSym,
+                            concilVes,
+                            countryProfile.localCurrencyCode
+                        )
+                    }
+                    binding.tvDebtorBalanceVes.setTextColor(Color.parseColor("#B91C1C"))
                     binding.btnItemWhatsApp.visibility = View.VISIBLE
                     binding.btnItemWhatsApp.text = "💬 Cobrar"
                     binding.btnItemWhatsApp.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#00875A"))
@@ -78,29 +99,53 @@ class DebtorsAdapter(
                 debtor.hasCredit -> {
                     val creditUsd = debtor.creditAmountUsd
                     val creditVes = debtor.getEquivalentVes(bcvRate)
-                    binding.tvDebtorStatusBadge.text = String.format(Locale.US, "🟢 A favor $%.2f", creditUsd)
-                    binding.tvDebtorStatusBadge.setTextColor(Color.parseColor("#2E7D32"))
-                    binding.tvDebtorStatusBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E8F5E9"))
-                    binding.tvDebtorBalanceVes.text = String.format(Locale.US, "Disponible: Bs. %.2f (BCV)", creditVes)
-                    binding.tvDebtorBalanceVes.setTextColor(Color.parseColor("#388E3C"))
+                    binding.tvDebtorStatusBadge.text = if (isBiCurrency) {
+                        String.format(Locale.US, "🟢 A favor $%.2f", creditUsd)
+                    } else {
+                        String.format(Locale.US, "🟢 A favor %s %.2f", localSym, creditVes)
+                    }
+                    binding.tvDebtorStatusBadge.setTextColor(Color.parseColor("#15803D"))
+                    binding.tvDebtorStatusBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#DCFCE7"))
+                    binding.tvDebtorBalanceVes.text = if (isBiCurrency) {
+                        String.format(Locale.US, "Disponible: Bs. %.2f (BCV)", creditVes)
+                    } else {
+                        String.format(Locale.US, "Disponible: %s %.2f (%s)", localSym, creditVes, countryProfile.localCurrencyCode)
+                    }
+                    binding.tvDebtorBalanceVes.setTextColor(Color.parseColor("#15803D"))
                     binding.btnItemWhatsApp.visibility = View.VISIBLE
                     binding.btnItemWhatsApp.text = "💬 Avisar"
                     binding.btnItemWhatsApp.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#00875A"))
                 }
                 else -> {
                     binding.tvDebtorStatusBadge.text = "⚪ Al Día ($0.00)"
-                    binding.tvDebtorStatusBadge.setTextColor(Color.parseColor("#5E6C84"))
-                    binding.tvDebtorStatusBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F4F5F7"))
-                    binding.tvDebtorBalanceVes.text = "Cuenta al día (Bs. 0,00)"
-                    binding.tvDebtorBalanceVes.setTextColor(Color.parseColor("#718096"))
+                    binding.tvDebtorStatusBadge.setTextColor(Color.parseColor("#334155"))
+                    binding.tvDebtorStatusBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F1F5F9"))
+                    binding.tvDebtorBalanceVes.text = if (isBiCurrency) {
+                        "Cuenta al día (Bs. 0,00)"
+                    } else {
+                        "Cuenta al día ($localSym 0.00)"
+                    }
+                    binding.tvDebtorBalanceVes.setTextColor(Color.parseColor("#475569"))
                     binding.btnItemWhatsApp.visibility = View.GONE
                 }
             }
 
-            binding.btnItemAddCharge.setOnClickListener { onChargeClick(debtor) }
-            binding.btnItemAddPayment.setOnClickListener { onPaymentClick(debtor) }
-            binding.btnItemWhatsApp.setOnClickListener { onWhatsAppClick(debtor) }
-            binding.root.setOnClickListener { onItemClick(debtor) }
+            binding.btnItemAddCharge.setOnClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onChargeClick(debtor)
+            }
+            binding.btnItemAddPayment.setOnClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onPaymentClick(debtor)
+            }
+            binding.btnItemWhatsApp.setOnClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onWhatsAppClick(debtor)
+            }
+            binding.root.setOnClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onItemClick(debtor)
+            }
         }
     }
 }

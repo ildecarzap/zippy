@@ -29,8 +29,8 @@
     <color name="border_subtle">#CFE0F5</color>
     <color name="card_background">#FFFFFF</color>
     <color name="text_primary">#0A192F</color>
-    <color name="text_secondary">#334E68</color>
-    <color name="text_muted">#627D98</color>
+    <color name="text_secondary">#1E293B</color>
+    <color name="text_muted">#334155</color>
     <color name="white">#FFFFFF</color>
 
     <!-- Teclado Numérico -->

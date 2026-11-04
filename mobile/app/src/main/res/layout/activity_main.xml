@@ -1226,19 +1226,33 @@
                             </LinearLayout>
 
                             <TextView
+                                android:id="@+id/tvOnboardingGuideSummary"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
-                                android:text="1️⃣ Ingresa tu Teléfono y Cédula donde recibes tus pagos móviles.\n2️⃣ Agrega tu Banco y sube tu Código QR.\n⚠️ IMPORTANTE: En tu banco genera el QR SIN MONTO FIJO para que tus pasajeros puedan escanearlo siempre.\n3️⃣ Activa los permisos de notificaciones para que Zeasy cante los pagos en voz alta."
+                                android:text="1️⃣ Ingresa tu Teléfono y Documento donde recibes tus pagos.\n2️⃣ Selecciona tu Banco o Billetera y sube tu Código QR.\n⚠️ IMPORTANTE: En tu banco genera el QR SIN MONTO FIJO para que tus clientes puedan escanearlo siempre.\n3️⃣ Activa los permisos de notificaciones para que Zeasy cante los pagos en voz alta."
                                 android:textColor="@color/text_secondary"
-                                android:textSize="12sp"
+                                android:textSize="13sp"
                                 android:lineSpacingExtra="3dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnOpenSetupWizard"
+                                android:layout_width="match_parent"
+                                android:layout_height="52dp"
+                                android:layout_marginTop="12dp"
+                                android:backgroundTint="@color/accent_cyan"
+                                android:text="👵 Abrir Asistente Paso a Paso (Guía Fácil)"
+                                android:textAllCaps="false"
+                                android:textColor="@color/white"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                app:cornerRadius="12dp" />
 
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal"
-                                android:layout_marginTop="12dp">
+                                android:layout_marginTop="8dp">
 
                                 <com.google.android.material.button.MaterialButton
                                     android:id="@+id/btnOpenWebGuide"
@@ -1290,15 +1304,116 @@
                                 android:text="🏪 Perfil del Negocio"
                                 android:textStyle="bold"
                                 android:textColor="@color/text_primary"
-                                android:textSize="16sp" />
+                                android:textSize="17sp" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Identificación comercial y tasa oficial del día"
+                                android:text="País de operación, identificación comercial y tasa del día"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="12sp" />
+                                android:textSize="13sp" />
+
+                            <!-- País de Operación (Fijado al instalar • Cambio vía Atención al Cliente / Panel Web Admin) -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:background="@drawable/bg_badge_rounded"
+                                android:backgroundTint="@color/surface_variant"
+                                android:orientation="vertical"
+                                android:padding="12dp">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="🌎 País de Operación Configurado"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="11.5sp"
+                                            android:textStyle="bold" />
+
+                                        <TextView
+                                            android:id="@+id/tvSettingsActiveCountry"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="2dp"
+                                            android:text="🇻🇪 Venezuela (Bolívares Bs. / USD)"
+                                            android:textColor="@color/text_primary"
+                                            android:textSize="15sp"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:background="@drawable/bg_badge_rounded"
+                                        android:backgroundTint="@color/accent_green_bg"
+                                        android:paddingHorizontal="8dp"
+                                        android:paddingVertical="4dp"
+                                        android:text="🔒 Fijo"
+                                        android:textColor="@color/income_green"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnRequestCountryChange"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="44dp"
+                                    android:layout_marginTop="8dp"
+                                    android:text="💬 Solicitar Cambio de País a Atención al Cliente"
+                                    android:textAllCaps="false"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    app:cornerRadius="10dp" />
+                            </LinearLayout>
+
+                            <com.google.android.material.button.MaterialButtonToggleGroup
+                                android:id="@+id/toggleGroupCountry"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:visibility="gone"
+                                app:singleSelection="true"
+                                app:selectionRequired="true"
+                                app:checkedButton="@id/btnCountryVe">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnCountryVe"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="48dp"
+                                    android:layout_weight="1"
+                                    android:text="🇻🇪 VE" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnCountryCo"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="48dp"
+                                    android:layout_weight="1"
+                                    android:text="🇨🇴 CO" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnCountryAr"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="48dp"
+                                    android:layout_weight="1"
+                                    android:text="🇦🇷 AR" />
+                            </com.google.android.material.button.MaterialButtonToggleGroup>
 
                             <!-- Nombre del Negocio -->
                             <com.google.android.material.textfield.TextInputLayout
@@ -1330,8 +1445,9 @@
                                     android:textColor="@color/text_primary" />
                             </com.google.android.material.textfield.TextInputLayout>
 
-                            <!-- Tasa BCV y Botón de Consulta Oficial Automática -->
+                            <!-- Tasa BCV y Botón de Consulta Oficial Automática (Solo Venezuela) -->
                             <LinearLayout
+                                android:id="@+id/layoutSettingsBcvRow"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal"
@@ -1439,8 +1555,9 @@
                                 android:textColor="@color/text_secondary"
                                 android:textSize="12sp" />
 
-                            <!-- Teléfono Pago Móvil -->
+                            <!-- Teléfono Pago Móvil / Billetera -->
                             <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/tilSettingsPhone"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="12dp"
@@ -1454,8 +1571,9 @@
                                     android:textColor="@color/text_primary" />
                             </com.google.android.material.textfield.TextInputLayout>
 
-                            <!-- Cédula / RIF -->
+                            <!-- Cédula / RIF / NIT / DNI -->
                             <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/tilSettingsId"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"

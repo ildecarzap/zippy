@@ -138,7 +138,16 @@
               <td>
                 <a href="javascript:void(0)" onclick="openUserDetailsModal({{ device.id }})" style="color: var(--color-primary); font-size: 0.95rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="Ver ficha técnica completa">
                   🔍 {{ device.merchant_name }}
-                </a><br>
+                </a>
+                {% set ccode = (device.country_code or 'VE') | upper %}
+                {% if ccode == 'CO' %}
+                <span style="font-size: 0.75rem; background: #FFF8E1; color: #8D6E63; padding: 2px 6px; border-radius: 4px; border: 1px solid #FFE082; font-weight: 700; margin-left: 4px;">🇨🇴 CO</span>
+                {% elif ccode == 'AR' %}
+                <span style="font-size: 0.75rem; background: #E3F2FD; color: #1565C0; padding: 2px 6px; border-radius: 4px; border: 1px solid #90CAF9; font-weight: 700; margin-left: 4px;">🇦🇷 AR</span>
+                {% else %}
+                <span style="font-size: 0.75rem; background: #EFEBE9; color: #4E342E; padding: 2px 6px; border-radius: 4px; border: 1px solid #D7CCC8; font-weight: 700; margin-left: 4px;">🇻🇪 VE</span>
+                {% endif %}
+                <br>
                 {% if device.doc_id %}
                 <span style="font-size: 0.82rem; color: var(--color-text-main); font-weight: 600;">📋 {{ device.doc_id }}</span>
                 {% else %}
@@ -369,6 +378,24 @@
           <div style="background: var(--color-surface-soft); padding: 12px 14px; border-radius: 8px; border: 1px solid var(--color-border);">
             <span style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 600;">Sincronización</span>
             <div style="font-size: 0.82rem; color: var(--color-text-main); margin-top: 4px;" id="udAppSync"></div>
+          </div>
+        </div>
+
+        <!-- Cambio de País por Solicitud a Atención al Cliente -->
+        <div style="background: var(--color-surface-soft); padding: 14px; border-radius: 8px; border: 1px solid var(--color-border); margin-bottom: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 2px; text-transform: uppercase; color: var(--color-text-muted);">🌎 País de Operación (Atención al Cliente)</h4>
+              <small style="font-size: 0.78rem; color: var(--color-text-light);">Al cambiarlo aquí, la app del comercio actualizará su moneda y bancos automáticamente al sincronizar.</small>
+            </div>
+            <form id="udFormChangeCountry" method="POST" action="" style="display: flex; gap: 8px; align-items: center;">
+              <select id="udCountrySelect" name="country_code" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.88rem; font-weight: 600;">
+                <option value="VE">🇻🇪 Venezuela (VES / USD)</option>
+                <option value="CO">🇨🇴 Colombia (COP $)</option>
+                <option value="AR">🇦🇷 Argentina (ARS $)</option>
+              </select>
+              <button type="submit" class="btn btn-primary btn-sm">💾 Guardar País</button>
+            </form>
           </div>
         </div>
 
@@ -618,6 +645,8 @@
         document.getElementById('udFormActivate365').action = `/${secretPath}/licenses/${d.id}/activate-pro`;
         document.getElementById('udFormDowngrade').action = `/${secretPath}/licenses/${d.id}/downgrade-basic`;
         document.getElementById('udFormToggle').action = `/${secretPath}/licenses/${d.id}/toggle-status`;
+        document.getElementById('udFormChangeCountry').action = `/${secretPath}/licenses/${d.id}/change-country`;
+        document.getElementById('udCountrySelect').value = (d.country_code || 'VE').toUpperCase();
         document.getElementById('udBtnToggleStatus').innerText = d.is_active ? '🔒 Suspender' : '🔓 Activar';
 
         const txContainer = document.getElementById('udTransactionsContainer');

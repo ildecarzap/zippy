@@ -49,6 +49,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
         const val EXTRA_BANK = "extra_bank"
         const val EXTRA_PHONE = "extra_phone"
         const val EXTRA_RECONCILED_DEBTOR = "extra_reconciled_debtor"
+        const val EXTRA_IS_OUTGOING = "extra_is_outgoing"
         private const val CHANNEL_ID = "cobrix_pocket_alerts"
         private const val CHANNEL_FOREGROUND_ID = "zeasy_shift_foreground_service"
         private const val FOREGROUND_NOTIFICATION_ID = 9010
@@ -359,20 +360,56 @@ class PocketNotificationListenerService : NotificationListenerService() {
         }
         val startOfDay = cal.timeInMillis
 
+        val isOutgoing = parsedPayment.isOutgoing
+        val targetTxType = if (isOutgoing) TransactionType.EXPENSE else TransactionType.INCOME
+
         if (dbHelper.hasDuplicateIncome(
                 reference = parsedPayment.referenciaUltimos4,
                 amountVes = amountVes,
                 amountUsd = amountUsd,
                 sinceTimestamp = startOfDay,
                 isCrypto = isUsdt,
-                sender = parsedPayment.telefonoOrigen
+                sender = parsedPayment.telefonoOrigen,
+                txType = targetTxType
             )) {
-            Log.w(TAG, "Pago ya registrado previamente en BD para la jornada: ref=${parsedPayment.referenciaUltimos4}, monto=$amountVes")
+            Log.w(TAG, "Movimiento ya registrado previamente en BD para la jornada: ref=${parsedPayment.referenciaUltimos4}, monto=$amountVes, tipo=$targetTxType")
             PaymentDeduplicator.markNotificationKeyProcessed(sbn.key)
             return false
         }
 
         PaymentDeduplicator.markNotificationKeyProcessed(sbn.key)
+
+        // Si es una SALIDA / DÉBITO de un banco configurado: registrar silenciosamente en Jornada como EXPENSE
+        if (isOutgoing) {
+            Log.i(TAG, "📤 Salida bancaria detectada en silencio: Banco=${parsedPayment.bancoCodigo.displayName}, Monto=${parsedPayment.monto}, Ref=${parsedPayment.referenciaUltimos4}")
+            val outTx = Transaction(
+                amount = amountVes,
+                amountUsd = amountUsd,
+                reference = parsedPayment.referenciaUltimos4,
+                bankCode = parsedPayment.bancoCodigo.sudebanCode,
+                bankName = parsedPayment.bancoCodigo.displayName,
+                senderName = parsedPayment.telefonoOrigen.orEmpty(),
+                type = TransactionType.EXPENSE,
+                category = com.cobrix.pocket.data.model.TransactionCategories.EXPENSE_AUTO_BANK,
+                note = "Salida detectada automáticamente de ${parsedPayment.bancoCodigo.displayName} (${parsedPayment.canal})",
+                timestamp = System.currentTimeMillis(),
+                isManual = false
+            )
+            dbHelper.insertTransaction(outTx)
+
+            val outBroadcast = Intent(ACTION_PAYMENT_RECEIVED).apply {
+                setPackage(this@PocketNotificationListenerService.packageName)
+                putExtra(EXTRA_AMOUNT, amountVes)
+                putExtra(EXTRA_AMOUNT_USD, amountUsd)
+                putExtra(EXTRA_IS_CRYPTO, isUsdt)
+                putExtra(EXTRA_REF, parsedPayment.referenciaUltimos4)
+                putExtra(EXTRA_BANK, parsedPayment.bancoCodigo.displayName)
+                putExtra(EXTRA_IS_OUTGOING, true)
+            }
+            sendBroadcast(outBroadcast)
+            return true
+        }
+
         acquirePaymentWakeLock()
 
         Log.i(TAG, "¡Pago válido detectado! Banco: ${parsedPayment.bancoCodigo.displayName}, Monto: ${parsedPayment.monto}, Ref: ${parsedPayment.referenciaUltimos4}")

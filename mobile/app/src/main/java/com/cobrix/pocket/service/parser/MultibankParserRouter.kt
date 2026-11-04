@@ -15,6 +15,7 @@ class MultibankParserRouter {
     }
 
     private val allParsers: List<BankParser> = listOf(
+        // Venezuela (VE)
         UbiiParser(),
         MercantilParser(),
         BanescoParser(),
@@ -22,6 +23,15 @@ class MultibankParserRouter {
         ProvincialParser(),
         BncParser(),
         BancamigaParser(),
+        // Colombia (CO)
+        NequiParser(),
+        DaviPlataParser(),
+        BancolombiaParser(),
+        // Argentina (AR)
+        MercadoPagoParser(),
+        CuentaDniParser(),
+        BnaMasParser(),
+        // Transversales
         BinancePayParser(),
         GenericSmsParser()
     )
@@ -55,16 +65,16 @@ class MultibankParserRouter {
             }
         }
 
-        // 1. FILTRO DE SALIDA: Descartar inmediatamente notificaciones de débito, compras o envíos salientes
-        if (ParserUtils.isOutgoingTransaction(combined)) {
-            Log.d(TAG, "Notificación descartada: es un pago saliente/débito ($packageName)")
+        // 1. FILTRO ANTI-PUBLICIDAD Y NO-OPERATIVOS: Descartar promociones, préstamos, claves dinámicas o fallos
+        if (ParserUtils.isPromotionalOrNonPaymentNotification(combined)) {
+            Log.d(TAG, "Notificación descartada: es promocional, clave dinámica o no operativa ($packageName)")
             return null
         }
 
-        // 2. FILTRO DE CORREO: Si proviene de un cliente de correo (Gmail, Outlook), exigir indicador explícito de abono/recibido
+        // 2. FILTRO DE CORREO: Si proviene de un cliente de correo (Gmail, Outlook), exigir indicador explícito de abono recibido o de salida bancaria
         val isEmail = ParserUtils.isEmailPackage(packageName)
-        if (isEmail && !ParserUtils.hasIncomingIndicators(combined)) {
-            Log.d(TAG, "Email descartado: no contiene indicadores de crédito/abono/pago recibido ($packageName)")
+        if (isEmail && !ParserUtils.hasIncomingIndicators(combined) && !ParserUtils.isOutgoingTransaction(combined)) {
+            Log.d(TAG, "Email descartado: no contiene indicadores de cobro recibido ni de salida bancaria ($packageName)")
             return null
         }
 

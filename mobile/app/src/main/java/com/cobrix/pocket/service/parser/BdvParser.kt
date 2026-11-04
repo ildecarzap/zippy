@@ -27,8 +27,8 @@ class BdvParser : BankParser {
         postTimeMillis: Long
     ): ParsedPayment? {
         val combined = "$title $text"
-        if (ParserUtils.isOutgoingTransaction(combined)) return null
-        if (ParserUtils.isEmailPackage(packageName) && !ParserUtils.hasIncomingIndicators(combined)) return null
+        val isOutgoing = ParserUtils.isOutgoingTransaction(combined)
+        if (ParserUtils.isEmailPackage(packageName) && !ParserUtils.hasIncomingIndicators(combined) && !isOutgoing) return null
 
         val (amount, amountRaw) = ParserUtils.extractAmount(combined) ?: return null
         val reference = ParserUtils.extractReference(combined) ?: return null
@@ -50,7 +50,8 @@ class BdvParser : BankParser {
             timestampMillis = postTimeMillis,
             paqueteOrigen = packageName,
             textoCrudo = combined.trim(),
-            canal = if (isSms) "SMS" else "PUSH"
+            canal = if (isSms) "SMS" else "PUSH",
+            isOutgoing = isOutgoing
         )
     }
 }

@@ -72,6 +72,7 @@ class FullScreenQrActivity : AppCompatActivity() {
         val amountUsd = intent.getDoubleExtra(EXTRA_AMOUNT_USD, 0.0)
 
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
         val targetBankCode = intent.getStringExtra(EXTRA_BANK_CODE) ?: profile.bankCode
         val targetBankName = intent.getStringExtra(EXTRA_BANK_NAME) ?: profile.bankName
         val targetQrUri = PreferencesHelper.getBankQrUri(this, targetBankCode) ?: profile.qrImageUri
@@ -84,7 +85,12 @@ class FullScreenQrActivity : AppCompatActivity() {
             binding.tvFullScreenUsd.visibility = View.VISIBLE
             if (isBinance) {
                 binding.tvFullScreenVes.text = String.format(Locale.US, "$%.2f USDT", amountUsd)
-                binding.tvFullScreenUsd.text = if (amountVes > 0) String.format(Locale.US, "(Equiv. Bs. %.2f)", amountVes) else ""
+                binding.tvFullScreenUsd.text = if (countryProfile.supportsExchangeRate && amountVes > 0) {
+                    String.format(Locale.US, "(Equiv. Bs. %.2f)", amountVes)
+                } else ""
+            } else if (!countryProfile.supportsExchangeRate) {
+                binding.tvFullScreenVes.text = String.format(Locale.US, "%s %.2f", countryProfile.localCurrencySymbol, amountVes)
+                binding.tvFullScreenUsd.text = "${countryProfile.flagEmoji} ${countryProfile.displayName} (${countryProfile.localCurrencyCode})"
             } else {
                 binding.tvFullScreenVes.text = String.format(Locale.US, "Bs. %.2f", amountVes)
                 binding.tvFullScreenUsd.text = String.format(Locale.US, "($%.2f USD)", amountUsd)
@@ -108,10 +114,10 @@ class FullScreenQrActivity : AppCompatActivity() {
             binding.tvFullScreenPhone.text = if (zinliEmail.isNotBlank()) "✉️ Correo: $zinliEmail" else "📱 Escanear con Zinli"
             binding.tvFullScreenId.visibility = View.GONE
         } else {
-            binding.tvFullScreenBank.text = "🏦 Banco: $targetBankName ($targetBankCode)"
-            binding.tvFullScreenPhone.text = "📱 Teléfono: ${profile.phoneNumber}"
+            binding.tvFullScreenBank.text = "🏦 Entidad: $targetBankName"
+            binding.tvFullScreenPhone.text = "📱 Teléfono / Cuenta: ${profile.phoneNumber}"
             binding.tvFullScreenId.visibility = View.VISIBLE
-            binding.tvFullScreenId.text = "🪪 Cédula/RIF: ${profile.idCard}"
+            binding.tvFullScreenId.text = "🪪 ${countryProfile.nationalIdLabel}: ${profile.idCard}"
         }
 
         if (!targetQrUri.isNullOrEmpty()) {
@@ -172,11 +178,19 @@ class FullScreenQrActivity : AppCompatActivity() {
 
         val dialogBinding = DialogPaymentCelebrationBinding.inflate(layoutInflater)
         val profile = PreferencesHelper.getUserProfile(this)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
 
         val isCryptoPayment = isCrypto || bank.contains("Binance", ignoreCase = true) || bank.contains("Cripto", ignoreCase = true)
         if (isCryptoPayment && amountUsd > 0.0) {
             dialogBinding.tvCelebrationAmountVes.text = String.format(Locale.US, "$%.2f USDT", amountUsd)
-            dialogBinding.tvCelebrationAmountUsd.text = String.format(Locale.US, "≈ Bs. %.2f (Tasa %.2f)", amount, profile.bcvRate)
+            dialogBinding.tvCelebrationAmountUsd.text = if (countryProfile.supportsExchangeRate) {
+                String.format(Locale.US, "≈ Bs. %.2f (Tasa %.2f)", amount, profile.bcvRate)
+            } else {
+                "Binance Pay (USDT)"
+            }
+        } else if (!countryProfile.supportsExchangeRate) {
+            dialogBinding.tvCelebrationAmountVes.text = String.format(Locale.US, "%s %.2f", countryProfile.localCurrencySymbol, amount)
+            dialogBinding.tvCelebrationAmountUsd.text = "${countryProfile.flagEmoji} ${countryProfile.displayName} (${countryProfile.localCurrencyCode})"
         } else {
             val calcUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
             dialogBinding.tvCelebrationAmountVes.text = String.format(Locale.US, "Bs. %.2f", amount)

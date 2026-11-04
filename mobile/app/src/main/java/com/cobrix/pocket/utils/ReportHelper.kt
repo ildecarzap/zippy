@@ -653,8 +653,8 @@ object ReportHelper {
 
     /**
      * Genera un Estado de Cuenta Detallado en PDF para un cliente específico de la Libreta (Función PRO).
-     * Incluye membrete del comercio, saldo actual en USD y Bs a tasa BCV del día, monto exacto con céntimos
-     * de conciliación, datos bancarios para Pago Móvil y tabla cronológica de fiados y abonos.
+     * Muestra los movimientos individuales en USD (o moneda local) y un único monto final total a transferir
+     * con todo incluido para evitar confusiones entre múltiples montos.
      */
     fun generateDebtorStatementPdf(
         context: Context,
@@ -662,7 +662,10 @@ object ReportHelper {
         debtor: Debtor,
         entries: List<LedgerEntry>
     ): File? {
-        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+        val countryProfile = PreferencesHelper.getCountryProfile(context)
+        val supportsExchange = countryProfile.supportsExchangeRate
+        val rate = if (supportsExchange && profile.bcvRate > 0) profile.bcvRate else 1.0
+        val autoConcilAllowed = PlanCapabilityManager.canUseAutoConciliation(context)
         val pageWidth = 595
         val pageHeight = 842
         val document = PdfDocument()
@@ -701,18 +704,18 @@ object ReportHelper {
         }
         val paintTableText = Paint().apply {
             color = Color.parseColor("#0A192F")
-            textSize = 9f
+            textSize = 9.5f
             isAntiAlias = true
         }
         val paintCharge = Paint().apply {
             color = Color.parseColor("#DE350B")
-            textSize = 9.5f
+            textSize = 10f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             isAntiAlias = true
         }
         val paintPayment = Paint().apply {
             color = Color.parseColor("#00875A")
-            textSize = 9.5f
+            textSize = 10f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             isAntiAlias = true
         }
@@ -734,7 +737,12 @@ object ReportHelper {
         canvas.drawText("ESTADO DE CUENTA DE CLIENTE • $merchantName", margin, y, paintTitle)
         y += 16f
         val emittedStr = FULL_DATETIME_FORMAT.format(Date())
-        canvas.drawText("Emitido con Zeasy PRO • Fecha: $emittedStr • Tasa BCV Oficial: Bs. ${String.format(Locale.US, "%.2f", rate)}/USD", margin, y, paintSubtitle)
+        val headerSubtitle = if (supportsExchange) {
+            "Emitido con Zeasy PRO • Fecha: $emittedStr"
+        } else {
+            "Emitido con Zeasy PRO • Fecha: $emittedStr • Moneda: ${countryProfile.localCurrencyCode}"
+        }
+        canvas.drawText(headerSubtitle, margin, y, paintSubtitle)
         y += 14f
         canvas.drawLine(margin, y, margin + contentWidth, y, paintLine)
         y += 14f
@@ -746,77 +754,83 @@ object ReportHelper {
 
         canvas.drawText("Cliente:", col1, y + 18f, paintLabel)
         canvas.drawText(debtor.name, col1, y + 32f, paintValue)
-        canvas.drawText("Teléfono / Cédula:", col1, y + 46f, paintLabel)
+        canvas.drawText("Teléfono / ${countryProfile.nationalIdLabel}:", col1, y + 46f, paintLabel)
         val metaClient = listOfNotNull(debtor.phone?.takeIf { it.isNotBlank() }, debtor.identification?.takeIf { it.isNotBlank() })
             .joinToString(" • ").ifEmpty { "No registrado" }
         canvas.drawText(metaClient, col1, y + 58f, paintValue)
 
-        canvas.drawText("Datos para Pago Móvil del Comercio:", col2, y + 18f, paintLabel)
-        canvas.drawText("${profile.bankName} (${profile.bankCode})", col2, y + 32f, paintValue)
-        canvas.drawText("Tel: ${profile.phoneNumber} • RIF/CI: ${profile.idCard}", col2, y + 48f, paintValue)
+        canvas.drawText("Datos para ${countryProfile.instantPaymentSystemName}:", col2, y + 18f, paintLabel)
+        val bankLabel = if (supportsExchange) "${profile.bankName} (${profile.bankCode})" else profile.bankName
+        canvas.drawText(bankLabel, col2, y + 32f, paintValue)
+        canvas.drawText("Tel: ${profile.phoneNumber} • ${countryProfile.nationalIdLabel}: ${profile.idCard}", col2, y + 48f, paintValue)
 
         y += 80f
 
-        // 3. Resumen de Saldo Actual
+        // 3. Resumen de Saldo Actual (Solo USD y el monto final con todo incluido)
         val totalChargesUsd = entries.filter { it.type == LedgerEntryType.CHARGE }.sumOf { it.amountUsd }
         val totalPaymentsUsd = entries.filter { it.type == LedgerEntryType.PAYMENT }.sumOf { it.amountUsd }
+        val currencyTag = if (supportsExchange) "USD" else countryProfile.localCurrencyCode
+        val sym = if (supportsExchange) "$" else "${countryProfile.localCurrencySymbol} "
 
         val kpiWidth = (contentWidth - 16f) / 3f
         val kpiHeight = 54f
 
-        // KPI Total Fiado Histórico
+        // KPI Total Fiado Histórico (solo monto base USD sin equivalente parcial)
         canvas.drawRoundRect(margin, y, margin + kpiWidth, y + kpiHeight, 6f, 6f, paintBoxBg)
-        canvas.drawText("HISTÓRICO COMPRAS FIADAS", margin + 8f, y + 16f, paintLabel)
-        canvas.drawText("$${String.format(Locale.US, "%.2f", totalChargesUsd)} USD", margin + 8f, y + 33f, paintCharge)
-        canvas.drawText("≈ Bs. ${String.format(Locale.US, "%.2f", totalChargesUsd * rate)}", margin + 8f, y + 46f, paintLabel)
+        canvas.drawText("HISTÓRICO COMPRAS FIADAS", margin + 8f, y + 18f, paintLabel)
+        canvas.drawText("$sym${String.format(Locale.US, "%.2f", totalChargesUsd)} $currencyTag", margin + 8f, y + 38f, paintCharge)
 
-        // KPI Total Abonado Histórico
+        // KPI Total Abonado Histórico (solo monto base USD sin equivalente parcial)
         val kpi2X = margin + kpiWidth + 8f
         canvas.drawRoundRect(kpi2X, y, kpi2X + kpiWidth, y + kpiHeight, 6f, 6f, paintBoxBg)
-        canvas.drawText("HISTÓRICO ABONOS / PAGOS", kpi2X + 8f, y + 16f, paintLabel)
-        canvas.drawText("$${String.format(Locale.US, "%.2f", totalPaymentsUsd)} USD", kpi2X + 8f, y + 33f, paintPayment)
-        canvas.drawText("≈ Bs. ${String.format(Locale.US, "%.2f", totalPaymentsUsd * rate)}", kpi2X + 8f, y + 46f, paintLabel)
+        canvas.drawText("HISTÓRICO ABONOS / PAGOS", kpi2X + 8f, y + 18f, paintLabel)
+        canvas.drawText("$sym${String.format(Locale.US, "%.2f", totalPaymentsUsd)} $currencyTag", kpi2X + 8f, y + 38f, paintPayment)
 
-        // KPI Saldo Actual
+        // KPI Saldo Actual y Monto Final Todo Incluido
         val kpi3X = kpi2X + kpiWidth + 8f
         val paintBalBg = Paint().apply {
             color = if (debtor.isDebtor) Color.parseColor("#FFEBEE") else Color.parseColor("#E8F5E9")
             style = Paint.Style.FILL
         }
         canvas.drawRoundRect(kpi3X, y, kpi3X + kpiWidth, y + kpiHeight, 6f, 6f, paintBalBg)
+        val finalTotalLocal = if (autoConcilAllowed) debtor.getConciliationVes(rate) else debtor.getEquivalentVes(rate)
+
         if (debtor.isDebtor) {
-            canvas.drawText("SALDO DEUDOR ACTUAL", kpi3X + 8f, y + 15f, paintCharge)
-            canvas.drawText("$${String.format(Locale.US, "%.2f", debtor.debtAmountUsd)} USD", kpi3X + 8f, y + 31f, paintTitle)
-            canvas.drawText("Exacto a transferir: Bs. ${String.format(Locale.US, "%.2f", debtor.getConciliationVes(rate))}", kpi3X + 8f, y + 46f, paintCharge)
+            canvas.drawText("SALDO ADEUDADO", kpi3X + 8f, y + 15f, paintCharge)
+            if (supportsExchange) {
+                canvas.drawText("$${String.format(Locale.US, "%.2f", debtor.debtAmountUsd)} USD", kpi3X + 8f, y + 31f, paintTitle)
+                canvas.drawText("Total a pagar: Bs. ${String.format(Locale.US, "%.2f", finalTotalLocal)}", kpi3X + 8f, y + 46f, paintCharge)
+            } else {
+                canvas.drawText("${countryProfile.localCurrencySymbol} ${String.format(Locale.US, "%.2f", finalTotalLocal)}", kpi3X + 8f, y + 34f, paintTitle)
+                canvas.drawText("Total a transferir (${countryProfile.localCurrencyCode})", kpi3X + 8f, y + 47f, paintCharge)
+            }
         } else if (debtor.hasCredit) {
-            canvas.drawText("SALDO A FAVOR DEL CLIENTE", kpi3X + 8f, y + 15f, paintPayment)
-            canvas.drawText("$${String.format(Locale.US, "%.2f", debtor.creditAmountUsd)} USD", kpi3X + 8f, y + 31f, paintTitle)
-            canvas.drawText("≈ Bs. ${String.format(Locale.US, "%.2f", debtor.getEquivalentVes(rate))}", kpi3X + 8f, y + 46f, paintPayment)
+            canvas.drawText("SALDO A FAVOR DEL CLIENTE", kpi3X + 8f, y + 16f, paintPayment)
+            canvas.drawText("$sym${String.format(Locale.US, "%.2f", debtor.creditAmountUsd)} $currencyTag", kpi3X + 8f, y + 38f, paintTitle)
         } else {
             canvas.drawText("CUENTA AL DÍA", kpi3X + 8f, y + 15f, paintSubtitle)
-            canvas.drawText("$0.00 USD", kpi3X + 8f, y + 32f, paintTitle)
+            canvas.drawText("${sym}0.00 $currencyTag", kpi3X + 8f, y + 32f, paintTitle)
             canvas.drawText("Sin saldo pendiente", kpi3X + 8f, y + 46f, paintLabel)
         }
 
         y += 72f
 
-        // 4. Tabla Detallada de Movimientos (Compras a crédito y Abonos)
+        // 4. Tabla Detallada de Movimientos (Solo monto en USD / moneda base, sin doble monto por fila)
         canvas.drawText("HISTORIAL DETALLADO DE FIADOS Y ABONOS (${entries.size} registros)", margin, y, paintSectionHeader)
         y += 14f
         canvas.drawLine(margin, y, margin + contentWidth, y, paintLine)
         y += 14f
 
         canvas.drawText("Fecha / Hora", margin, y, paintLabel)
-        canvas.drawText("Operación", margin + 85f, y, paintLabel)
-        canvas.drawText("Concepto / Detalle de Artículos", margin + 165f, y, paintLabel)
-        canvas.drawText("Monto USD", margin + 365f, y, paintLabel)
-        canvas.drawText("Equiv. Bs (BCV Hoy)", margin + 435f, y, paintLabel)
+        canvas.drawText("Operación", margin + 95f, y, paintLabel)
+        canvas.drawText("Concepto / Detalle de Artículos", margin + 185f, y, paintLabel)
+        canvas.drawText("Monto ($currencyTag)", margin + 430f, y, paintLabel)
         y += 6f
         canvas.drawLine(margin, y, margin + contentWidth, y, paintLine)
         y += 14f
 
         val dtFmt = SimpleDateFormat("dd/MM/yy HH:mm", Locale.US)
-        val maxListY = pageHeight - 90f
+        val maxListY = pageHeight - 105f
 
         if (entries.isEmpty()) {
             canvas.drawText("No hay movimientos registrados para este cliente.", margin, y, paintTableText)
@@ -829,30 +843,31 @@ object ReportHelper {
                 val isCharge = entry.type == LedgerEntryType.CHARGE
                 val dtStr = dtFmt.format(Date(entry.timestamp))
                 val opStr = if (isCharge) "Compra / Fiado" else "Abono / Pago"
-                val conceptStr = (entry.notes?.takeIf { it.isNotBlank() } ?: if (isCharge) "Compra a crédito" else "Abono a cuenta").take(34)
+                val conceptStr = (entry.notes?.takeIf { it.isNotBlank() } ?: if (isCharge) "Compra a crédito" else "Abono a cuenta").take(44)
                 val sign = if (isCharge) "-" else "+"
-                val usdStr = "$sign$${String.format(Locale.US, "%.2f", entry.amountUsd)}"
-                val bsToday = entry.amountUsd * rate
-                val bsStr = "Bs. ${String.format(Locale.US, "%.2f", bsToday)}"
+                val amountStr = "$sign$sym${String.format(Locale.US, "%.2f", entry.amountUsd)} $currencyTag"
 
                 canvas.drawText(dtStr, margin, y, paintTableText)
-                canvas.drawText(opStr, margin + 85f, y, if (isCharge) paintCharge else paintPayment)
-                canvas.drawText(conceptStr, margin + 165f, y, paintTableText)
-                canvas.drawText(usdStr, margin + 365f, y, if (isCharge) paintCharge else paintPayment)
-                canvas.drawText(bsStr, margin + 435f, y, paintTableText)
-                y += 15f
+                canvas.drawText(opStr, margin + 95f, y, if (isCharge) paintCharge else paintPayment)
+                canvas.drawText(conceptStr, margin + 185f, y, paintTableText)
+                canvas.drawText(amountStr, margin + 430f, y, if (isCharge) paintCharge else paintPayment)
+                y += 16f
             }
         }
 
-        // Pie de página
-        val footerY = pageHeight - 40f
+        // Recuadro final de total a transferir y pie de página
+        val footerY = pageHeight - 55f
         canvas.drawLine(margin, footerY, margin + contentWidth, footerY, paintLine)
         val footerNote = if (debtor.isDebtor) {
-            "Nota: Las cuentas por cobrar están indexadas en USD a la tasa oficial del BCV del día del pago. Monto exacto para conciliación automática: Bs. ${String.format(Locale.US, "%.2f", debtor.getConciliationVes(rate))}"
+            if (supportsExchange) {
+                "SALDO ADEUDADO: $${String.format(Locale.US, "%.2f", debtor.debtAmountUsd)} USD   •   TOTAL FINAL A TRANSFERIR: Bs. ${String.format(Locale.US, "%.2f", finalTotalLocal)}"
+            } else {
+                "TOTAL FINAL A TRANSFERIR: ${countryProfile.localCurrencySymbol} ${String.format(Locale.US, "%.2f", finalTotalLocal)} (${countryProfile.localCurrencyCode})"
+            }
         } else {
             "Documento emitido por Zeasy PRO • Ciem tech solutions C.A • RIF J-50849495-4"
         }
-        canvas.drawText(footerNote, margin, footerY + 16f, paintLabel)
+        canvas.drawText(footerNote, margin, footerY + 18f, if (debtor.isDebtor) paintValue else paintLabel)
 
         document.finishPage(page)
 
@@ -892,18 +907,19 @@ object ReportHelper {
         }
 
         val waPackage = WhatsAppHelper.getWhatsAppPackage(context)
+        val countryPrefix = PreferencesHelper.getCountryCode(context).phonePrefix
         var cleanPhone = customerPhone?.replace(Regex("[^0-9]"), "") ?: ""
         if (cleanPhone.startsWith("0")) {
-            cleanPhone = "58" + cleanPhone.substring(1)
-        } else if (cleanPhone.isNotEmpty() && !cleanPhone.startsWith("58") && cleanPhone.length == 10) {
-            cleanPhone = "58$cleanPhone"
+            cleanPhone = countryPrefix + cleanPhone.substring(1)
+        } else if (cleanPhone.isNotEmpty() && !cleanPhone.startsWith(countryPrefix) && cleanPhone.length == 10) {
+            cleanPhone = "$countryPrefix$cleanPhone"
         }
 
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
             putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_SUBJECT, "Estado de Cuenta - $debtorName")
-            putExtra(Intent.EXTRA_TEXT, "👋 Hola $debtorName, te compartimos tu estado de cuenta detallado actualizado a la tasa BCV del día.")
+            putExtra(Intent.EXTRA_TEXT, "👋 Hola $debtorName, te compartimos tu estado de cuenta detallado.")
             if (cleanPhone.isNotEmpty() && waPackage != null) {
                 putExtra("jid", "$cleanPhone@s.whatsapp.net")
                 setPackage(waPackage)

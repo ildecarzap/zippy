@@ -26,6 +26,8 @@ class RegisterDeviceRequest(BaseModel):
     doc_id: str = ""
     email: str = ""
     app_version: str = "1.0.0"
+    country_code: str = "VE"
+    force_country: bool = False
 
 @router.get("/license/check")
 def check_license(
@@ -153,6 +155,7 @@ def check_license(
         "phone": license_obj.phone,
         "doc_id": license_obj.doc_id,
         "email": license_obj.email,
+        "country_code": (getattr(license_obj, "country_code", "VE") or "VE").upper(),
         "registered": True,
         "is_pro": license_obj.is_pro_active,
         "plan_type": effective_plan,
@@ -176,6 +179,9 @@ def register_device(
     Registra o sincroniza un dispositivo instalado.
     """
     license_obj = db.query(DeviceLicense).filter(DeviceLicense.device_id == payload.device_id).first()
+    normalized_country = (payload.country_code or "VE").strip().upper()
+    if normalized_country not in ("VE", "CO", "AR"):
+        normalized_country = "VE"
     
     if not license_obj:
         license_obj = DeviceLicense(
@@ -184,6 +190,7 @@ def register_device(
             phone=payload.phone or "",
             doc_id=payload.doc_id or "",
             email=payload.email or "",
+            country_code=normalized_country,
             plan_type="BASIC",
             app_version=payload.app_version,
             activation_code=generate_activation_code(payload.device_id),
@@ -192,7 +199,7 @@ def register_device(
         db.add(license_obj)
         db.commit()
         db.refresh(license_obj)
-        logger.info(f"📱 Nuevo dispositivo registrado en Zeasy Hub: {license_obj.device_id} ({license_obj.merchant_name})")
+        logger.info(f"📱 Nuevo dispositivo registrado en Zeasy Hub: {license_obj.device_id} ({license_obj.merchant_name}) [{normalized_country}]")
     else:
         if payload.merchant_name and payload.merchant_name != "Comercio Zeasy":
             license_obj.merchant_name = payload.merchant_name
@@ -202,6 +209,8 @@ def register_device(
             license_obj.doc_id = payload.doc_id
         if payload.email:
             license_obj.email = payload.email
+        if payload.force_country or not getattr(license_obj, "country_code", None):
+            license_obj.country_code = normalized_country
         if not license_obj.activation_code:
             license_obj.activation_code = generate_activation_code(license_obj.device_id)
         license_obj.app_version = payload.app_version
@@ -213,6 +222,7 @@ def register_device(
     return {
         "status": "success",
         "device_id": license_obj.device_id,
+        "country_code": (getattr(license_obj, "country_code", "VE") or "VE").upper(),
         "plan_type": effective_plan,
         "is_pro": license_obj.is_pro_active,
         "remaining_days": license_obj.remaining_days,

@@ -16,5 +16,6 @@ data class ParsedPayment(
     val timestampMillis: Long = System.currentTimeMillis(),
     val paqueteOrigen: String,
     val textoCrudo: String,
-    val canal: String = "PUSH" // "PUSH" o "SMS"
+    val canal: String = "PUSH", // "PUSH" o "SMS"
+    val isOutgoing: Boolean = false // true si es una salida/débito/pago enviado desde el banco configurado
 )

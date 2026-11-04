@@ -11,6 +11,7 @@ class DeviceLicense(Base):
     phone = Column(String(50), default="", nullable=False)
     doc_id = Column(String(50), nullable=True) # Cédula de identidad o RIF
     email = Column(String(150), nullable=True)
+    country_code = Column(String(10), default="VE", nullable=False) # VE, CO, AR
     plan_type = Column(String(20), default="BASIC", nullable=False) # BASIC, TRIAL, PRO
     trial_ends_at = Column(DateTime, nullable=True)
     pro_expires_at = Column(DateTime, nullable=True)

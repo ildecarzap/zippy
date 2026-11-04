@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:padding="22dp">
 
         <!-- Encabezado con Icono y Badge PRO -->
         <LinearLayout
@@ -19,8 +19,8 @@
             android:gravity="center_vertical">
 
             <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
                 android:src="@drawable/ic_zeasy_icon"
                 android:contentDescription="Zeasy PRO" />
 
@@ -43,7 +43,7 @@
                         android:text="Zeasy"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary"
-                        android:textSize="22sp" />
+                        android:textSize="23sp" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -51,27 +51,27 @@
                         android:layout_marginStart="8dp"
                         android:background="@drawable/bg_badge_rounded"
                         android:backgroundTint="@color/accent_blue"
-                        android:paddingHorizontal="8dp"
-                        android:paddingVertical="2dp"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="3dp"
                         android:text="PRO ⚡"
-                        android:textColor="@color/primary"
+                        android:textColor="@color/white"
                         android:textStyle="bold"
-                        android:textSize="11sp" />
+                        android:textSize="12sp" />
                 </LinearLayout>
 
                 <TextView
                     android:id="@+id/tvProReasonSubtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="3dp"
                     android:text="Habilita las funciones avanzadas en tu terminal"
-                    android:textColor="@color/accent_blue"
+                    android:textColor="@color/primary"
                     android:textStyle="bold"
-                    android:textSize="13sp" />
+                    android:textSize="14sp" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Tarjeta de Beneficios PRO -->
+        <!-- Tarjeta de Beneficios PRO (Alto Contraste) -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -79,7 +79,7 @@
             app:cardCornerRadius="14dp"
             app:cardElevation="0dp"
             app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp"
+            app:strokeWidth="1.5dp"
             app:cardBackgroundColor="@color/card_background">
 
             <LinearLayout
@@ -96,11 +96,11 @@
                     android:gravity="center_vertical">
 
                     <TextView
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
                         android:gravity="center"
                         android:text="🏦"
-                        android:textSize="17sp" />
+                        android:textSize="18sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -114,14 +114,14 @@
                             android:text="Detección y QR Multibanco Simultáneo"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Banesco, BDV, Mercantil, Provincial, BNC, Bancamiga y Binance Pay activos a la vez."
+                            android:text="Múltiples bancos, billeteras digitales y Binance Pay activos a la vez."
                             android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp" />
+                            android:textSize="12.5sp" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -139,11 +139,11 @@
                     android:gravity="center_vertical">
 
                     <TextView
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
                         android:gravity="center"
                         android:text="📒"
-                        android:textSize="17sp" />
+                        android:textSize="18sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -157,14 +157,14 @@
                             android:text="Libreta PRO: Conciliación Automática y PDF"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Descuenta deudas automáticamente al llegar el Pago Móvil y envía estados de cuenta en PDF."
+                            android:text="Descuenta deudas automáticamente al llegar el pago y envía estados de cuenta en PDF."
                             android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp" />
+                            android:textSize="12.5sp" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -182,11 +182,11 @@
                     android:gravity="center_vertical">
 
                     <TextView
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
                         android:gravity="center"
                         android:text="🔊"
-                        android:textSize="17sp" />
+                        android:textSize="18sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -200,14 +200,14 @@
                             android:text="Soundbox Parlante y Carga por Voz"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Anuncia en voz alta cada pago recibido o fiado conciliado, y registra gastos hablando."
                             android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp" />
+                            android:textSize="12.5sp" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -225,11 +225,11 @@
                     android:gravity="center_vertical">
 
                     <TextView
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
                         android:gravity="center"
                         android:text="📄"
-                        android:textSize="17sp" />
+                        android:textSize="18sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -243,49 +243,49 @@
                             android:text="Cierres Contables PDF/Excel y Respaldo"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Exporta cuadres auditables con desglose de fiados y respalda tu cartera para cambiar de equipo."
                             android:textColor="@color/text_secondary"
-                            android:textSize="11.5sp" />
+                            android:textSize="12.5sp" />
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- SECCIÓN DE CÓDIGO DE ACTIVACIÓN DEL DISPOSITIVO -->
+        <!-- SECCIÓN DE CANJE DE CÓDIGO DE LICENCIA (100% Neutral Google Play) -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            app:cardCornerRadius="12dp"
+            android:layout_marginTop="14dp"
+            app:cardCornerRadius="14dp"
             app:cardElevation="0dp"
             app:strokeColor="@color/accent_cyan"
-            app:strokeWidth="1dp"
+            app:strokeWidth="1.5dp"
             app:cardBackgroundColor="@color/surface_variant">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="12dp">
+                android:padding="14dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="🔑 ¿Ya tienes tu código de activación?"
+                    android:text="🔑 Canjear código de licencia"
                     android:textColor="@color/text_primary"
                     android:textStyle="bold"
-                    android:textSize="12.5sp" />
+                    android:textSize="14sp" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:hint="Ingresa tu Código de Activación PRO"
+                    android:hint="Ingresa tu código de licencia asignado"
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -294,22 +294,22 @@
                         android:layout_height="wrap_content"
                         android:inputType="textCapCharacters"
                         android:singleLine="true"
-                        android:textSize="14sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnProRedeemCode"
                     android:layout_width="match_parent"
-                    android:layout_height="46dp"
-                    android:layout_marginTop="8dp"
-                    android:text="🔑 Validar y Activar Código"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="10dp"
+                    android:text="🔑 Validar Código de Licencia"
                     android:textAllCaps="false"
                     android:textColor="@color/white"
                     android:textStyle="bold"
-                    android:textSize="13.5sp"
+                    android:textSize="15sp"
                     app:backgroundTint="@color/primary"
-                    app:cornerRadius="10dp" />
+                    app:cornerRadius="12dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -317,71 +317,71 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnProTrial"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_height="54dp"
             android:layout_marginTop="12dp"
             android:text="✨ Activar 7 Días de Prueba Gratis"
             android:textAllCaps="false"
-            android:textColor="@color/primary"
+            android:textColor="@color/white"
             android:textStyle="bold"
-            android:textSize="14sp"
+            android:textSize="15.5sp"
             app:backgroundTint="@color/accent_green"
             app:cornerRadius="12dp" />
 
-        <!-- Solicitud de Código a Soporte CIEM (WhatsApp o Correo) -->
+        <!-- Soporte Comercial y Atención al Cliente (Terminología Neutral Google Play) -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:gravity="center"
-            android:text="¿Necesitas solicitar un código de activación para tu negocio?"
+            android:text="Soporte comercial y atención al cliente corporativo"
             android:textColor="@color/text_secondary"
             android:textStyle="bold"
-            android:textSize="11.5sp" />
+            android:textSize="13sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="6dp">
+            android:layout_marginTop="8dp">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnProWhatsapp"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="52dp"
                 android:layout_weight="1"
                 android:layout_marginEnd="4dp"
-                android:text="💬 Por WhatsApp"
+                android:text="💬 Soporte Comercial"
                 android:textAllCaps="false"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/white"
                 android:textStyle="bold"
-                android:textSize="12.5sp"
+                android:textSize="13.5sp"
                 app:backgroundTint="@color/accent_blue"
-                app:cornerRadius="10dp" />
+                app:cornerRadius="12dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnProEmail"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="52dp"
                 android:layout_weight="1"
                 android:layout_marginStart="4dp"
-                android:text="✉️ Por Correo"
+                android:text="✉️ Atención al Cliente"
                 android:textAllCaps="false"
                 android:textColor="@color/text_primary"
                 android:textStyle="bold"
-                android:textSize="12.5sp"
+                android:textSize="13.5sp"
                 app:strokeColor="@color/border_subtle"
-                app:cornerRadius="10dp" />
+                app:cornerRadius="12dp" />
         </LinearLayout>
 
         <!-- AVISO ANTI-ESTAFAS Y CERO CUSTODIA -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:text="🛡️ Zeasy nunca te pedirá claves ni datos bancarios. Cero custodia."
-            android:textColor="@color/text_muted"
-            android:textSize="11sp"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
             android:gravity="center" />
 
         <!-- Continuar con Free -->
@@ -391,10 +391,11 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:gravity="center"
-            android:padding="6dp"
+            android:padding="10dp"
             android:text="Continuar con el Plan Básico Gratuito"
-            android:textColor="@color/text_muted"
-            android:textSize="13sp" />
+            android:textColor="@color/text_secondary"
+            android:textStyle="bold"
+            android:textSize="14sp" />
 
     </LinearLayout>
 </ScrollView>

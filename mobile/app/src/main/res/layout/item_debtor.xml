@@ -3,20 +3,20 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="10dp"
-    app:cardCornerRadius="14dp"
-    app:cardElevation="0dp"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="1dp"
     app:strokeColor="@color/border"
-    app:strokeWidth="1dp"
+    app:strokeWidth="1.5dp"
     app:cardBackgroundColor="@color/surface">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="14dp">
+        android:padding="16dp">
 
-        <!-- Fila 1: Nombre y Badge de Estado -->
+        <!-- Fila 1: Nombre Gigante y Badge de Saldo de Alto Contraste -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -36,7 +36,7 @@
                     android:text="Doña Carmen"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp" />
+                    android:textSize="19sp" />
 
                 <TextView
                     android:id="@+id/tvDebtorMeta"
@@ -44,7 +44,8 @@
                     android:layout_height="wrap_content"
                     android:text="0414-1234567 • V-14567890"
                     android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textSize="13.5sp"
                     android:layout_marginTop="2dp" />
             </LinearLayout>
 
@@ -54,14 +55,14 @@
                 android:layout_height="wrap_content"
                 android:text="🔴 Debe $18.50"
                 android:textStyle="bold"
-                android:textSize="12sp"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
+                android:textSize="15sp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
                 android:background="@drawable/bg_badge_rounded"
-                android:textColor="#C62828" />
+                android:textColor="#991B1B" />
         </LinearLayout>
 
-        <!-- Fila 2: Monto equivalente en Bolívares (Tasa BCV) -->
+        <!-- Fila 2: Monto equivalente en Moneda Local (Alto Contraste) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -75,25 +76,26 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Equivalente: Bs. 841,75 (BCV)"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
+                android:textSize="14sp" />
 
             <TextView
                 android:id="@+id/tvDebtorUpdatedTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Último movimiento: Hoy"
-                android:textColor="@color/text_muted"
-                android:textSize="11sp" />
+                android:text="Último: Hoy"
+                android:textColor="@color/text_secondary"
+                android:textSize="12.5sp" />
         </LinearLayout>
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="@color/border"
-            android:layout_marginVertical="10dp" />
+            android:layout_marginVertical="12dp" />
 
-        <!-- Fila 3: Botones de Acción Rápida -->
+        <!-- Fila 3: Botones de Acción Rápida de Alta Accesibilidad (50dp Touch Target) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -102,46 +104,50 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnItemAddCharge"
                 android:layout_width="0dp"
-                android:layout_height="38dp"
+                android:layout_height="50dp"
                 android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:text="+ Fiar"
-                android:textSize="12sp"
+                android:layout_marginEnd="5dp"
+                android:text="➕ Fiar"
+                android:textAllCaps="false"
+                android:textSize="14sp"
                 android:textStyle="bold"
-                app:cornerRadius="8dp"
-                android:backgroundTint="#FFEBEE"
-                android:textColor="#C62828"
+                app:cornerRadius="12dp"
+                android:backgroundTint="#FEE2E2"
+                android:textColor="#991B1B"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#FFCDD2" />
+                app:strokeWidth="1.5dp"
+                app:strokeColor="#FCA5A5" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnItemAddPayment"
                 android:layout_width="0dp"
-                android:layout_height="38dp"
+                android:layout_height="50dp"
                 android:layout_weight="1"
-                android:layout_marginHorizontal="4dp"
+                android:layout_marginHorizontal="5dp"
                 android:text="💵 Abonar"
-                android:textSize="12sp"
+                android:textAllCaps="false"
+                android:textSize="14sp"
                 android:textStyle="bold"
-                app:cornerRadius="8dp"
-                android:backgroundTint="#E8F5E9"
-                android:textColor="#2E7D32"
+                app:cornerRadius="12dp"
+                android:backgroundTint="#D1FAE5"
+                android:textColor="#065F46"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#C8E6C9" />
+                app:strokeWidth="1.5dp"
+                app:strokeColor="#6EE7B7" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnItemWhatsApp"
-                android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:layout_marginStart="4dp"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:layout_marginStart="5dp"
                 android:text="💬 Cobrar"
-                android:textSize="12sp"
+                android:textAllCaps="false"
+                android:textSize="14sp"
                 android:textStyle="bold"
-                app:cornerRadius="8dp"
+                app:cornerRadius="12dp"
                 android:backgroundTint="#00875A"
                 android:textColor="@color/white"
                 android:insetTop="0dp"

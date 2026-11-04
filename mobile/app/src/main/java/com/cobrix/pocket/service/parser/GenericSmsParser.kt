@@ -10,13 +10,14 @@ class GenericSmsParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val combined = "$title $text"
-        if (ParserUtils.isOutgoingTransaction(combined)) return false
+        val isOutgoing = ParserUtils.isOutgoingTransaction(combined)
 
         val isSms = ParserUtils.isSmsPackage(packageName)
         if (!isSms) return false
 
         val lower = combined.lowercase(Locale.ROOT)
         val hasPaymentWords = ParserUtils.hasIncomingIndicators(combined) ||
+                isOutgoing ||
                 lower.contains("recibiste") ||
                 lower.contains("recibido") ||
                 lower.contains("recibio") ||
@@ -43,7 +44,7 @@ class GenericSmsParser : BankParser {
         postTimeMillis: Long
     ): ParsedPayment? {
         val combined = "$title $text"
-        if (ParserUtils.isOutgoingTransaction(combined)) return null
+        val isOutgoing = ParserUtils.isOutgoingTransaction(combined)
 
         val (amount, amountRaw) = ParserUtils.extractAmount(combined) ?: return null
         val reference = ParserUtils.extractReference(combined) ?: return null
@@ -69,7 +70,8 @@ class GenericSmsParser : BankParser {
             timestampMillis = postTimeMillis,
             paqueteOrigen = packageName,
             textoCrudo = combined.trim(),
-            canal = "SMS"
+            canal = "SMS",
+            isOutgoing = isOutgoing
         )
     }
 }

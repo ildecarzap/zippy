@@ -165,7 +165,8 @@ class PocketDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABAS
         amountUsd: Double = 0.0,
         sinceTimestamp: Long = 0L,
         isCrypto: Boolean = false,
-        sender: String? = null
+        sender: String? = null,
+        txType: TransactionType = TransactionType.INCOME
     ): Boolean {
         val db = readableDatabase
 
@@ -178,7 +179,7 @@ class PocketDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABAS
                 AND ABS($COL_AMOUNT_USD - ?) < 0.005 
                 AND $COL_TIMESTAMP >= ?
             """.trimIndent()
-            val cryptoCursor = db.rawQuery(cryptoQuery, arrayOf(TransactionType.INCOME.name, amountUsd.toString(), tenMinutesAgo.toString()))
+            val cryptoCursor = db.rawQuery(cryptoQuery, arrayOf(txType.name, amountUsd.toString(), tenMinutesAgo.toString()))
             var cryptoDuplicate = false
             cryptoCursor.use {
                 while (it.moveToNext()) {
@@ -218,9 +219,9 @@ class PocketDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABAS
             """.trimIndent()
         }
         val args = if (sinceTimestamp > 0) {
-            arrayOf(TransactionType.INCOME.name, reference, amountVes.toString(), amountUsd.toString(), sinceTimestamp.toString())
+            arrayOf(txType.name, reference, amountVes.toString(), amountUsd.toString(), sinceTimestamp.toString())
         } else {
-            arrayOf(TransactionType.INCOME.name, reference, amountVes.toString(), amountUsd.toString())
+            arrayOf(txType.name, reference, amountVes.toString(), amountUsd.toString())
         }
         val cursor = db.rawQuery(query, args)
         var exists = false

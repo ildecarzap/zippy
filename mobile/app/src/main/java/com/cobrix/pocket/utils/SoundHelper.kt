@@ -44,7 +44,8 @@ class SoundHelper(private val context: Context) : TextToSpeech.OnInitListener {
                 tts?.setAudioAttributes(audioAttrs)
             } catch (_: Exception) {}
 
-            val result = tts?.setLanguage(Locale("es", "VE"))
+            val countryProfile = PreferencesHelper.getCountryProfile(context)
+            val result = tts?.setLanguage(countryProfile.ttsLocale)
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 // Fallback a español general
                 tts?.setLanguage(Locale("es", "ES"))
@@ -203,20 +204,22 @@ class SoundHelper(private val context: Context) : TextToSpeech.OnInitListener {
     }
 
     /**
-     * Anuncia el pago recibido mediante voz sintética clara sin duplicar el sonido de caja.
+     * Anuncia el pago recibido mediante voz sintética clara adaptada a la moneda del país activo.
      */
     fun announcePayment(amount: Double) {
+        val currencyWord = PreferencesHelper.getCountryProfile(context).localCurrencyVoiceName
         val formatted = String.format(Locale.US, "%.0f", amount)
-        val phrase = "Pago recibido. $formatted bolívares."
+        val phrase = "Pago recibido. $formatted $currencyWord."
         speakOrQueue(phrase, "PAYMENT_ANNOUNCE")
     }
 
     /**
-     * Anuncia un Pago Móvil que concilió automáticamente la deuda de un cliente en la Libreta.
+     * Anuncia un pago que concilió automáticamente la deuda de un cliente en la Libreta.
      */
     fun announceReconciledPayment(amount: Double, debtorName: String) {
+        val currencyWord = PreferencesHelper.getCountryProfile(context).localCurrencyVoiceName
         val formatted = String.format(Locale.US, "%.0f", amount)
-        val phrase = "Pago recibido de $formatted bolívares. Abonado a la cuenta de $debtorName."
+        val phrase = "Pago recibido de $formatted $currencyWord. Abonado a la cuenta de $debtorName."
         speakOrQueue(phrase, "PAYMENT_RECONCILED_ANNOUNCE")
     }
 
@@ -233,8 +236,9 @@ class SoundHelper(private val context: Context) : TextToSpeech.OnInitListener {
      * Anuncia el egreso o gasto registrado por voz.
      */
     fun announceExpense(amount: Double) {
+        val currencyWord = PreferencesHelper.getCountryProfile(context).localCurrencyVoiceName
         val formatted = String.format(Locale.US, "%.0f", amount)
-        val phrase = "Gasto registrado. $formatted bolívares."
+        val phrase = "Gasto registrado. $formatted $currencyWord."
         speakOrQueue(phrase, "EXPENSE_ANNOUNCE")
     }
 

@@ -3,25 +3,25 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="0dp"
+    android:layout_marginBottom="10dp"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="1dp"
     app:strokeColor="@color/border"
-    app:strokeWidth="1dp"
+    app:strokeWidth="1.5dp"
     app:cardBackgroundColor="@color/surface">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="12dp"
+        android:padding="14dp"
         android:gravity="center_vertical">
 
         <ImageView
             android:id="@+id/ivTxIcon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:padding="8dp"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:padding="10dp"
             android:background="@drawable/ic_cashier"
             android:backgroundTint="@color/accent_green_bg"
             app:tint="@color/accent_green" />
@@ -40,15 +40,17 @@
                 android:text="Pago Móvil Banesco"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary"
-                android:textSize="15sp" />
+                android:textSize="16.5sp" />
 
             <TextView
                 android:id="@+id/tvTxSubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:text="14:35 hrs • Ref: 4892"
                 android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
+                android:textStyle="bold"
+                android:textSize="13.5sp" />
         </LinearLayout>
 
         <TextView
@@ -58,7 +60,7 @@
             android:text="+ Bs. 250,00"
             android:textStyle="bold"
             android:textColor="@color/accent_green"
-            android:textSize="16sp" />
+            android:textSize="18.5sp" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import com.cobrix.pocket.data.model.CountryProfile
+import com.cobrix.pocket.data.model.CountryProfileCatalog
 import com.cobrix.pocket.data.model.UserProfile
 import java.net.URLEncoder
 import java.util.Locale
@@ -15,9 +17,26 @@ object WhatsAppHelper {
         amountVes: Double,
         amountUsd: Double = 0.0,
         bankName: String = profile.bankName,
-        bankCode: String = profile.bankCode
+        bankCode: String = profile.bankCode,
+        countryProfile: CountryProfile = CountryProfileCatalog.VENEZUELA
     ): String {
         val vesFormatted = String.format(Locale.US, "%.2f", amountVes)
+
+        if (!countryProfile.supportsExchangeRate) {
+            val sym = countryProfile.localCurrencySymbol
+            return """
+                💸 *Datos para ${countryProfile.instantPaymentSystemName}*
+                ---------------------------------
+                📌 *Monto a transferir:*
+                👉 *$sym $vesFormatted*
+                
+                🏦 *Entidad:* $bankName
+                📱 *Teléfono / Cuenta:* ${profile.phoneNumber}
+                🪪 *${countryProfile.nationalIdLabel}:* ${profile.idCard}
+                ---------------------------------
+                ⚡ *Cobro solicitado con Zeasy*
+            """.trimIndent()
+        }
 
         return """
             💸 *Datos para Pago Móvil*
@@ -56,7 +75,8 @@ object WhatsAppHelper {
 
     /**
      * Mensaje de cobro cordial para cuentas por cobrar / fiados pendientes.
-     * Soporta cobro de deuda total o abono parcial acordado, con céntimos de conciliación automática.
+     * Muestra únicamente el saldo en USD (si aplica) y el monto final exacto a transferir,
+     * evitando mostrar dos montos en moneda local o textos técnicos de céntimos que confundan al cliente.
      */
     fun generateDebtReminderMessage(
         profile: UserProfile,
@@ -68,12 +88,13 @@ object WhatsAppHelper {
         bankCode: String = profile.bankCode,
         conciliationCents: Double = 0.01,
         requestedAmountUsd: Double? = null,
-        includeConciliationCents: Boolean = true
+        includeConciliationCents: Boolean = true,
+        countryProfile: CountryProfile = CountryProfileCatalog.VENEZUELA
     ): String {
         val totalDebtUsd = Math.abs(balanceUsd)
         val targetUsd = (requestedAmountUsd ?: totalDebtUsd).coerceAtLeast(0.01)
         val isPartial = targetUsd < totalDebtUsd - 0.005
-        val rate = if (bcvRate > 0) bcvRate else 1.0
+        val rate = if (countryProfile.supportsExchangeRate && bcvRate > 0) bcvRate else 1.0
 
         val totalDebtVes = Math.round(totalDebtUsd * rate * 100.0) / 100.0
         val targetBaseVes = Math.round(targetUsd * rate * 100.0) / 100.0
@@ -87,26 +108,49 @@ object WhatsAppHelper {
         val totalDebtVesFmt = String.format(Locale.US, "%.2f", totalDebtVes)
         val targetUsdFmt = String.format(Locale.US, "%.2f", targetUsd)
         val concilVesFmt = String.format(Locale.US, "%.2f", concilVes)
-        val centsFmt = String.format(Locale.US, "%.2f", conciliationCents)
         val noteSection = if (recentConcept.isNotBlank()) "📝 *Concepto:* $recentConcept\n" else ""
         val merchant = if (profile.merchantName.isNotBlank()) profile.merchantName else "tu comercio amigo"
 
+        if (!countryProfile.supportsExchangeRate) {
+            val sym = countryProfile.localCurrencySymbol
+            val amountBlock = if (isPartial) {
+                """
+                💵 *Saldo total pendiente:* $sym $totalDebtVesFmt
+                👉 *Monto exacto a transferir:* *$sym $concilVesFmt*
+                """.trimIndent()
+            } else {
+                """
+                👉 *Monto exacto a transferir:* *$sym $concilVesFmt*
+                """.trimIndent()
+            }
+
+            return """
+                👋 Hola *$debtorName*, un cordial saludo de *$merchant*.
+                
+                Le compartimos con todo aprecio su detalle de pago:
+                $amountBlock
+                $noteSection
+                🏦 *Datos para ${countryProfile.instantPaymentSystemName}:*
+                • *Entidad:* $bankName
+                • *Teléfono / Cuenta:* ${profile.phoneNumber}
+                • *${countryProfile.nationalIdLabel}:* ${profile.idCard}
+                
+                📸 _Le adjuntamos nuestro código QR para su comodidad al transferir._
+                🙏 ¡Muchas gracias por su preferencia!
+                ⚡ *Enviado vía Zeasy*
+            """.trimIndent()
+        }
+
         val amountBlock = if (isPartial) {
-            val centsLine = if (includeConciliationCents) {
-                "\n_(Incluye +Bs. $centsFmt de céntimos para descontar tu abono automáticamente al llegar el Pago Móvil)_"
-            } else ""
             """
-            💵 *Saldo total pendiente:* $$totalDebtUsdFmt USD (Bs. $totalDebtVesFmt BCV)
+            💵 *Saldo total pendiente:* $$totalDebtUsdFmt USD
             🤝 *Abono acordado hoy:* $$targetUsdFmt USD
-            👉 *Monto exacto a transferir:* *Bs. $concilVesFmt*$centsLine
+            👉 *Monto exacto a transferir:* *Bs. $concilVesFmt*
             """.trimIndent()
         } else {
-            val centsLine = if (includeConciliationCents) {
-                "\n_(Incluye +Bs. $centsFmt de céntimos para descontar tu deuda automáticamente al llegar el Pago Móvil)_"
-            } else ""
             """
-            💵 *Saldo adeudado:* $$totalDebtUsdFmt USD (Bs. $totalDebtVesFmt BCV)
-            👉 *Monto exacto a transferir:* *Bs. $concilVesFmt*$centsLine
+            💵 *Saldo adeudado:* $$totalDebtUsdFmt USD
+            👉 *Monto exacto a transferir:* *Bs. $concilVesFmt*
             """.trimIndent()
         }
 
@@ -134,18 +178,25 @@ object WhatsAppHelper {
         profile: UserProfile,
         debtorName: String,
         creditUsd: Double,
-        bcvRate: Double
+        bcvRate: Double,
+        countryProfile: CountryProfile = CountryProfileCatalog.VENEZUELA
     ): String {
-        val rate = if (bcvRate > 0) bcvRate else 1.0
+        val rate = if (countryProfile.supportsExchangeRate && bcvRate > 0) bcvRate else 1.0
         val vesFormatted = String.format(Locale.US, "%.2f", creditUsd * rate)
         val usdFormatted = String.format(Locale.US, "%.2f", creditUsd)
         val merchant = if (profile.merchantName.isNotBlank()) profile.merchantName else "tu comercio amigo"
+
+        val amountText = if (countryProfile.supportsExchangeRate) {
+            "$$usdFormatted USD (≈ Bs. $vesFormatted)"
+        } else {
+            "${countryProfile.localCurrencySymbol} $vesFormatted"
+        }
 
         return """
             👋 Hola *$debtorName*, un saludo de *$merchant*.
             
             Le informamos amablemente que cuenta con un *saldo a su favor* disponible para sus compras:
-            🟢 *Monto a su favor:* $$usdFormatted USD (≈ Bs. $vesFormatted)
+            🟢 *Monto a su favor:* $amountText
             
             ¡Puede consumirlo cuando guste en nuestro establecimiento!
             ⚡ *Zeasy*
@@ -217,13 +268,17 @@ object WhatsAppHelper {
     ) {
         val targetPackage = getWhatsAppPackage(context)
         val shareableUri = getShareableUri(context, imageUri)
+        val countryCode = PreferencesHelper.getCountryCode(context)
+        val phonePrefix = countryCode.phonePrefix
 
-        // Limpiar teléfono (ej. de 04141234567 a 584141234567 si es de Venezuela)
+        // Limpiar teléfono y anteponer código de país activo (VE=58, CO=57, AR=54)
         var cleanPhone = customerPhone.replace(Regex("[^0-9]"), "")
-        if (cleanPhone.startsWith("0")) {
-            cleanPhone = "58" + cleanPhone.substring(1)
-        } else if (!cleanPhone.startsWith("58") && cleanPhone.length == 10) {
-            cleanPhone = "58$cleanPhone"
+        if (cleanPhone.isNotEmpty()) {
+            if (cleanPhone.startsWith("0")) {
+                cleanPhone = phonePrefix + cleanPhone.substring(1)
+            } else if (!cleanPhone.startsWith(phonePrefix) && cleanPhone.length == 10) {
+                cleanPhone = "$phonePrefix$cleanPhone"
+            }
         }
 
         try {

@@ -17,6 +17,7 @@ object TransactionCategories {
     const val INCOME_MANUAL_OTRO = "OTRO_INGRESO"
 
     // Gastos
+    const val EXPENSE_AUTO_BANK = "SALIDA_BANCARIA_AUTO"
     const val EXPENSE_GASOLINA = "GASOLINA"
     const val EXPENSE_COMIDA = "COMIDA"
     const val EXPENSE_REPUESTO = "REPUESTO"
@@ -34,6 +35,7 @@ object TransactionCategories {
             INCOME_MANUAL_TRANSFERENCIA -> "Transferencia"
             INCOME_ABONO_FIADO -> "Abono de Fiado (Libreta)"
             INCOME_MANUAL_OTRO -> "Otro Ingreso"
+            EXPENSE_AUTO_BANK -> "Salida Bancaria (Automática)"
             EXPENSE_GASOLINA -> "Gasolina"
             EXPENSE_COMIDA -> "Comida / Café"
             EXPENSE_REPUESTO -> "Repuesto"

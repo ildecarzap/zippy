@@ -7,41 +7,51 @@
     android:padding="24dp"
     android:background="@color/surface">
 
+    <!-- Indicador de arrastre superior (Bottom Sheet Handle) -->
+    <View
+        android:layout_width="44dp"
+        android:layout_height="5dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="14dp"
+        android:background="@drawable/bg_badge_rounded"
+        android:backgroundTint="@color/border" />
+
     <TextView
         android:id="@+id/tvPaymentTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Registrar Abono / Pago"
+        android:text="💵 Registrar Abono / Pago"
         android:textStyle="bold"
         android:textColor="@color/text_primary"
-        android:textSize="20sp" />
+        android:textSize="22sp" />
 
     <TextView
         android:id="@+id/tvPaymentClientName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="4dp"
         android:text="Cliente: Doña Carmen"
         android:textColor="@color/primary"
         android:textStyle="bold"
-        android:textSize="14sp" />
+        android:textSize="16sp" />
 
-    <!-- Estado de deuda actual -->
+    <!-- Estado de deuda actual (Alto Contraste) -->
     <TextView
         android:id="@+id/tvPaymentCurrentDebt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="4dp"
         android:text="Deuda actual: $18.50 USD"
-        android:textColor="#C62828"
-        android:textSize="13sp" />
+        android:textColor="#991B1B"
+        android:textStyle="bold"
+        android:textSize="15sp" />
 
-    <!-- Selector de Moneda para Abonar: Bolívares o Dólares -->
+    <!-- Selector de Moneda para Abonar: Bolívares o Dólares (50dp Touch Target) -->
     <com.google.android.material.button.MaterialButtonToggleGroup
         android:id="@+id/togglePaymentCurrency"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="14dp"
         app:singleSelection="true"
         app:selectionRequired="true"
         app:checkedButton="@id/btnPaymentCurrencyUsd">
@@ -50,29 +60,31 @@
             android:id="@+id/btnPaymentCurrencyVes"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="50dp"
             android:layout_weight="1"
             android:text="Bs. Bolívares"
-            android:textSize="13sp"
+            android:textAllCaps="false"
+            android:textSize="14.5sp"
             android:textStyle="bold" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPaymentCurrencyUsd"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="50dp"
             android:layout_weight="1"
             android:text="$ Dólares (USD)"
-            android:textSize="13sp"
+            android:textAllCaps="false"
+            android:textSize="14.5sp"
             android:textStyle="bold" />
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
-    <!-- Campo de Monto a Abonar -->
+    <!-- Campo de Monto Gigante a Abonar -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilPaymentAmount"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="12dp"
         android:hint="Monto a Abonar en Dólares ($ USD) *">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -81,7 +93,7 @@
             android:layout_height="wrap_content"
             android:inputType="numberDecimal"
             android:textColor="@color/text_primary"
-            android:textSize="18sp"
+            android:textSize="26sp"
             android:textStyle="bold" />
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -90,11 +102,11 @@
         android:id="@+id/tvPaymentEquivBs"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="6dp"
         android:text="≈ Bs. 0,00 (Tasa BCV: 45.00)"
-        android:textColor="@color/text_secondary"
+        android:textColor="@color/text_primary"
         android:textStyle="bold"
-        android:textSize="12.5sp" />
+        android:textSize="14.5sp" />
 
     <!-- Nota de integración con Jornada y Excedente -->
     <TextView
@@ -103,14 +115,15 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:text="🟢 Este abono se registrará como entrada de dinero en tu Jornada de hoy para el reporte final."
-        android:textColor="#2E7D32"
-        android:textSize="11sp" />
+        android:textColor="#065F46"
+        android:textStyle="bold"
+        android:textSize="12.5sp" />
 
     <!-- Nota / Referencia -->
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="12dp"
         android:hint="Nota / Referencia (Opcional, ej. Pago Móvil o Efectivo)">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -118,18 +131,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="@color/text_primary"
-            android:textSize="14sp" />
+            android:textSize="15.5sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnConfirmPayment"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="56dp"
         android:layout_marginTop="20dp"
         android:text="Guardar Abono y Sumar a Jornada"
-        android:textSize="15sp"
+        android:textAllCaps="false"
+        android:textSize="16.5sp"
         android:textStyle="bold"
-        app:cornerRadius="12dp"
+        app:cornerRadius="14dp"
         android:backgroundTint="#00875A"
         android:textColor="@color/white" />
 

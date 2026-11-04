@@ -756,4 +756,118 @@ object PreferencesHelper {
     fun clearPendingDebtorConciliation(context: Context, debtorId: Long) {
         getPrefs(context).edit().remove("pending_concil_${debtorId}").apply()
     }
+
+    // --- GESTIÓN MULTIPAÍS (VENEZUELA, COLOMBIA, ARGENTINA) Y ASISTENTE PASO A PASO ---
+    private const val KEY_COUNTRY_CODE = "pref_country_code"
+    private const val KEY_COUNTRY_SELECTED_INITIAL = "pref_country_selected_initial"
+    private const val KEY_ONBOARDING_COMPLETED = "pref_onboarding_completed"
+    private const val KEY_ONBOARDING_STEP = "pref_onboarding_step"
+
+    fun isOnboardingCompleted(context: Context): Boolean {
+        val prefs = getPrefs(context)
+        if (prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)) {
+            return true
+        }
+        // Si es un usuario existente que ya tenía configurados teléfono y documento válidos, no bloquearlo
+        val profile = getUserProfile(context)
+        val hasValidData = profile.phoneNumber.length >= 7 && profile.idCard.length >= 4 && hasSelectedCountryOnFirstLaunch(context)
+        if (hasValidData && !isFirstLaunch(context)) {
+            prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, true).apply()
+            return true
+        }
+        return false
+    }
+
+    fun setOnboardingCompleted(context: Context, completed: Boolean) {
+        getPrefs(context).edit()
+            .putBoolean(KEY_ONBOARDING_COMPLETED, completed)
+            .putBoolean(KEY_FIRST_LAUNCH, false)
+            .apply()
+    }
+
+    fun getOnboardingStep(context: Context): Int {
+        return getPrefs(context).getInt(KEY_ONBOARDING_STEP, 1).coerceIn(1, 5)
+    }
+
+    fun setOnboardingStep(context: Context, step: Int) {
+        getPrefs(context).edit().putInt(KEY_ONBOARDING_STEP, step.coerceIn(1, 5)).apply()
+    }
+
+    /**
+     * Guarda progresivamente en tiempo real cada dato ingresado en el asistente paso a paso,
+     * asegurando que nunca se pierda información aunque el usuario salga a otorgar permisos o cierre la app.
+     */
+    fun saveProgressiveOnboardingData(
+        context: Context,
+        merchantName: String? = null,
+        category: String? = null,
+        phone: String? = null,
+        idCard: String? = null,
+        bcvRate: Double? = null
+    ) {
+        val editor = getPrefs(context).edit()
+        if (merchantName != null) {
+            editor.putString(KEY_MERCHANT_NAME, merchantName.trim())
+            editor.putString(KEY_DRAFT_MERCHANT_NAME, merchantName.trim())
+        }
+        if (!category.isNullOrBlank()) {
+            editor.putString(KEY_BUSINESS_CATEGORY, category.trim())
+            editor.putString(KEY_DRAFT_BUSINESS_CATEGORY, category.trim())
+        }
+        if (phone != null) {
+            editor.putString(KEY_PHONE, phone.trim())
+            editor.putString(KEY_DRAFT_PHONE, phone.trim())
+        }
+        if (idCard != null) {
+            editor.putString(KEY_ID_CARD, idCard.trim())
+            editor.putString(KEY_DRAFT_ID_CARD, idCard.trim())
+        }
+        if (bcvRate != null && bcvRate > 0.0) {
+            editor.putFloat(KEY_BCV_RATE, bcvRate.toFloat())
+        }
+        editor.apply()
+    }
+
+    fun getCountryCode(context: Context): com.cobrix.pocket.data.model.CountryCode {
+        val raw = getPrefs(context).getString(KEY_COUNTRY_CODE, "VE")
+        return com.cobrix.pocket.data.model.CountryCode.fromIso(raw)
+    }
+
+    fun getCountryProfile(context: Context): com.cobrix.pocket.data.model.CountryProfile {
+        return com.cobrix.pocket.data.model.CountryProfileCatalog.getProfile(getCountryCode(context))
+    }
+
+    fun hasSelectedCountryOnFirstLaunch(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_COUNTRY_SELECTED_INITIAL, false)
+    }
+
+    fun setCountryCode(context: Context, country: com.cobrix.pocket.data.model.CountryCode) {
+        val prefs = getPrefs(context)
+        val previous = getCountryCode(context)
+        prefs.edit()
+            .putString(KEY_COUNTRY_CODE, country.isoCode)
+            .putBoolean(KEY_COUNTRY_SELECTED_INITIAL, true)
+            .apply()
+
+        // Si el banco principal actual no pertenece al nuevo país seleccionado, asignar el banco principal de ese país
+        val currentBankCode = getPrimaryBankCode(context)
+        val countryBanks = BankCatalog.getBanksForCountry(country)
+        if (countryBanks.none { it.code.equals(currentBankCode, ignoreCase = true) }) {
+            val defaultBank = BankCatalog.getDefaultBankForCountry(country)
+            setPrimaryBank(context, defaultBank.code, defaultBank.name)
+            // Filtrar bancos habilitados para mantener solo los del país activo y respetar restricciones de plan
+            val allowedCodes = countryBanks.map { it.code }.toSet()
+            val filtered = getEnabledBankCodes(context).filter { it in allowedCodes }.toMutableSet()
+            if (filtered.isEmpty()) {
+                filtered.add(defaultBank.code)
+            }
+            if (!PlanCapabilityManager.canUseMultibank(context)) {
+                prefs.edit().putStringSet(KEY_ENABLED_BANKS, setOf(defaultBank.code)).apply()
+            } else {
+                prefs.edit().putStringSet(KEY_ENABLED_BANKS, filtered).apply()
+            }
+        } else if (previous != country) {
+            sanitizeBasicPlanBank(context)
+        }
+    }
 }
