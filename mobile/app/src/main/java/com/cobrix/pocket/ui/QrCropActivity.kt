@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.PointF
 import android.net.Uri
@@ -11,6 +12,8 @@ import android.os.Bundle
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.widget.Toast
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -45,20 +48,32 @@ class QrCropActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
+        )
         super.onCreate(savedInstanceState)
         binding = ActivityQrCropBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Respetar la barra de navegación inferior (3 botones o gestos) dinámicamente
-        ViewCompat.setOnApplyWindowInsetsListener(binding.layoutCropActions) { v, insets ->
-            val navBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+        // Respetar bajorrelieves (status bar y barra de navegación) dinámicamente
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
             val defaultPaddingPx = (20 * density).toInt()
-            v.setPadding(
+
+            binding.layoutCropHeader.setPadding(
+                defaultPaddingPx,
+                systemBars.top + (8 * density).toInt(),
+                defaultPaddingPx,
+                (16 * density).toInt()
+            )
+
+            binding.layoutCropActions.setPadding(
                 defaultPaddingPx,
                 defaultPaddingPx,
                 defaultPaddingPx,
-                defaultPaddingPx + navBars.bottom
+                defaultPaddingPx + systemBars.bottom
             )
             insets
         }

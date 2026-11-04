@@ -127,14 +127,16 @@
         android:text="🔄 La deuda se indexa y ajusta diariamente a la tasa oficial del BCV"
         android:textColor="@color/text_secondary"
         android:textStyle="bold"
-        android:textSize="12.5sp" />
+        android:textSize="12.5sp"
+        android:visibility="gone" />
 
     <!-- Concepto / Artículos -->
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilChargeConcept"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:hint="Artículos / Detalle (Opcional, ej. 3 Canillas, Queso)">
+        android:hint="Artículos / Detalle (Opcional, ej. Víveres, Pan, Bebidas)">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etChargeConcept"

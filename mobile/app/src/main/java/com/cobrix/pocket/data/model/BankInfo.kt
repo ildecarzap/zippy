@@ -89,8 +89,8 @@ enum class BankCode(
     AR_MERCADOPAGO(
         sudebanCode = "AR_MP",
         displayName = "Mercado Pago",
-        defaultKeywords = listOf("mercado pago", "mercadopago", "te transfirieron", "recibiste", "cobro aprobado"),
-        knownPackageNames = listOf("com.mercadopago.wallet"),
+        defaultKeywords = listOf("mercado pago", "mercadopago", "te transfirieron", "recibiste", "cobro aprobado", "cobraste", "transferencia"),
+        knownPackageNames = listOf("com.mercadopago.wallet", "com.mercadolibre", "com.mercadopago"),
         country = CountryCode.AR
     ),
     AR_CUENTADNI(

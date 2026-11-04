@@ -97,7 +97,7 @@
             android:textStyle="bold" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Equivalente calculado en tiempo real -->
+    <!-- Equivalente calculado en tiempo real (solo visible si aplica bimoneda) -->
     <TextView
         android:id="@+id/tvPaymentEquivBs"
         android:layout_width="wrap_content"
@@ -106,7 +106,8 @@
         android:text="≈ Bs. 0,00 (Tasa BCV: 45.00)"
         android:textColor="@color/text_primary"
         android:textStyle="bold"
-        android:textSize="14.5sp" />
+        android:textSize="14.5sp"
+        android:visibility="gone" />
 
     <!-- Nota de integración con Jornada y Excedente -->
     <TextView
@@ -121,10 +122,11 @@
 
     <!-- Nota / Referencia -->
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilPaymentNote"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:hint="Nota / Referencia (Opcional, ej. Pago Móvil o Efectivo)">
+        android:hint="Nota / Referencia (Opcional, ej. Transferencia o Efectivo)">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etPaymentNote"

@@ -12,6 +12,7 @@
 
         <!-- Top Header Bar con Logo Oficial y Estado de Licencia -->
         <LinearLayout
+            android:id="@+id/layoutTopHeaderBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/primary"
@@ -1281,6 +1282,169 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
+                    <!-- ===================================================== -->
+                    <!-- TARJETA: PERMISOS DEL TELÉFONO Y SEGUNDO PLANO        -->
+                    <!-- Ubicada al inicio de configuración para acceso directo-->
+                    <!-- ===================================================== -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardSettingsPermissions"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/accent_cyan"
+                        app:strokeWidth="1.5dp"
+                        app:cardBackgroundColor="@color/surface">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="⚡ Permisos para Cantar Pagos"
+                                android:textStyle="bold"
+                                android:textColor="@color/text_primary"
+                                android:textSize="17sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Verifica que tu teléfono tenga los permisos activos para leer y cantar los pagos automáticamente:"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp" />
+
+                            <!-- 1. Permiso de escucha de notificaciones bancarias -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginTop="12dp">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="🔔 Notificaciones de Bancos y Billeteras"
+                                        android:textStyle="bold"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="13sp" />
+
+                                    <TextView
+                                        android:id="@+id/tvSettingsNotificationStatus"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="1dp"
+                                        android:text="Inactiva ⚠️"
+                                        android:textColor="@color/warning_orange"
+                                        android:textSize="11sp" />
+                                </LinearLayout>
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnSettingsFixNotification"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="38dp"
+                                    android:text="Activar"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    app:cornerRadius="8dp" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginVertical="10dp"
+                                android:background="@color/border" />
+
+                            <!-- 2. Optimización de batería / segundo plano con pantalla apagada -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="🔋 Funcionamiento con Pantalla Apagada"
+                                        android:textStyle="bold"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="13sp" />
+
+                                    <TextView
+                                        android:id="@+id/tvSettingsBatteryStatus"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="1dp"
+                                        android:text="Con restricciones ⚠️"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="11sp" />
+                                </LinearLayout>
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnSettingsFixBattery"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="38dp"
+                                    android:text="Configurar"
+                                    android:textSize="12sp"
+                                    app:cornerRadius="8dp" />
+                            </LinearLayout>
+
+                            <!-- 3. Detección automática por SMS Bancario (Solo visible para Venezuela) -->
+                            <LinearLayout
+                                android:id="@+id/layoutSettingsSmsSection"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:visibility="gone">
+
+                                <View
+                                    android:layout_width="match_parent"
+                                    android:layout_height="1dp"
+                                    android:layout_marginVertical="10dp"
+                                    android:background="@color/border" />
+
+                                <com.google.android.material.materialswitch.MaterialSwitch
+                                    android:id="@+id/switchDetectSms"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="🔔 Escuchar pagos por SMS bancario"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_primary" />
+
+                                <TextView
+                                    android:id="@+id/tvSettingsSmsSubtitle"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="Detecta automáticamente pagos móviles por SMS únicamente de tus bancos activos configurados (ej. BDV 26371, Banesco 2661). Los SMS de otros bancos se ignoran."
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
                     <!-- TARJETA 1: DATOS DEL COMERCIO Y TASA BCV -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
@@ -1540,18 +1704,20 @@
                             android:padding="16dp">
 
                             <TextView
+                                android:id="@+id/tvSettingsBankSectionTitle"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="🏦 Pago Móvil y Bancos"
+                                android:text="🏦 Datos de Cobro y Bancos"
                                 android:textStyle="bold"
                                 android:textColor="@color/text_primary"
                                 android:textSize="16sp" />
 
                             <TextView
+                                android:id="@+id/tvSettingsBankSectionSubtitle"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Número receptor y códigos QR exclusivos por banco"
+                                android:text="Tus cuentas receptoras y códigos QR"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="12sp" />
 
@@ -1664,30 +1830,6 @@
                                 android:textColor="@color/accent_cyan"
                                 app:strokeColor="@color/accent_cyan"
                                 app:cornerRadius="10dp" />
-
-                            <View
-                                android:layout_width="match_parent"
-                                android:layout_height="1dp"
-                                android:layout_marginVertical="14dp"
-                                android:background="@color/border" />
-
-                            <!-- Detección automática por SMS Bancario -->
-                            <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/switchDetectSms"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="🔔 Escuchar pagos por SMS bancario"
-                                android:textSize="13sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/text_primary" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="Detecta automáticamente pagos móviles por SMS únicamente de tus bancos activos configurados (ej. BDV 26371, Banesco 2661). Los SMS de otros bancos se ignoran."
-                                android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
 
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
@@ -2021,105 +2163,6 @@
                                 android:text="🔊 Probar Soundbox ahora"
                                 android:textSize="12sp"
                                 app:cornerRadius="8dp" />
-
-                            <View
-                                android:layout_width="match_parent"
-                                android:layout_height="1dp"
-                                android:layout_marginVertical="10dp"
-                                android:background="@color/border" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Detección de Pagos y Segundo Plano:"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <!-- Permiso de escucha bancaria -->
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical"
-                                android:layout_marginTop="8dp">
-
-                                <LinearLayout
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:orientation="vertical">
-
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="Lectura de Notificaciones Bancarias"
-                                        android:textStyle="bold"
-                                        android:textColor="@color/text_primary"
-                                        android:textSize="13sp" />
-
-                                    <TextView
-                                        android:id="@+id/tvSettingsNotificationStatus"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:layout_marginTop="1dp"
-                                        android:text="Inactiva ⚠️"
-                                        android:textColor="@color/warning_orange"
-                                        android:textSize="11sp" />
-                                </LinearLayout>
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btnSettingsFixNotification"
-                                    style="@style/Widget.Material3.Button.TonalButton"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="38dp"
-                                    android:text="Activar"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold"
-                                    app:cornerRadius="8dp" />
-                            </LinearLayout>
-
-                            <!-- Optimización de batería / segundo plano -->
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical"
-                                android:layout_marginTop="8dp">
-
-                                <LinearLayout
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:orientation="vertical">
-
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="Ejecución en Segundo Plano"
-                                        android:textStyle="bold"
-                                        android:textColor="@color/text_primary"
-                                        android:textSize="13sp" />
-
-                                    <TextView
-                                        android:id="@+id/tvSettingsBatteryStatus"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:layout_marginTop="1dp"
-                                        android:text="Con restricciones ⚠️"
-                                        android:textColor="@color/text_secondary"
-                                        android:textSize="11sp" />
-                                </LinearLayout>
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btnSettingsFixBattery"
-                                    style="@style/Widget.Material3.Button.OutlinedButton"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="38dp"
-                                    android:text="Configurar"
-                                    android:textSize="12sp"
-                                    app:cornerRadius="8dp" />
-                            </LinearLayout>
 
                             <View
                                 android:layout_width="match_parent"

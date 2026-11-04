@@ -1,16 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:background="@color/background"
-    android:fillViewport="true">
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
 
-    <LinearLayout
+    <!-- CONTENIDO SCROLLABLE PASO A PASO -->
+    <ScrollView
+        android:id="@+id/scrollWizardContent"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="22dp">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="22dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="24dp">
 
         <!-- Encabezado de Progreso Paso a Paso -->
         <LinearLayout
@@ -99,7 +111,7 @@
                 android:padding="14dp"
                 android:text="🇻🇪  VENEZUELA\nBolívares (Bs.) y Dólares ($ USD) • Pago Móvil"
                 android:textAllCaps="false"
-                android:textColor="@color/text_primary"
+                android:textColor="#0A192F"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 app:cornerRadius="14dp"
@@ -117,7 +129,7 @@
                 android:padding="14dp"
                 android:text="🇨🇴  COLOMBIA\nPesos Colombianos ($ COP) • Nequi, DaviPlata, Bancolombia"
                 android:textAllCaps="false"
-                android:textColor="@color/text_primary"
+                android:textColor="#0A192F"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 app:cornerRadius="14dp"
@@ -135,7 +147,7 @@
                 android:padding="14dp"
                 android:text="🇦🇷  ARGENTINA\nPesos Argentinos ($ ARS) • Mercado Pago, Cuenta DNI, BNA+"
                 android:textAllCaps="false"
-                android:textColor="@color/text_primary"
+                android:textColor="#0A192F"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 app:cornerRadius="14dp"
@@ -384,8 +396,11 @@
                     android:layout_marginTop="8dp"
                     android:text="📸 Subir Imagen de mi QR"
                     android:textAllCaps="false"
+                    android:textColor="#0A192F"
                     android:textSize="15sp"
                     android:textStyle="bold"
+                    app:strokeColor="@color/border"
+                    app:backgroundTint="@color/white"
                     app:cornerRadius="12dp" />
             </LinearLayout>
         </LinearLayout>
@@ -485,9 +500,11 @@
                 android:layout_marginTop="12dp"
                 android:text="🔋 Permitir Uso con Pantalla Apagada"
                 android:textAllCaps="false"
+                android:textColor="#0A192F"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 app:cornerRadius="14dp"
+                app:backgroundTint="@color/white"
                 app:strokeColor="@color/accent_cyan"
                 app:strokeWidth="2dp" />
 
@@ -524,49 +541,63 @@
                     android:layout_marginTop="10dp"
                     android:text="🔊 Escuchar Prueba de Pago Ahora"
                     android:textAllCaps="false"
+                    android:textColor="#0A192F"
                     android:textSize="16sp"
                     android:textStyle="bold"
+                    app:strokeColor="@color/border"
+                    app:backgroundTint="@color/white"
                     app:cornerRadius="14dp" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- ===================================================== -->
-        <!-- BOTONES DE NAVEGACIÓN DEL ASISTENTE (ATRÁS / SIGUIENTE) -->
-        <!-- ===================================================== -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnWizardBack"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="58dp"
-                android:layout_marginEnd="10dp"
-                android:minWidth="110dp"
-                android:text="⬅ Atrás"
-                android:textAllCaps="false"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:visibility="gone"
-                app:cornerRadius="14dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnWizardNext"
-                android:layout_width="0dp"
-                android:layout_height="58dp"
-                android:layout_weight="1"
-                android:backgroundTint="@color/income_green"
-                android:text="Siguiente Paso ➔"
-                android:textAllCaps="false"
-                android:textColor="@color/white"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                app:cornerRadius="14dp" />
-        </LinearLayout>
-
     </LinearLayout>
-</ScrollView>
+    </ScrollView>
+
+    <!-- ===================================================== -->
+    <!-- BARRA INFERIOR FIJA CON LOS BOTONES DE NAVEGACIÓN      -->
+    <!-- Protegida contra solapamiento con botones del sistema  -->
+    <!-- ===================================================== -->
+    <LinearLayout
+        android:id="@+id/layoutWizardBottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface"
+        android:elevation="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="16dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWizardBack"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:layout_marginEnd="10dp"
+            android:minWidth="105dp"
+            android:text="⬅ Atrás"
+            android:textAllCaps="false"
+            android:textColor="#0A192F"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            app:strokeColor="@color/border"
+            app:backgroundTint="@color/white"
+            app:cornerRadius="14dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWizardNext"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/income_green"
+            android:text="Siguiente Paso ➔"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:cornerRadius="14dp" />
+    </LinearLayout>
+
+</LinearLayout>

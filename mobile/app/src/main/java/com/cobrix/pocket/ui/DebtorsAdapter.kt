@@ -117,7 +117,11 @@ class DebtorsAdapter(
                     binding.btnItemWhatsApp.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#00875A"))
                 }
                 else -> {
-                    binding.tvDebtorStatusBadge.text = "⚪ Al Día ($0.00)"
+                    binding.tvDebtorStatusBadge.text = if (isBiCurrency) {
+                        "⚪ Al Día ($0.00)"
+                    } else {
+                        "⚪ Al Día ($localSym 0.00)"
+                    }
                     binding.tvDebtorStatusBadge.setTextColor(Color.parseColor("#334155"))
                     binding.tvDebtorStatusBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F1F5F9"))
                     binding.tvDebtorBalanceVes.text = if (isBiCurrency) {

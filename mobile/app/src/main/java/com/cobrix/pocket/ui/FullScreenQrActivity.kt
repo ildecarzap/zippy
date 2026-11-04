@@ -13,8 +13,12 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.WindowManager
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.cobrix.pocket.R
 import com.cobrix.pocket.databinding.ActivityFullScreenQrBinding
 import com.cobrix.pocket.databinding.DialogPaymentCelebrationBinding
@@ -58,6 +62,10 @@ class FullScreenQrActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
+        )
         super.onCreate(savedInstanceState)
 
         // Forzar brillo de pantalla al 100% mientras se muestra el QR para facilitar el escaneo
@@ -67,6 +75,14 @@ class FullScreenQrActivity : AppCompatActivity() {
 
         binding = ActivityFullScreenQrBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val density = resources.displayMetrics.density
+            val padH = (20 * density).toInt()
+            v.setPadding(padH, bars.top + (12 * density).toInt(), padH, bars.bottom + (16 * density).toInt())
+            insets
+        }
 
         val amountVes = intent.getDoubleExtra(EXTRA_AMOUNT_VES, 0.0)
         val amountUsd = intent.getDoubleExtra(EXTRA_AMOUNT_USD, 0.0)

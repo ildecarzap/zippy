@@ -13,18 +13,29 @@ class MercadoPagoParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
-        val combined = "${title.orEmpty()} $text".lowercase(Locale.ROOT)
-        val isMpOrigin = pkg == "com.mercadopago.wallet" ||
-                ((ParserUtils.isSmsPackage(pkg) || ParserUtils.isEmailPackage(pkg)) && (combined.contains("mercado pago") || combined.contains("mercadopago")))
-        val isIncoming = combined.contains("te transfirieron") ||
-                combined.contains("recibiste $") ||
-                combined.contains("recibiste ars") ||
-                combined.contains("recibiste una transferencia") ||
-                combined.contains("recibiste un pago") ||
+        val clean = "${title.orEmpty()} $text"
+            .replace('\u00A0', ' ')
+            .replace('\u202F', ' ')
+            .trim()
+        val combined = clean.lowercase(Locale.ROOT)
+
+        val isMpOrigin = pkg.contains("mercadopago") ||
+                pkg.contains("mercadolibre") ||
+                pkg == "com.mercadopago.wallet" ||
+                combined.contains("mercado pago") ||
+                combined.contains("mercadopago")
+
+        val isIncoming = combined.contains("recibiste") ||
+                combined.contains("te transfirieron") ||
+                combined.contains("te enviaron") ||
+                combined.contains("te ingresaron") ||
                 combined.contains("cobro aprobado") ||
-                combined.contains("cobraste $") ||
-                combined.contains("te enviaron $") ||
-                combined.contains("te ingresaron")
+                combined.contains("cobraste") ||
+                combined.contains("transferencia recibida") ||
+                combined.contains("pago recibido") ||
+                combined.contains("ingreso de dinero") ||
+                combined.contains("acredit")
+
         val isOutgoing = ParserUtils.isOutgoingTransaction(combined)
         return isMpOrigin &&
                 (isIncoming || isOutgoing) &&
@@ -32,10 +43,18 @@ class MercadoPagoParser : BankParser {
     }
 
     override fun parse(packageName: String, title: String?, text: String, postTimeMillis: Long): ParsedPayment? {
-        val combined = "${title.orEmpty()} $text"
-        val isOutgoing = ParserUtils.isOutgoingTransaction(combined)
-        val (amount, rawAmount) = ParserUtils.extractAmount(combined) ?: return null
-        val ref = ParserUtils.extractReference(combined) ?: (postTimeMillis % 10000).toString().padStart(4, '0')
+        val clean = "${title.orEmpty()} $text"
+            .replace('\u00A0', ' ')
+            .replace('\u202F', ' ')
+            .trim()
+        val isOutgoing = ParserUtils.isOutgoingTransaction(clean)
+        val (amount, rawAmount) = ParserUtils.extractAmount(clean) ?: return null
+        val ref = ParserUtils.extractReference(clean) ?: (postTimeMillis % 10000).toString().padStart(4, '0')
+
+        // Extraer remitente de la notificación (ej: "De Ildemaro Antonio Carrasco Zapata desde...")
+        val senderMatch = Regex("""(?:De|de)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ\s]+?)\s+(?:desde|por|en|con|\.)""").find(clean)
+        val sender = senderMatch?.groupValues?.getOrNull(1)?.trim()
+
         return ParsedPayment(
             monto = amount,
             montoRaw = rawAmount,
@@ -44,8 +63,9 @@ class MercadoPagoParser : BankParser {
             bancoCodigo = BankCode.AR_MERCADOPAGO,
             referencia = ref,
             referenciaUltimos4 = ref.takeLast(4),
+            telefonoOrigen = sender,
             paqueteOrigen = packageName,
-            textoCrudo = combined,
+            textoCrudo = clean,
             timestampMillis = postTimeMillis,
             isOutgoing = isOutgoing
         )
@@ -60,14 +80,22 @@ class CuentaDniParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
-        val combined = "${title.orEmpty()} $text".lowercase(Locale.ROOT)
-        val isCdniOrigin = pkg == "ar.com.bapro.cuentadni" ||
-                ((ParserUtils.isSmsPackage(pkg) || ParserUtils.isEmailPackage(pkg)) && combined.contains("cuenta dni"))
-        val isIncoming = combined.contains("recibiste una transferencia") ||
-                combined.contains("recibiste $") ||
+        val clean = "${title.orEmpty()} $text"
+            .replace('\u00A0', ' ')
+            .replace('\u202F', ' ')
+            .trim()
+        val combined = clean.lowercase(Locale.ROOT)
+
+        val isCdniOrigin = pkg.contains("cuentadni") ||
+                pkg == "ar.com.bapro.cuentadni" ||
+                combined.contains("cuenta dni")
+
+        val isIncoming = combined.contains("recibiste") ||
                 combined.contains("se acreditó") ||
                 combined.contains("se acredito") ||
-                combined.contains("transferencia recibida")
+                combined.contains("transferencia recibida") ||
+                combined.contains("pago recibido")
+
         val isOutgoing = ParserUtils.isOutgoingTransaction(combined)
         return isCdniOrigin &&
                 (isIncoming || isOutgoing) &&
@@ -75,10 +103,13 @@ class CuentaDniParser : BankParser {
     }
 
     override fun parse(packageName: String, title: String?, text: String, postTimeMillis: Long): ParsedPayment? {
-        val combined = "${title.orEmpty()} $text"
-        val isOutgoing = ParserUtils.isOutgoingTransaction(combined)
-        val (amount, rawAmount) = ParserUtils.extractAmount(combined) ?: return null
-        val ref = ParserUtils.extractReference(combined) ?: (postTimeMillis % 10000).toString().padStart(4, '0')
+        val clean = "${title.orEmpty()} $text"
+            .replace('\u00A0', ' ')
+            .replace('\u202F', ' ')
+            .trim()
+        val isOutgoing = ParserUtils.isOutgoingTransaction(clean)
+        val (amount, rawAmount) = ParserUtils.extractAmount(clean) ?: return null
+        val ref = ParserUtils.extractReference(clean) ?: (postTimeMillis % 10000).toString().padStart(4, '0')
         return ParsedPayment(
             monto = amount,
             montoRaw = rawAmount,
@@ -88,7 +119,7 @@ class CuentaDniParser : BankParser {
             referencia = ref,
             referenciaUltimos4 = ref.takeLast(4),
             paqueteOrigen = packageName,
-            textoCrudo = combined,
+            textoCrudo = clean,
             timestampMillis = postTimeMillis,
             isOutgoing = isOutgoing
         )
@@ -103,14 +134,25 @@ class BnaMasParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
-        val combined = "${title.orEmpty()} $text".lowercase(Locale.ROOT)
-        val isBnaOrigin = pkg == "com.bna.bnamas" ||
-                ((ParserUtils.isSmsPackage(pkg) || ParserUtils.isEmailPackage(pkg)) && (combined.contains("bna+") || combined.contains("banco nacion") || combined.contains("banco nación")))
-        val isIncoming = combined.contains("recibiste una transferencia") ||
-                combined.contains("recibiste $") ||
+        val clean = "${title.orEmpty()} $text"
+            .replace('\u00A0', ' ')
+            .replace('\u202F', ' ')
+            .trim()
+        val combined = clean.lowercase(Locale.ROOT)
+
+        val isBnaOrigin = pkg.contains("bnamas") ||
+                pkg == "com.bna.bnamas" ||
+                combined.contains("bna+") ||
+                combined.contains("banco nacion") ||
+                combined.contains("banco nación") ||
+                combined.contains("modo")
+
+        val isIncoming = combined.contains("recibiste") ||
                 combined.contains("transferencia recibida") ||
+                combined.contains("pago recibido") ||
                 combined.contains("se acreditó") ||
                 combined.contains("se acredito")
+
         val isOutgoing = ParserUtils.isOutgoingTransaction(combined)
         return isBnaOrigin &&
                 (isIncoming || isOutgoing) &&
@@ -118,10 +160,13 @@ class BnaMasParser : BankParser {
     }
 
     override fun parse(packageName: String, title: String?, text: String, postTimeMillis: Long): ParsedPayment? {
-        val combined = "${title.orEmpty()} $text"
-        val isOutgoing = ParserUtils.isOutgoingTransaction(combined)
-        val (amount, rawAmount) = ParserUtils.extractAmount(combined) ?: return null
-        val ref = ParserUtils.extractReference(combined) ?: (postTimeMillis % 10000).toString().padStart(4, '0')
+        val clean = "${title.orEmpty()} $text"
+            .replace('\u00A0', ' ')
+            .replace('\u202F', ' ')
+            .trim()
+        val isOutgoing = ParserUtils.isOutgoingTransaction(clean)
+        val (amount, rawAmount) = ParserUtils.extractAmount(clean) ?: return null
+        val ref = ParserUtils.extractReference(clean) ?: (postTimeMillis % 10000).toString().padStart(4, '0')
         return ParsedPayment(
             monto = amount,
             montoRaw = rawAmount,
@@ -131,7 +176,7 @@ class BnaMasParser : BankParser {
             referencia = ref,
             referenciaUltimos4 = ref.takeLast(4),
             paqueteOrigen = packageName,
-            textoCrudo = combined,
+            textoCrudo = clean,
             timestampMillis = postTimeMillis,
             isOutgoing = isOutgoing
         )

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import com.cobrix.pocket.data.model.BankCatalog
+import com.cobrix.pocket.data.model.CountryCode
 import com.cobrix.pocket.data.model.UserProfile
 
 object PreferencesHelper {
@@ -208,14 +209,15 @@ object PreferencesHelper {
      * Solo retorna bancos habilitados en getEnabledBankCodes() y que existan en BankCatalog.ALL_BANKS.
      */
     fun getConfiguredBankCodes(context: Context): List<String> {
-        val validCatalogCodes = BankCatalog.ALL_BANKS.map { it.code }.toSet()
+        val currentCountry = getCountryCode(context)
+        val validCatalogCodes = BankCatalog.getBanksForCountry(currentCountry).map { it.code }.toSet()
         val enabled = getEnabledBankCodes(context).filter { it in validCatalogCodes }
 
         if (enabled.isNotEmpty()) {
             return enabled
         }
 
-        // Fallback de emergencia: banco principal configurado si existe
+        // Fallback de emergencia: banco principal configurado si existe para el país actual
         val prefs = getPrefs(context)
         val primary = prefs.getString(KEY_BANK_CODE, "") ?: ""
         if (primary.isNotEmpty() && primary in validCatalogCodes) {
@@ -226,30 +228,35 @@ object PreferencesHelper {
 
     /**
      * Obtiene los códigos bancarios y de billeteras que deben ser escuchados activamente por el servicio de notificaciones.
-     * En Plan Básico: Exclusivamente el banco receptor seleccionado por el usuario (ej: 0134 Banesco).
-     * En Plan PRO: Exclusivamente los bancos que el usuario ha configurado y que tienen un QR cargado (o el principal),
-     * más Binance Pay sólo si fue activado explícitamente en Ajustes.
+     * En Plan Básico: Exclusivamente el banco receptor seleccionado por el usuario (ej: AR_MP Mercado Pago).
+     * En Plan PRO: Exclusivamente los bancos del país actual que el usuario ha configurado.
+     * En Argentina y Colombia, los cobros por Alias / CVU / transferencia no requieren QR obligatorio.
+     * Más Binance Pay sólo si fue activado explícitamente en Ajustes.
      */
     fun getActiveListeningBankCodes(context: Context): Set<String> {
         val isMultibank = PlanCapabilityManager.canUseMultibank(context)
         val profile = getUserProfile(context)
+        val currentCountry = getCountryCode(context)
+        val validCatalogCodes = BankCatalog.getBanksForCountry(currentCountry).map { it.code }.toSet()
         val result = mutableSetOf<String>()
 
-        if (!isMultibank) {
-            // Plan Básico Gratuito: Sólo 1 banco activo
-            if (profile.bankCode.isNotEmpty()) {
-                result.add(profile.bankCode)
-            }
-        } else {
-            // Plan PRO: Bancos configurados en el panel
+        // Siempre incluir el banco principal si corresponde al país actual
+        if (profile.bankCode.isNotEmpty() && profile.bankCode in validCatalogCodes) {
+            result.add(profile.bankCode)
+        }
+
+        if (isMultibank) {
+            // Plan PRO: Bancos configurados en el panel para el país actual
             val configured = getConfiguredBankCodes(context)
+
+            // En Argentina y Colombia el Alias / CVU no requiere QR obligatorio
+            val isQrStrict = (currentCountry == CountryCode.VE)
             val withQr = configured.filter { getBankQrUri(context, it) != null }
-            if (withQr.isNotEmpty()) {
+
+            if (isQrStrict && withQr.isNotEmpty()) {
                 result.addAll(withQr)
             } else if (configured.isNotEmpty()) {
                 result.addAll(configured)
-            } else if (profile.bankCode.isNotEmpty()) {
-                result.add(profile.bankCode)
             }
 
             // Billetera Binance Pay (solo si el usuario la activó explícitamente)
@@ -257,6 +264,12 @@ object PreferencesHelper {
                 result.add("BINANCE")
             }
         }
+
+        // Respaldo de seguridad: si no quedó ninguno, asegurar el banco principal
+        if (result.isEmpty() && profile.bankCode in validCatalogCodes) {
+            result.add(profile.bankCode)
+        }
+
         return result
     }
 
@@ -828,9 +841,9 @@ object PreferencesHelper {
         editor.apply()
     }
 
-    fun getCountryCode(context: Context): com.cobrix.pocket.data.model.CountryCode {
+    fun getCountryCode(context: Context): CountryCode {
         val raw = getPrefs(context).getString(KEY_COUNTRY_CODE, "VE")
-        return com.cobrix.pocket.data.model.CountryCode.fromIso(raw)
+        return CountryCode.fromIso(raw)
     }
 
     fun getCountryProfile(context: Context): com.cobrix.pocket.data.model.CountryProfile {
@@ -841,7 +854,7 @@ object PreferencesHelper {
         return getPrefs(context).getBoolean(KEY_COUNTRY_SELECTED_INITIAL, false)
     }
 
-    fun setCountryCode(context: Context, country: com.cobrix.pocket.data.model.CountryCode) {
+    fun setCountryCode(context: Context, country: CountryCode) {
         val prefs = getPrefs(context)
         val previous = getCountryCode(context)
         prefs.edit()

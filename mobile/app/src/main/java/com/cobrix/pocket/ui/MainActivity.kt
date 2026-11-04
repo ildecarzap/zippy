@@ -6,6 +6,8 @@ import java.io.FileOutputStream
 import android.app.DatePickerDialog
 import android.app.Dialog
 import android.content.BroadcastReceiver
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -28,10 +30,14 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.cobrix.pocket.BuildConfig
 import com.cobrix.pocket.R
 import com.cobrix.pocket.data.db.PocketDatabaseHelper
@@ -118,6 +124,11 @@ class MainActivity : AppCompatActivity() {
     private var setupWizardBinding: DialogSetupWizardBinding? = null
     private var currentWizardStep: Int = 1
     private var isWizardMandatory: Boolean = false
+
+    // Control de diálogos de licencia y celebración para evitar ventanas duplicadas
+    private var isSyncingLicense: Boolean = false
+    private var proCelebrationDialog: Dialog? = null
+    private var trialRegisteredDialog: Dialog? = null
 
     // Estado para Libreta de Clientes y Fiados
     private lateinit var debtorsAdapter: DebtorsAdapter
@@ -423,6 +434,12 @@ class MainActivity : AppCompatActivity() {
             androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO)
         }
 
+        // Habilitar Edge-to-Edge nativo para Android 15+ (targetSdk 35/36) con retrocompatibilidad
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
+        )
+
         super.onCreate(savedInstanceState)
         PreferencesHelper.sanitizeBasicPlanBank(this)
         val initialProfile = PreferencesHelper.getUserProfile(this)
@@ -433,6 +450,25 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Gestión de bajorrelieves (insets: status bar / notch y barra de navegación del sistema)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val density = resources.displayMetrics.density
+            val defaultPaddingH = (20 * density).toInt()
+            val defaultPaddingBottom = (16 * density).toInt()
+
+            binding.layoutTopHeaderBar.setPadding(
+                defaultPaddingH,
+                systemBars.top + (8 * density).toInt(),
+                defaultPaddingH,
+                defaultPaddingBottom
+            )
+
+            binding.bottomNavigation.setPadding(0, 0, 0, systemBars.bottom)
+
+            insets
+        }
 
         if (savedInstanceState != null) {
             isAuthenticatedThisSession = savedInstanceState.getBoolean("KEY_AUTH_SESSION", isAuthenticatedThisSession)
@@ -468,8 +504,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        // Sincronización proactiva con Zippy Hub al iniciar
-        syncLicenseStatus(showToastIfNoChange = false)
+        // La sincronización de licencia se realiza en onResume() de forma segura y no concurrente
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -793,9 +828,34 @@ class MainActivity : AppCompatActivity() {
             View.GONE
         }
 
-        // Hints de teléfono e identificación fiscal adaptados al país
-        binding.tilSettingsPhone.hint = "Teléfono / ${countryProfile.instantPaymentSystemName} (${countryProfile.phonePlaceholder})"
-        binding.tilSettingsId.hint = "${countryProfile.nationalIdLabel} (${countryProfile.nationalIdPlaceholder})"
+        // Visibilidad de sección SMS Bancario (Solo relevante para Venezuela: BDV, Banesco, etc.)
+        binding.layoutSettingsSmsSection.visibility = if (countryProfile.code == CountryCode.VE) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+
+        // Títulos y hints de teléfono e identificación fiscal adaptados al país
+        when (countryProfile.code) {
+            CountryCode.VE -> {
+                binding.tvSettingsBankSectionTitle.text = "🏦 Pago Móvil y Bancos"
+                binding.tvSettingsBankSectionSubtitle.text = "Número receptor de Pago Móvil, Cédula o RIF y códigos QR"
+                binding.tilSettingsPhone.hint = "Teléfono Pago Móvil (ej. 04141234567)"
+                binding.tilSettingsId.hint = "Cédula o RIF (ej. V12345678 o J123456789)"
+            }
+            CountryCode.CO -> {
+                binding.tvSettingsBankSectionTitle.text = "🏦 Cobro por Transferencia y Bancos"
+                binding.tvSettingsBankSectionSubtitle.text = "Celular receptor Nequi/DaviPlata, Cédula/NIT y códigos QR"
+                binding.tilSettingsPhone.hint = "Celular Nequi / DaviPlata o Cuenta (ej. 3001234567)"
+                binding.tilSettingsId.hint = "Cédula o NIT (ej. 1020304050 o 900123456-1)"
+            }
+            CountryCode.AR -> {
+                binding.tvSettingsBankSectionTitle.text = "🏦 Cobro por Alias / CVU y Bancos"
+                binding.tvSettingsBankSectionSubtitle.text = "Tu Alias o CVU de Mercado Pago / Banco (0% de comisión)"
+                binding.tilSettingsPhone.hint = "Tu Alias o CVU de cobro (ej. mi.negocio.mp)"
+                binding.tilSettingsId.hint = "CUIT, CUIL o DNI (ej. 20-12345678-9)"
+            }
+        }
 
         // Configurar el selector de moneda en Caja
         binding.btnCurrencyVes.text = "${countryProfile.localCurrencySymbol} ${countryProfile.localCurrencyCode}"
@@ -1321,20 +1381,26 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Renderiza las tarjetas de bancos configurados en la pantalla de cobro.
-     * Solo muestra los bancos que tengan código QR cargado.
-     * Al presionar "Quitar", se elimina el QR y la tarjeta desaparece de la pantalla principal,
-     * quedando la tarjeta de "Agregar nuevo QR" y la de "WhatsApp".
+     * Muestra las tarjetas de bancos configurados (con QR o para cobro directo por Alias / CVU o número).
      */
     private fun renderCashierBankCards() {
         binding.layoutCashierBankCardsContainer.removeAllViews()
         val isMultibank = PlanCapabilityManager.canUseMultibank(this)
         val profile = PreferencesHelper.getUserProfile(this)
+        val currentCountry = PreferencesHelper.getCountryCode(this)
 
         val bankCodesToShow = if (isMultibank) {
             val configured = PreferencesHelper.getConfiguredBankCodes(this)
-            configured.filter { PreferencesHelper.getBankQrUri(this, it) != null }
+            val withQr = configured.filter { PreferencesHelper.getBankQrUri(this, it) != null }
+            if (withQr.isNotEmpty()) {
+                withQr
+            } else if (configured.isNotEmpty()) {
+                configured
+            } else if (profile.bankCode.isNotEmpty()) {
+                listOf(profile.bankCode)
+            } else emptyList()
         } else {
-            if (PreferencesHelper.getBankQrUri(this, profile.bankCode) != null) {
+            if (profile.bankCode.isNotEmpty()) {
                 listOf(profile.bankCode)
             } else {
                 emptyList()
@@ -1347,42 +1413,106 @@ class MainActivity : AppCompatActivity() {
             val bankName = bank?.name ?: code
             val brandColor = bank?.getBrandColor() ?: Color.parseColor("#00B2FE")
             val shortName = bank?.getShortName() ?: code.takeLast(2)
+            val hasQr = PreferencesHelper.getBankQrUri(this, code) != null
 
             cardBinding.tvCashierBankBadge.text = shortName
             cardBinding.tvCashierBankBadge.backgroundTintList = ColorStateList.valueOf(brandColor)
             cardBinding.tvCashierBankName.text = bankName
-            cardBinding.tvCashierBankSubtitle.text = "Toca para mostrar QR a brillo 100%"
-            cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
 
-            // Abrir pantalla completa de QR al tocar la tarjeta o el botón principal
-            val openQrAction = View.OnClickListener {
-                activeCashierBankCode = code
-                activeCashierBankName = bankName
-                val intent = Intent(this, FullScreenQrActivity::class.java).apply {
-                    putExtra(FullScreenQrActivity.EXTRA_AMOUNT_VES, 0.0)
-                    putExtra(FullScreenQrActivity.EXTRA_AMOUNT_USD, 0.0)
-                    putExtra(FullScreenQrActivity.EXTRA_BANK_CODE, code)
-                    putExtra(FullScreenQrActivity.EXTRA_BANK_NAME, bankName)
+            if (hasQr) {
+                if (currentCountry == CountryCode.AR && profile.phoneNumber.isNotBlank()) {
+                    cardBinding.tvCashierBankSubtitle.text = "Alias / CVU: ${profile.phoneNumber} • Toca para QR 100%"
+                } else {
+                    cardBinding.tvCashierBankSubtitle.text = "Toca para mostrar QR a brillo 100%"
                 }
-                startActivity(intent)
-            }
-            cardBinding.cardCashierBank.setOnClickListener(openQrAction)
-            cardBinding.btnCardShowQr.setOnClickListener(openQrAction)
+                cardBinding.btnCardShowQr.text = "📸 Mostrar Código QR en Pantalla"
+                cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
 
-            // Botón Quitar: elimina el QR y remueve la tarjeta de la pantalla principal
-            cardBinding.btnCardDeleteQr.setOnClickListener {
-                AlertDialog.Builder(this)
-                    .setTitle("Quitar Tarjeta de Banco")
-                    .setMessage("¿Deseas quitar la tarjeta y el código QR de $bankName de la pantalla principal?")
-                    .setPositiveButton("Quitar") { _, _ ->
-                        PreferencesHelper.clearBankQr(this, code)
-                        renderCashierBankCards()
-                        setupCashierBankSelector()
-                        updateSelectedBankConfigCard()
-                        Toast.makeText(this, "Tarjeta de $bankName eliminada", Toast.LENGTH_SHORT).show()
+                // Abrir pantalla completa de QR al tocar la tarjeta o el botón principal
+                val openQrAction = View.OnClickListener {
+                    activeCashierBankCode = code
+                    activeCashierBankName = bankName
+                    val intent = Intent(this, FullScreenQrActivity::class.java).apply {
+                        putExtra(FullScreenQrActivity.EXTRA_AMOUNT_VES, 0.0)
+                        putExtra(FullScreenQrActivity.EXTRA_AMOUNT_USD, 0.0)
+                        putExtra(FullScreenQrActivity.EXTRA_BANK_CODE, code)
+                        putExtra(FullScreenQrActivity.EXTRA_BANK_NAME, bankName)
                     }
-                    .setNegativeButton("Cancelar", null)
-                    .show()
+                    startActivity(intent)
+                }
+                cardBinding.cardCashierBank.setOnClickListener(openQrAction)
+                cardBinding.btnCardShowQr.setOnClickListener(openQrAction)
+
+                // Botón Quitar: elimina el QR y remueve la tarjeta de la pantalla principal
+                cardBinding.btnCardDeleteQr.text = "🗑️ Quitar"
+                cardBinding.btnCardDeleteQr.setOnClickListener {
+                    AlertDialog.Builder(this)
+                        .setTitle("Quitar Tarjeta de Banco")
+                        .setMessage("¿Deseas quitar la tarjeta y el código QR de $bankName de la pantalla principal?")
+                        .setPositiveButton("Quitar") { _, _ ->
+                            PreferencesHelper.clearBankQr(this, code)
+                            renderCashierBankCards()
+                            setupCashierBankSelector()
+                            updateSelectedBankConfigCard()
+                            Toast.makeText(this, "Tarjeta de $bankName eliminada", Toast.LENGTH_SHORT).show()
+                        }
+                        .setNegativeButton("Cancelar", null)
+                        .show()
+                }
+            } else {
+                // Tarjeta sin QR (Cobro directo por Alias / CVU o datos de transferencia con 0% comisión)
+                if (currentCountry == CountryCode.AR) {
+                    val aliasOrCvu = profile.phoneNumber.ifBlank { profile.idCard }
+                    if (aliasOrCvu.isNotBlank()) {
+                        cardBinding.tvCashierBankSubtitle.text = "Cobro por Alias / CVU (0% comisión): $aliasOrCvu"
+                        cardBinding.btnCardShowQr.text = "📋 Copiar Alias / CVU para Cobro"
+                        cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
+                        val copyAction = View.OnClickListener {
+                            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Alias / CVU", aliasOrCvu))
+                            Toast.makeText(this, "📋 Alias / CVU copiado: $aliasOrCvu", Toast.LENGTH_SHORT).show()
+                        }
+                        cardBinding.cardCashierBank.setOnClickListener(copyAction)
+                        cardBinding.btnCardShowQr.setOnClickListener(copyAction)
+                    } else {
+                        cardBinding.tvCashierBankSubtitle.text = "Configura tu Alias o CVU de Mercado Pago / Banco"
+                        cardBinding.btnCardShowQr.text = "⚙️ Configurar Datos de Cobro"
+                        cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
+                        cardBinding.btnCardShowQr.setOnClickListener {
+                            binding.bottomNavigation.selectedItemId = R.id.nav_settings
+                        }
+                    }
+                } else {
+                    val phoneOrDoc = profile.phoneNumber.ifBlank { profile.idCard }
+                    if (phoneOrDoc.isNotBlank()) {
+                        val label = if (currentCountry == CountryCode.VE) "Pago Móvil" else "Transferencia"
+                        cardBinding.tvCashierBankSubtitle.text = "$label: $phoneOrDoc"
+                        cardBinding.btnCardShowQr.text = "📋 Copiar Datos de Cobro"
+                        cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
+                        val copyAction = View.OnClickListener {
+                            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Datos de Cobro", phoneOrDoc))
+                            Toast.makeText(this, "📋 Datos copiados: $phoneOrDoc", Toast.LENGTH_SHORT).show()
+                        }
+                        cardBinding.cardCashierBank.setOnClickListener(copyAction)
+                        cardBinding.btnCardShowQr.setOnClickListener(copyAction)
+                    } else {
+                        cardBinding.tvCashierBankSubtitle.text = "Configura tus datos de cobro o sube un QR"
+                        cardBinding.btnCardShowQr.text = "📸 Subir Código QR"
+                        cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
+                        cardBinding.btnCardShowQr.setOnClickListener {
+                            launchCropForBank(code)
+                        }
+                    }
+                }
+
+                cardBinding.btnCardDeleteQr.text = "📸 Subir QR"
+                cardBinding.btnCardDeleteQr.setTextColor(ContextCompat.getColor(this, R.color.accent_blue))
+                cardBinding.btnCardDeleteQr.setOnClickListener {
+                    launchCropForBank(code)
+                }
             }
 
             binding.layoutCashierBankCardsContainer.addView(cardBinding.root)
@@ -2144,16 +2274,29 @@ class MainActivity : AppCompatActivity() {
         if (!countryProfile.supportsExchangeRate) {
             dBinding.toggleChargeCurrency.visibility = View.GONE
             dBinding.tilChargeAmount.hint = "Monto a Fiar en ${countryProfile.localCurrencyCode} (${countryProfile.localCurrencySymbol}) *"
-            dBinding.tvChargeEquivBs.text = "${countryProfile.flagEmoji} ${countryProfile.displayName} (${countryProfile.localCurrencyCode})"
+            dBinding.tvChargeEquivBs.visibility = View.GONE
+            dBinding.tvChargeBcvNotice.visibility = View.GONE
+        } else {
+            dBinding.tvChargeEquivBs.visibility = View.VISIBLE
+            dBinding.tvChargeBcvNotice.visibility = View.VISIBLE
         }
 
         if (debtor.hasCredit) {
             dBinding.layoutCreditNoticeBanner.visibility = View.VISIBLE
-            dBinding.tvCreditNoticeText.text = String.format(
-                Locale.US,
-                "🟢 Este cliente tiene $%.2f de saldo a favor. Al fiar, se descontará de este saldo.",
-                debtor.creditAmountUsd
-            )
+            dBinding.tvCreditNoticeText.text = if (countryProfile.supportsExchangeRate) {
+                String.format(
+                    Locale.US,
+                    "🟢 Este cliente tiene $%.2f de saldo a favor. Al fiar, se descontará de este saldo.",
+                    debtor.creditAmountUsd
+                )
+            } else {
+                String.format(
+                    Locale.US,
+                    "🟢 Este cliente tiene %s %.2f de saldo a favor. Al fiar, se descontará de este saldo.",
+                    countryProfile.localCurrencySymbol,
+                    debtor.creditAmountUsd
+                )
+            }
         } else {
             dBinding.layoutCreditNoticeBanner.visibility = View.GONE
         }
@@ -2256,8 +2399,17 @@ class MainActivity : AppCompatActivity() {
         if (!countryProfile.supportsExchangeRate) {
             dBinding.togglePaymentCurrency.visibility = View.GONE
             dBinding.tilPaymentAmount.hint = "Monto a Abonar en ${countryProfile.localCurrencyCode} (${countryProfile.localCurrencySymbol}) *"
-            dBinding.tvPaymentEquivBs.text = "${countryProfile.flagEmoji} ${countryProfile.displayName} (${countryProfile.localCurrencyCode})"
+            dBinding.tvPaymentEquivBs.visibility = View.GONE
+        } else {
+            dBinding.tvPaymentEquivBs.visibility = View.VISIBLE
         }
+
+        val refHint = when (countryProfile.code) {
+            CountryCode.VE -> "Nota / Referencia (Opcional, ej. Pago Móvil o Efectivo)"
+            CountryCode.CO -> "Nota / Referencia (Opcional, ej. Transferencia, Nequi o Efectivo)"
+            CountryCode.AR -> "Nota / Referencia (Opcional, ej. Transferencia, Alias o Efectivo)"
+        }
+        dBinding.tilPaymentNote.hint = refHint
 
         if (debtor.isDebtor) {
             dBinding.tvPaymentCurrentDebt.text = if (countryProfile.supportsExchangeRate) {
@@ -2296,7 +2448,11 @@ class MainActivity : AppCompatActivity() {
             }
             dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#15803D"))
         } else {
-            dBinding.tvPaymentCurrentDebt.text = "Cuenta al día ($0.00)"
+            dBinding.tvPaymentCurrentDebt.text = if (countryProfile.supportsExchangeRate) {
+                "Cuenta al día ($0.00)"
+            } else {
+                "Cuenta al día (${countryProfile.localCurrencySymbol} 0.00)"
+            }
             dBinding.tvPaymentCurrentDebt.setTextColor(Color.parseColor("#334155"))
         }
 
@@ -2316,11 +2472,20 @@ class MainActivity : AppCompatActivity() {
 
             if (debtor.isDebtor && inputUsd > debtor.debtAmountUsd + 0.009) {
                 val excess = inputUsd - debtor.debtAmountUsd
-                dBinding.tvPaymentExcessHint.text = String.format(
-                    Locale.US,
-                    "💡 El excedente de $%.2f quedará como Saldo a Favor y el total entrará a Jornada.",
-                    excess
-                )
+                dBinding.tvPaymentExcessHint.text = if (countryProfile.supportsExchangeRate) {
+                    String.format(
+                        Locale.US,
+                        "💡 El excedente de $%.2f quedará como Saldo a Favor y el total entrará a Jornada.",
+                        excess
+                    )
+                } else {
+                    String.format(
+                        Locale.US,
+                        "💡 El excedente de %s %.2f quedará como Saldo a Favor y el total entrará a Jornada.",
+                        countryProfile.localCurrencySymbol,
+                        excess
+                    )
+                }
             } else {
                 dBinding.tvPaymentExcessHint.text = "🟢 Este abono se registrará como entrada de dinero en tu Jornada de hoy para el reporte final."
             }
@@ -4736,6 +4901,35 @@ class MainActivity : AppCompatActivity() {
 
         dialogBinding.tvProReasonSubtitle.text = "Habilita $featureName con tu licencia Zeasy PRO ⚡"
 
+        // Oculto temporalmente mientras se verifica el micro-depósito y se aprueba zeasy_pro_monthly en Play Console
+        val enablePlayBillingUi = false
+        val supportsPlayBilling = enablePlayBillingUi && LicenseRepository.shouldShowPlayBillingOption(this)
+        if (supportsPlayBilling) {
+            dialogBinding.cardProGooglePlay.visibility = View.VISIBLE
+            val cProf = PreferencesHelper.getCountryProfile(this)
+            dialogBinding.tvProPlayBillingSubtitle.text =
+                "Suscripción mensual oficial con Google Play Store en ${cProf.localCurrencyDisplay}. Cancela cuando quieras."
+
+            dialogBinding.btnProGooglePlay.setOnClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                AlertDialog.Builder(this)
+                    .setTitle("💳 Suscripción Google Play Store")
+                    .setMessage(
+                        "Estás en la versión de Prueba Cerrada de Zeasy para ${cProf.displayName}.\n\n" +
+                        "La pasarela de facturación automática de Google Play está en proceso de activación final.\n\n" +
+                        "Durante esta fase de prueba puedes activar tus 7 días de prueba gratis o solicitar un código de activación a nuestro equipo de Atención al Cliente."
+                    )
+                    .setPositiveButton("💬 Contactar Soporte") { _, _ ->
+                        dialog.dismiss()
+                        openSupportWhatsAppForPro(featureName)
+                    }
+                    .setNegativeButton("Entendido", null)
+                    .show()
+            }
+        } else {
+            dialogBinding.cardProGooglePlay.visibility = View.GONE
+        }
+
         val hasUsedTrial = PlanCapabilityManager.hasUsedTrial(this)
         if (hasUsedTrial) {
             dialogBinding.btnProTrial.visibility = View.GONE
@@ -4824,23 +5018,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showTrialRegisteredPrompt() {
+        if (isFinishing || isDestroyed) return
+        if (trialRegisteredDialog?.isShowing == true) return
+
         val profile = PreferencesHelper.getUserProfile(this)
         val deviceId = PlanCapabilityManager.getDeviceId(this)
         val businessName = profile.merchantName.ifEmpty { "Mi Negocio" }
 
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle("🎉 ¡Prueba de 7 Días Activada!")
             .setMessage("Tienes acceso completo a todas las funciones PRO (Multibanco, Soundbox por Voz, Conciliación Automática de Libreta y Reportes PDF).\n\n¿Deseas registrar tu terminal con el equipo de soporte de Ciem tech solutions C.A por WhatsApp para recibir asistencia prioritaria?")
-            .setPositiveButton("💬 Registrar por WhatsApp") { dialog, _ ->
-                dialog.dismiss()
+            .setPositiveButton("💬 Registrar por WhatsApp") { d, _ ->
+                d.dismiss()
+                trialRegisteredDialog = null
                 val text = Uri.encode("Hola Ciem tech solutions C.A, acabo de activar mis 7 días de prueba de Zeasy PRO. Comercio: '$businessName' (ID de Terminal: $deviceId). Quedo atento a su soporte y asistencia para mi código de activación.")
                 val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
                 startActivity(Intent(Intent.ACTION_VIEW, uri))
             }
-            .setNegativeButton("Ahora no") { dialog, _ ->
-                dialog.dismiss()
+            .setNegativeButton("Ahora no") { d, _ ->
+                d.dismiss()
+                trialRegisteredDialog = null
             }
-            .show()
+            .create()
+
+        dialog.setOnDismissListener {
+            trialRegisteredDialog = null
+        }
+        trialRegisteredDialog = dialog
+        dialog.show()
     }
 
     private fun showSubscriptionExpiredPrompt() {
@@ -4948,52 +5153,59 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun syncLicenseStatus(showToastIfNoChange: Boolean = false) {
+        if (isSyncingLicense) return
+        isSyncingLicense = true
         lifecycleScope.launch {
-            val wasPro = PlanCapabilityManager.isPro(this@MainActivity)
-            val prevCountry = PreferencesHelper.getCountryCode(this@MainActivity)
-            val updated = ZeasySyncManager.syncWithBackend(this@MainActivity)
-            val isProNow = PlanCapabilityManager.isPro(this@MainActivity)
-            val newCountry = PreferencesHelper.getCountryCode(this@MainActivity)
-            val daysRemaining = PlanCapabilityManager.getDaysRemaining(this@MainActivity)
+            try {
+                val wasPro = PlanCapabilityManager.isPro(this@MainActivity)
+                val prevCountry = PreferencesHelper.getCountryCode(this@MainActivity)
+                val updated = ZeasySyncManager.syncWithBackend(this@MainActivity)
+                val isProNow = PlanCapabilityManager.isPro(this@MainActivity)
+                val newCountry = PreferencesHelper.getCountryCode(this@MainActivity)
+                val daysRemaining = PlanCapabilityManager.getDaysRemaining(this@MainActivity)
 
-            runOnUiThread {
-                if (newCountry != prevCountry) {
-                    val newProfile = CountryProfileCatalog.getProfile(newCountry)
-                    val updatedUser = PreferencesHelper.getUserProfile(this@MainActivity)
-                    activeCashierBankCode = updatedUser.bankCode
-                    activeCashierBankName = updatedUser.bankName
-                    selectedBankConfigCode = updatedUser.bankCode
-                    selectedBankConfigName = updatedUser.bankName
-                    soundHelper?.shutdown()
-                    soundHelper = SoundHelper(this@MainActivity)
-                    applyCountryProfileToUi()
-                    renderConfiguredBanksList()
-                    setupCashierBankSelector()
-                    renderCashierBankCards()
-                    updateCashierHeaderSummary()
-                    loadTodayLedger()
-                    loadDebtors()
-                    Toast.makeText(
-                        this@MainActivity,
-                        "✅ Atención al Cliente actualizó tu país a ${newProfile.flagEmoji} ${newProfile.displayName} (${newProfile.localCurrencyCode})",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    if (newCountry != prevCountry) {
+                        val newProfile = CountryProfileCatalog.getProfile(newCountry)
+                        val updatedUser = PreferencesHelper.getUserProfile(this@MainActivity)
+                        activeCashierBankCode = updatedUser.bankCode
+                        activeCashierBankName = updatedUser.bankName
+                        selectedBankConfigCode = updatedUser.bankCode
+                        selectedBankConfigName = updatedUser.bankName
+                        soundHelper?.shutdown()
+                        soundHelper = SoundHelper(this@MainActivity)
+                        applyCountryProfileToUi()
+                        renderConfiguredBanksList()
+                        setupCashierBankSelector()
+                        renderCashierBankCards()
+                        updateCashierHeaderSummary()
+                        loadTodayLedger()
+                        loadDebtors()
+                        Toast.makeText(
+                            this@MainActivity,
+                            "✅ Atención al Cliente actualizó tu país a ${newProfile.flagEmoji} ${newProfile.displayName} (${newProfile.localCurrencyCode})",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
 
-                if (wasPro != isProNow || binding.viewSettings.visibility == View.VISIBLE) {
-                    updatePlanUiInSettings()
-                    updateBinanceSettingsCard()
-                }
-                updateLicenseBadge()
-                updateShiftUI()
+                    if (wasPro != isProNow || binding.viewSettings.visibility == View.VISIBLE) {
+                        updatePlanUiInSettings()
+                        updateBinanceSettingsCard()
+                    }
+                    updateLicenseBadge()
+                    updateShiftUI()
 
-                if (!wasPro && isProNow) {
-                    showProActivatedCelebrationDialog(daysRemaining)
-                } else if (wasPro && !isProNow && PlanCapabilityManager.hasHadPaidPro(this@MainActivity)) {
-                    showSubscriptionExpiredPrompt()
-                } else if (showToastIfNoChange) {
-                    Toast.makeText(this@MainActivity, "Estado de suscripción verificado (${PlanCapabilityManager.getPlanType(this@MainActivity)})", Toast.LENGTH_SHORT).show()
+                    if (!wasPro && isProNow) {
+                        showProActivatedCelebrationDialog(daysRemaining)
+                    } else if (wasPro && !isProNow && PlanCapabilityManager.hasHadPaidPro(this@MainActivity)) {
+                        showSubscriptionExpiredPrompt()
+                    } else if (showToastIfNoChange) {
+                        Toast.makeText(this@MainActivity, "Estado de suscripción verificado (${PlanCapabilityManager.getPlanType(this@MainActivity)})", Toast.LENGTH_SHORT).show()
+                    }
                 }
+            } finally {
+                isSyncingLicense = false
             }
         }
     }
@@ -5026,11 +5238,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showProActivatedCelebrationDialog(daysRemaining: Int) {
+        if (isFinishing || isDestroyed) return
+        if (proCelebrationDialog?.isShowing == true) return
+
         try {
             soundHelper?.playCashRegisterSound()
         } catch (_: Exception) {}
 
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle("🎉 ¡Credencial Zeasy PRO Activada! ⚡")
             .setMessage(
                 "¡Tu código de activación ha sido validado con éxito!\n\n" +
@@ -5043,8 +5258,9 @@ class MainActivity : AppCompatActivity() {
                 "• Copia de seguridad, Binance Pay y reportes PDF/Excel\n\n" +
                 "¡Gracias por confiar en Ciem tech solutions C.A!"
             )
-            .setPositiveButton("¡Empezar a Usar PRO!") { dialog, _ ->
-                dialog.dismiss()
+            .setPositiveButton("¡Empezar a Usar PRO!") { d, _ ->
+                d.dismiss()
+                proCelebrationDialog = null
                 loadSettings()
                 loadTodayLedger()
                 loadDebtors()
@@ -5052,7 +5268,14 @@ class MainActivity : AppCompatActivity() {
                 updateLicenseBadge()
             }
             .setCancelable(false)
-            .show()
+            .create()
+
+        dialog.setOnDismissListener {
+            proCelebrationDialog = null
+        }
+
+        proCelebrationDialog = dialog
+        dialog.show()
     }
 
     private fun showPaywallDialog() {
@@ -5083,15 +5306,17 @@ class MainActivity : AppCompatActivity() {
         if (isListenerEnabled) {
             binding.tvSettingsNotificationStatus.text = "Escucha de pagos: Activa ✅"
             binding.tvSettingsNotificationStatus.setTextColor(ContextCompat.getColor(this, R.color.income_green))
-            binding.btnSettingsFixNotification.text = "Desactivar"
+            binding.btnSettingsFixNotification.text = "Activo ✅"
+            binding.btnSettingsFixNotification.setTextColor(Color.WHITE)
             binding.btnSettingsFixNotification.isEnabled = true
             binding.btnSettingsFixNotification.alpha = 1.0f
-            binding.btnSettingsFixNotification.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.warning_orange))
+            binding.btnSettingsFixNotification.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.income_green))
             wasNotificationListenerEnabled = true
         } else {
             binding.tvSettingsNotificationStatus.text = "Escucha de pagos: Inactiva ⚠️"
             binding.tvSettingsNotificationStatus.setTextColor(ContextCompat.getColor(this, R.color.warning_orange))
-            binding.btnSettingsFixNotification.text = "Activar"
+            binding.btnSettingsFixNotification.text = "👉 Activar"
+            binding.btnSettingsFixNotification.setTextColor(Color.WHITE)
             binding.btnSettingsFixNotification.isEnabled = true
             binding.btnSettingsFixNotification.alpha = 1.0f
             binding.btnSettingsFixNotification.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent_cyan))
@@ -5105,14 +5330,16 @@ class MainActivity : AppCompatActivity() {
             if (isIgnoringBattery) {
                 binding.tvSettingsBatteryStatus.text = "Segundo plano: Sin límites ✅"
                 binding.tvSettingsBatteryStatus.setTextColor(ContextCompat.getColor(this, R.color.income_green))
-                binding.btnSettingsFixBattery.text = "Modificar"
+                binding.btnSettingsFixBattery.text = "Activo ✅"
+                binding.btnSettingsFixBattery.setTextColor(Color.WHITE)
                 binding.btnSettingsFixBattery.isEnabled = true
                 binding.btnSettingsFixBattery.alpha = 1.0f
-                binding.btnSettingsFixBattery.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.warning_orange))
+                binding.btnSettingsFixBattery.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.income_green))
             } else {
                 binding.tvSettingsBatteryStatus.text = "Segundo plano: Con restricciones ⚠️"
-                binding.tvSettingsBatteryStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
-                binding.btnSettingsFixBattery.text = "Optimizar"
+                binding.tvSettingsBatteryStatus.setTextColor(ContextCompat.getColor(this, R.color.warning_orange))
+                binding.btnSettingsFixBattery.text = "👉 Permitir"
+                binding.btnSettingsFixBattery.setTextColor(Color.WHITE)
                 binding.btnSettingsFixBattery.isEnabled = true
                 binding.btnSettingsFixBattery.alpha = 1.0f
                 binding.btnSettingsFixBattery.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent_cyan))
@@ -5188,15 +5415,31 @@ class MainActivity : AppCompatActivity() {
         setupWizardDialog = dialog
         setupWizardBinding = wBinding
 
+        // Respetar la barra de navegación del sistema (3 botones o gestos) dinámicamente
+        ViewCompat.setOnApplyWindowInsetsListener(wBinding.layoutWizardBottomBar) { v, insets ->
+            val navBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val density = resources.displayMetrics.density
+            val defaultPaddingH = (20 * density).toInt()
+            val defaultPaddingTop = (12 * density).toInt()
+            val defaultPaddingBottom = (16 * density).toInt()
+            v.setPadding(
+                defaultPaddingH,
+                defaultPaddingTop,
+                defaultPaddingH,
+                defaultPaddingBottom + navBars.bottom
+            )
+            insets
+        }
+
         var selectedCountry = PreferencesHelper.getCountryCode(this)
         val countryAlreadyLocked = PreferencesHelper.hasSelectedCountryOnFirstLaunch(this) && !isMandatory
 
         fun updateCountrySelectionButtons(country: CountryCode) {
             selectedCountry = country
-            val activeStroke = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent_cyan))
-            val inactiveStroke = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.border))
-            val activeBg = ColorStateList.valueOf(Color.parseColor("#1800D2C4"))
-            val inactiveBg = ColorStateList.valueOf(Color.TRANSPARENT)
+            val activeStroke = ColorStateList.valueOf(Color.parseColor("#0096C7"))
+            val inactiveStroke = ColorStateList.valueOf(Color.parseColor("#CBD5E1"))
+            val activeBg = ColorStateList.valueOf(Color.parseColor("#E0F7FE"))
+            val inactiveBg = ColorStateList.valueOf(Color.WHITE)
 
             listOf(
                 Pair(wBinding.btnWizardCountryVe, CountryCode.VE),
@@ -5204,8 +5447,9 @@ class MainActivity : AppCompatActivity() {
                 Pair(wBinding.btnWizardCountryAr, CountryCode.AR)
             ).forEach { (btn, code) ->
                 val isSelected = (code == country)
+                btn.setTextColor(Color.parseColor("#0A192F"))
                 btn.strokeColor = if (isSelected) activeStroke else inactiveStroke
-                btn.strokeWidth = if (isSelected) 6 else 3
+                btn.strokeWidth = if (isSelected) (3 * resources.displayMetrics.density).toInt() else (1.5f * resources.displayMetrics.density).toInt()
                 btn.backgroundTintList = if (isSelected) activeBg else inactiveBg
             }
         }
@@ -5464,6 +5708,7 @@ class MainActivity : AppCompatActivity() {
 
         wBinding.tvWizardStepBadge.text = "PASO $currentWizardStep DE 5"
         wBinding.progressWizard.progress = currentWizardStep
+        wBinding.scrollWizardContent.scrollTo(0, 0)
 
         wBinding.layoutWizardStep1.visibility = if (currentWizardStep == 1) View.VISIBLE else View.GONE
         wBinding.layoutWizardStep2.visibility = if (currentWizardStep == 2) View.VISIBLE else View.GONE
@@ -5489,10 +5734,12 @@ class MainActivity : AppCompatActivity() {
                     CountryCode.CO -> "2. Celular Nequi / DaviPlata o Cuenta:"
                     CountryCode.AR -> "2. Celular o Alias / CVU de cobro:"
                 }
-                wBinding.tilWizardPhone.hint = "Ej: ${cProf.phonePlaceholder}"
+                val cleanPhoneHint = cProf.phonePlaceholder.removePrefix("Ej: ").trim()
+                val cleanIdHint = cProf.nationalIdPlaceholder.removePrefix("Ej: ").trim()
+                wBinding.tilWizardPhone.hint = "Ej: $cleanPhoneHint"
 
                 wBinding.tvWizardIdLabel.text = "3. Tu ${cProf.nationalIdLabel}:"
-                wBinding.tilWizardIdCard.hint = "Ej: ${cProf.nationalIdPlaceholder}"
+                wBinding.tilWizardIdCard.hint = "Ej: $cleanIdHint"
 
                 if (wBinding.etWizardMerchantName.text.isNullOrBlank() && uProf.merchantName.isNotBlank()) {
                     wBinding.etWizardMerchantName.setText(uProf.merchantName)
@@ -5524,14 +5771,20 @@ class MainActivity : AppCompatActivity() {
                 wBinding.btnWizardNext.text = "Guardar Datos y Continuar ➔"
             }
             3 -> {
-                wBinding.tvWizardStepTitle.text = "🏦 3. Elige tu Banco o Billetera"
-                wBinding.tvWizardStepSubtitle.text = "Toca el banco donde recibes tus pagos en ${cProf.displayName}."
+                if (cProf.code == CountryCode.AR) {
+                    wBinding.tvWizardStepTitle.text = "🏦 3. Tu Billetera o Banco Principal"
+                    wBinding.tvWizardStepSubtitle.text = "En Argentina, los cobros por Transferencia a tu Alias o CVU tienen 0% de comisión. Toca tu billetera o banco:"
+                } else {
+                    wBinding.tvWizardStepTitle.text = "🏦 3. Elige tu Banco o Billetera"
+                    wBinding.tvWizardStepSubtitle.text = "Toca el banco donde recibes tus pagos en ${cProf.displayName}."
+                }
 
                 val countryBanks = BankCatalog.getBanksForCountry(cProf.code).filter { it.code != "0000" }
                 val activeCode = uProf.bankCode.ifBlank { countryBanks.firstOrNull()?.code ?: "" }
                 val activeName = BankCatalog.findByCode(activeCode)?.name ?: uProf.bankName
 
                 wBinding.tvWizardSelectedBank.text = "✅ $activeName"
+                wBinding.tvWizardSelectedBank.setTextColor(Color.parseColor("#00875A"))
 
                 wBinding.layoutWizardBanksContainer.removeAllViews()
                 countryBanks.forEach { bankEntry ->
@@ -5546,18 +5799,19 @@ class MainActivity : AppCompatActivity() {
                         minHeight = (56 * resources.displayMetrics.density).toInt()
                         isAllCaps = false
                         textSize = 16f
-                        text = if (isSelected) "🟢  ${bankEntry.name} (Seleccionado)" else "🏦  ${bankEntry.name}"
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_primary))
-                        strokeColor = ColorStateList.valueOf(
-                            ContextCompat.getColor(
-                                this@MainActivity,
-                                if (isSelected) R.color.income_green else R.color.border
-                            )
-                        )
-                        strokeWidth = if (isSelected) 6 else 3
-                        backgroundTintList = ColorStateList.valueOf(
-                            if (isSelected) Color.parseColor("#1800875A") else Color.TRANSPARENT
-                        )
+                        if (isSelected) {
+                            text = "✔  ${bankEntry.name} (Seleccionado)"
+                            setTextColor(Color.WHITE)
+                            backgroundTintList = ColorStateList.valueOf(Color.parseColor("#00875A"))
+                            strokeColor = ColorStateList.valueOf(Color.parseColor("#006644"))
+                            strokeWidth = (2 * resources.displayMetrics.density).toInt()
+                        } else {
+                            text = "🏦  ${bankEntry.name}"
+                            setTextColor(Color.parseColor("#0A192F"))
+                            backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+                            strokeColor = ColorStateList.valueOf(Color.parseColor("#CBD5E1"))
+                            strokeWidth = (1.5f * resources.displayMetrics.density).toInt()
+                        }
                         setOnClickListener {
                             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                             if (!PlanCapabilityManager.canUseMultibank(this@MainActivity)) {
@@ -5577,14 +5831,30 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val hasQr = !PreferencesHelper.getBankQrUri(this, activeCode).isNullOrEmpty()
-                if (hasQr) {
-                    wBinding.tvWizardQrStatus.text = "✅ ¡Excelente! Ya subiste el código QR de $activeName"
-                    wBinding.tvWizardQrStatus.setTextColor(ContextCompat.getColor(this, R.color.income_green))
-                    wBinding.btnWizardUploadQr.text = "📸 Cambiar Imagen de mi QR"
+                wBinding.btnWizardUploadQr.setTextColor(Color.parseColor("#0A192F"))
+                wBinding.btnWizardUploadQr.strokeColor = ColorStateList.valueOf(Color.parseColor("#CBD5E1"))
+                wBinding.btnWizardUploadQr.backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+
+                if (cProf.code == CountryCode.AR) {
+                    if (hasQr) {
+                        wBinding.tvWizardQrStatus.text = "✅ Ya subiste el código QR de $activeName (Opcional)"
+                        wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#00875A"))
+                        wBinding.btnWizardUploadQr.text = "📸 Cambiar Imagen de mi QR"
+                    } else {
+                        wBinding.tvWizardQrStatus.text = "💡 En Argentina se cobra gratis (0% comisión) por Alias o CVU de Mercado Pago.\nEl código QR es totalmente opcional."
+                        wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#1E293B"))
+                        wBinding.btnWizardUploadQr.text = "📸 Subir QR (Opcional)"
+                    }
                 } else {
-                    wBinding.tvWizardQrStatus.text = "📸 Código QR de $activeName (Opcional: puedes subirlo ahora o después)"
-                    wBinding.tvWizardQrStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
-                    wBinding.btnWizardUploadQr.text = "📸 Subir Imagen de mi QR"
+                    if (hasQr) {
+                        wBinding.tvWizardQrStatus.text = "✅ ¡Excelente! Ya subiste el código QR de $activeName"
+                        wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#00875A"))
+                        wBinding.btnWizardUploadQr.text = "📸 Cambiar Imagen de mi QR"
+                    } else {
+                        wBinding.tvWizardQrStatus.text = "📸 Código QR de $activeName (Opcional: puedes subirlo ahora o después)"
+                        wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#1E293B"))
+                        wBinding.btnWizardUploadQr.text = "📸 Subir Imagen de mi QR"
+                    }
                 }
 
                 wBinding.btnWizardNext.text = "Guardar Banco y Continuar ➔"
@@ -5617,12 +5887,18 @@ class MainActivity : AppCompatActivity() {
                     val isIgnoringBattery = pm?.isIgnoringBatteryOptimizations(packageName) == true
                     if (isIgnoringBattery) {
                         wBinding.tvWizardBatteryStatusBadge.text = "🟢 ¡Perfecto! Tu teléfono no suspenderá a Zeasy cuando se apague la pantalla ✅"
-                        wBinding.tvWizardBatteryStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.income_green))
+                        wBinding.tvWizardBatteryStatusBadge.setTextColor(Color.parseColor("#00875A"))
                         wBinding.btnWizardActivateBattery.text = "✅ Uso con Pantalla Apagada Activado"
+                        wBinding.btnWizardActivateBattery.setTextColor(Color.WHITE)
+                        wBinding.btnWizardActivateBattery.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#00875A"))
+                        wBinding.btnWizardActivateBattery.strokeColor = ColorStateList.valueOf(Color.parseColor("#006644"))
                     } else {
                         wBinding.tvWizardBatteryStatusBadge.text = "⚠️ Toca el botón de abajo y elige 'Permitir' para que funcione con pantalla apagada:"
-                        wBinding.tvWizardBatteryStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.warning_orange))
+                        wBinding.tvWizardBatteryStatusBadge.setTextColor(Color.parseColor("#FF8B00"))
                         wBinding.btnWizardActivateBattery.text = "🔋 Permitir Uso con Pantalla Apagada"
+                        wBinding.btnWizardActivateBattery.setTextColor(Color.parseColor("#0A192F"))
+                        wBinding.btnWizardActivateBattery.backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+                        wBinding.btnWizardActivateBattery.strokeColor = ColorStateList.valueOf(Color.parseColor("#0096C7"))
                     }
                 }
 

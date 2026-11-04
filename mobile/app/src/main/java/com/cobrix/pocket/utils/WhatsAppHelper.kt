@@ -24,14 +24,19 @@ object WhatsAppHelper {
 
         if (!countryProfile.supportsExchangeRate) {
             val sym = countryProfile.localCurrencySymbol
+            val (titleLabel, entityLabel, phoneLabel) = when (countryProfile.code) {
+                CountryCode.AR -> Triple("Transferir (0% comisión)", "Billetera / Banco:", "Alias / CVU:")
+                CountryCode.CO -> Triple("Transferir (Nequi / Bancos)", "Entidad:", "Celular / Cuenta:")
+                else -> Triple("Transferencia", "Banco:", "Teléfono / Cuenta:")
+            }
             return """
-                💸 *Datos para ${countryProfile.instantPaymentSystemName}*
+                💸 *Datos para $titleLabel*
                 ---------------------------------
                 📌 *Monto a transferir:*
                 👉 *$sym $vesFormatted*
                 
-                🏦 *Entidad:* $bankName
-                📱 *Teléfono / Cuenta:* ${profile.phoneNumber}
+                🏦 *$entityLabel* $bankName
+                📱 *$phoneLabel* ${profile.phoneNumber}
                 🪪 *${countryProfile.nationalIdLabel}:* ${profile.idCard}
                 ---------------------------------
                 ⚡ *Cobro solicitado con Zeasy*
@@ -124,6 +129,12 @@ object WhatsAppHelper {
                 """.trimIndent()
             }
 
+            val (entityTitle, phoneTitle) = when (countryProfile.code) {
+                CountryCode.AR -> Pair("Billetera / Banco:", "Alias / CVU:")
+                CountryCode.CO -> Pair("Entidad:", "Celular / Cuenta:")
+                else -> Pair("Banco:", "Teléfono / Cuenta:")
+            }
+
             return """
                 👋 Hola *$debtorName*, un cordial saludo de *$merchant*.
                 
@@ -131,8 +142,8 @@ object WhatsAppHelper {
                 $amountBlock
                 $noteSection
                 🏦 *Datos para ${countryProfile.instantPaymentSystemName}:*
-                • *Entidad:* $bankName
-                • *Teléfono / Cuenta:* ${profile.phoneNumber}
+                • *$entityTitle* $bankName
+                • *$phoneTitle* ${profile.phoneNumber}
                 • *${countryProfile.nationalIdLabel}:* ${profile.idCard}
                 
                 📸 _Le adjuntamos nuestro código QR para su comodidad al transferir._

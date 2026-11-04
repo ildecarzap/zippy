@@ -11,8 +11,8 @@ android {
         applicationId = "com.ciemtech.zeasy"
         minSdk = 24
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.4.0"
+        versionCode = 15
+        versionName = "1.4.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -45,6 +45,7 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation("androidx.activity:activity-ktx:1.9.0")
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
 

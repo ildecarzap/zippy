@@ -71,8 +71,8 @@ object CountryProfileCatalog {
         currencyMode = CurrencyMode.BI_CURRENCY_USD_LOCAL,
         requiresExchangeRate = true,
         idDocumentLabel = "Cédula o RIF",
-        idDocumentHint = "Ej: V12345678 o J123456789",
-        phoneHint = "Ej: 04141234567",
+        idDocumentHint = "V12345678 o J123456789",
+        phoneHint = "04141234567",
         instantPaySystemName = "Pago Móvil",
         billingStrategy = PrimaryBillingStrategy.EXTERNAL_CODE_FIRST
     )
@@ -87,8 +87,8 @@ object CountryProfileCatalog {
         currencyMode = CurrencyMode.SINGLE_LOCAL_CURRENCY,
         requiresExchangeRate = false,
         idDocumentLabel = "Cédula o NIT",
-        idDocumentHint = "Ej: 1020304050 o 900123456-1",
-        phoneHint = "Ej: 3001234567",
+        idDocumentHint = "1020304050 o 900123456-1",
+        phoneHint = "3001234567",
         instantPaySystemName = "Nequi / DaviPlata / QR",
         billingStrategy = PrimaryBillingStrategy.GOOGLE_PLAY_BILLING_FIRST
     )
@@ -102,10 +102,10 @@ object CountryProfileCatalog {
         ttsLocale = Locale("es", "AR"),
         currencyMode = CurrencyMode.SINGLE_LOCAL_CURRENCY,
         requiresExchangeRate = false,
-        idDocumentLabel = "DNI / CUIT / Alias CVU",
-        idDocumentHint = "Ej: 20-12345678-9 o mi.negocio.mp",
-        phoneHint = "Ej: 1123456789",
-        instantPaySystemName = "Transferencias 3.0 / QR",
+        idDocumentLabel = "CUIT o DNI",
+        idDocumentHint = "20-12345678-9 o DNI",
+        phoneHint = "mi.negocio.mp o 1123456789",
+        instantPaySystemName = "Alias / CVU / QR",
         billingStrategy = PrimaryBillingStrategy.GOOGLE_PLAY_BILLING_FIRST
     )
 

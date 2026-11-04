@@ -65,8 +65,9 @@ object ParserUtils {
     )
 
     fun extractAmount(text: String): Pair<Double, String>? {
+        val cleanText = text.replace('\u00A0', ' ').replace('\u202F', ' ').replace('\u200B', ' ')
         for (pattern in AMOUNT_PATTERNS) {
-            val matcher = pattern.matcher(text)
+            val matcher = pattern.matcher(cleanText)
             if (matcher.find()) {
                 val rawAmount = matcher.group(1)?.trim() ?: continue
                 val parsed = parseAmountStringToDouble(rawAmount)
