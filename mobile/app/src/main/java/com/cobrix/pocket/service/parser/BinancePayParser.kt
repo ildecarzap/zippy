@@ -75,6 +75,7 @@ class BinancePayParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
         val combined = "$title $text".lowercase(Locale.ROOT)
 
         val isBinanceApp = pkg.contains("binance")

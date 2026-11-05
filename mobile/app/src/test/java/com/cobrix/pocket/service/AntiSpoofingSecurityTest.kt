@@ -26,8 +26,18 @@ class AntiSpoofingSecurityTest {
     private val router = MultibankParserRouter()
     private val bdvParser = BdvParser()
     private val banescoParser = BanescoParser()
+    private val mercantilParser = com.cobrix.pocket.service.parser.MercantilParser()
+    private val provincialParser = com.cobrix.pocket.service.parser.ProvincialParser()
+    private val bncParser = com.cobrix.pocket.service.parser.BncParser()
+    private val bancamigaParser = com.cobrix.pocket.service.parser.BancamigaParser()
+    private val ubiiParser = com.cobrix.pocket.service.parser.UbiiParser()
+    private val binanceParser = com.cobrix.pocket.service.parser.BinancePayParser()
     private val mpParser = MercadoPagoParser()
+    private val cuentaDniParser = com.cobrix.pocket.service.parser.CuentaDniParser()
+    private val bnaMasParser = com.cobrix.pocket.service.parser.BnaMasParser()
     private val nequiParser = NequiParser()
+    private val daviPlataParser = com.cobrix.pocket.service.parser.DaviPlataParser()
+    private val bancolombiaParser = com.cobrix.pocket.service.parser.BancolombiaParser()
 
     @Test
     fun testWhatsAppMessagingNotificationIsBlockedByBlacklist() {
@@ -53,17 +63,30 @@ class AntiSpoofingSecurityTest {
         val title = "Ernesto (WhatsApp)"
         val text = "👋 Hola Ernesto, un cordial saludo de Mi Comercio. Datos para Pago Móvil: Banco de Venezuela. Monto exacto a transferir: Bs. 1500.00 Ref: 8941"
 
-        // 1. Verificar que BdvParser rechace la notificación de WhatsApp
+        // 1. Venezuela: BDV, Banesco, Mercantil, Provincial, BNC, Bancamiga, Ubii
         assertFalse(bdvParser.canHandle(whatsappPkg, title, text))
         assertFalse(bdvParser.canHandle(whatsappBusinessPkg, title, text))
-
-        // 2. Verificar que BanescoParser rechace la notificación de WhatsApp
         assertFalse(banescoParser.canHandle(whatsappPkg, title, text))
+        assertFalse(mercantilParser.canHandle(whatsappPkg, title, text))
+        assertFalse(provincialParser.canHandle(whatsappPkg, title, text))
+        assertFalse(bncParser.canHandle(whatsappPkg, title, text))
+        assertFalse(bancamigaParser.canHandle(whatsappPkg, title, text))
+        assertFalse(ubiiParser.canHandle(whatsappPkg, title, text))
 
-        // 3. Verificar que MercadoPagoParser rechace la notificación de WhatsApp
+        // 2. Argentina: Mercado Pago, Cuenta DNI, BNA+
         assertFalse(mpParser.canHandle(whatsappPkg, title, text))
+        assertFalse(cuentaDniParser.canHandle(whatsappPkg, title, text))
+        assertFalse(bnaMasParser.canHandle(whatsappPkg, title, text))
 
-        // 4. Verificar que el Router central bloquee y retorne null inmediatamente
+        // 3. Colombia: Nequi, DaviPlata, Bancolombia
+        assertFalse(nequiParser.canHandle(whatsappPkg, title, text))
+        assertFalse(daviPlataParser.canHandle(whatsappPkg, title, text))
+        assertFalse(bancolombiaParser.canHandle(whatsappPkg, title, text))
+
+        // 4. Cripto: Binance Pay
+        assertFalse(binanceParser.canHandle(whatsappPkg, title, text))
+
+        // 5. Verificar que el Router central bloquee y retorne null inmediatamente
         val result = router.routeAndParse(whatsappPkg, title, text, System.currentTimeMillis())
         assertNull("Zeasy NUNCA debe procesar notificaciones provenientes de WhatsApp", result)
 
