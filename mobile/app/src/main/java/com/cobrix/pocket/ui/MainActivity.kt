@@ -841,21 +841,24 @@ class MainActivity : AppCompatActivity() {
                 binding.tvSettingsBankSectionTitle.text = "🏦 Pago Móvil y Bancos"
                 binding.tvSettingsBankSectionSubtitle.text = "Número receptor de Pago Móvil, Cédula o RIF y códigos QR"
                 binding.tilSettingsPhone.hint = "Teléfono Pago Móvil (ej. 04141234567)"
-                binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_PHONE
+                binding.etSettingsPhone.keyListener = android.text.method.DialerKeyListener.getInstance()
+                binding.etSettingsPhone.setRawInputType(InputType.TYPE_CLASS_PHONE)
                 binding.tilSettingsId.hint = "Cédula o RIF (ej. V12345678 o J123456789)"
             }
             CountryCode.CO -> {
                 binding.tvSettingsBankSectionTitle.text = "🏦 Cobro por Transferencia y Bancos"
                 binding.tvSettingsBankSectionSubtitle.text = "Celular receptor Nequi/DaviPlata, Cédula/NIT y códigos QR"
                 binding.tilSettingsPhone.hint = "Celular Nequi / DaviPlata o Cuenta (ej. 3001234567)"
-                binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_PHONE
+                binding.etSettingsPhone.keyListener = android.text.method.DialerKeyListener.getInstance()
+                binding.etSettingsPhone.setRawInputType(InputType.TYPE_CLASS_PHONE)
                 binding.tilSettingsId.hint = "Cédula o NIT (ej. 1020304050 o 900123456-1)"
             }
             CountryCode.AR -> {
                 binding.tvSettingsBankSectionTitle.text = "🏦 Cobro por Alias / CVU y Bancos"
                 binding.tvSettingsBankSectionSubtitle.text = "Tu Alias o CVU de Mercado Pago / Banco (0% de comisión)"
                 binding.tilSettingsPhone.hint = "Tu Alias o CVU de cobro (ej. mi.negocio.mp)"
-                binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                binding.etSettingsPhone.keyListener = android.text.method.TextKeyListener.getInstance()
+                binding.etSettingsPhone.setRawInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS)
                 binding.tilSettingsId.hint = "CUIT, CUIL o DNI (ej. 20-12345678-9)"
             }
         }
@@ -1407,10 +1410,7 @@ class MainActivity : AppCompatActivity() {
 
         val bankCodesToShow = if (isMultibank) {
             val configured = PreferencesHelper.getConfiguredBankCodes(this)
-            val withQr = configured.filter { PreferencesHelper.getBankQrUri(this, it) != null }
-            if (withQr.isNotEmpty()) {
-                withQr
-            } else if (configured.isNotEmpty()) {
+            if (configured.isNotEmpty()) {
                 configured
             } else if (profile.bankCode.isNotEmpty()) {
                 listOf(profile.bankCode)
@@ -2623,8 +2623,12 @@ class MainActivity : AppCompatActivity() {
         val rate = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) profile.bcvRate else 1.0
         val targetBankCode = activeCashierBankCode.ifBlank { profile.bankCode }
         val targetBankName = activeCashierBankName.ifBlank { profile.bankName }
-        val qrUriString = PreferencesHelper.getBankQrUri(this, targetBankCode) ?: profile.qrImageUri
-        val qrUri = qrUriString?.let { Uri.parse(it) }
+        val qrUriString = PreferencesHelper.getBankQrUri(this, targetBankCode)
+        val qrUri = qrUriString?.let { uriStr ->
+            val uri = Uri.parse(uriStr)
+            val path = uri.path ?: uriStr
+            if (java.io.File(path).exists()) uri else null
+        }
         val autoConcilAllowed = PlanCapabilityManager.canUseAutoConciliation(this)
 
         if (debtor.isDebtor) {
@@ -5876,13 +5880,13 @@ class MainActivity : AppCompatActivity() {
                         textSize = 16f
                         if (isSelected) {
                             text = "✔  ${bankEntry.name} (Seleccionado)"
-                            setTextColor(Color.WHITE)
+                            setTextColor(ColorStateList.valueOf(Color.WHITE))
                             backgroundTintList = ColorStateList.valueOf(Color.parseColor("#00875A"))
                             strokeColor = ColorStateList.valueOf(Color.parseColor("#006644"))
                             strokeWidth = (2 * resources.displayMetrics.density).toInt()
                         } else {
                             text = "🏦  ${bankEntry.name}"
-                            setTextColor(Color.parseColor("#0A192F"))
+                            setTextColor(ColorStateList.valueOf(Color.parseColor("#0A192F")))
                             backgroundTintList = ColorStateList.valueOf(Color.WHITE)
                             strokeColor = ColorStateList.valueOf(Color.parseColor("#CBD5E1"))
                             strokeWidth = (1.5f * resources.displayMetrics.density).toInt()

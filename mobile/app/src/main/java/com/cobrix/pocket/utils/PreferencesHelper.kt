@@ -247,15 +247,9 @@ object PreferencesHelper {
 
         if (isMultibank) {
             // Plan PRO: Bancos configurados en el panel para el país actual
+            // Escuchar todos los bancos configurados por el comerciante, con o sin QR
             val configured = getConfiguredBankCodes(context)
-
-            // En Argentina y Colombia el Alias / CVU no requiere QR obligatorio
-            val isQrStrict = (currentCountry == CountryCode.VE)
-            val withQr = configured.filter { getBankQrUri(context, it) != null }
-
-            if (isQrStrict && withQr.isNotEmpty()) {
-                result.addAll(withQr)
-            } else if (configured.isNotEmpty()) {
+            if (configured.isNotEmpty()) {
                 result.addAll(configured)
             }
 
@@ -278,17 +272,28 @@ object PreferencesHelper {
      */
     fun getBankQrUri(context: Context, bankCode: String): String? {
         if (bankCode.equals("BINANCE", ignoreCase = true)) {
-            return getBinanceQrUri(context)
+            val uri = getBinanceQrUri(context) ?: return null
+            val file = java.io.File(Uri.parse(uri).path ?: uri)
+            return if (file.exists()) uri else null
         }
         if (bankCode.equals("ZINLI", ignoreCase = true)) {
-            return getZinliQrUri(context)
+            val uri = getZinliQrUri(context) ?: return null
+            val file = java.io.File(Uri.parse(uri).path ?: uri)
+            return if (file.exists()) uri else null
         }
         val prefs = getPrefs(context)
         val specific = prefs.getString("qr_image_uri_$bankCode", null)
-        if (!specific.isNullOrEmpty()) return specific
+        if (!specific.isNullOrEmpty()) {
+            val file = java.io.File(Uri.parse(specific).path ?: specific)
+            if (file.exists()) return specific
+        }
         val activeBank = prefs.getString(KEY_BANK_CODE, "")
         if (bankCode == activeBank && !activeBank.isNullOrEmpty()) {
-            return prefs.getString(KEY_QR_URI, null)
+            val legacy = prefs.getString(KEY_QR_URI, null)
+            if (!legacy.isNullOrEmpty()) {
+                val file = java.io.File(Uri.parse(legacy).path ?: legacy)
+                if (file.exists()) return legacy
+            }
         }
         return null
     }

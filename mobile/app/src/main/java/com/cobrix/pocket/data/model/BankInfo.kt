@@ -29,8 +29,14 @@ enum class BankCode(
     BDV(
         sudebanCode = "0102",
         displayName = "Banco de Venezuela",
-        defaultKeywords = listOf("bdv", "pagoclave", "pago clave", "venezuela"),
-        knownPackageNames = listOf("com.bancodevenezuela.bdvdigital"),
+        defaultKeywords = listOf("bdv", "pagoclave", "pago clave", "venezuela", "pagomovil", "pago movil", "pagomóvil", "pago móvil"),
+        knownPackageNames = listOf(
+            "com.bancodevenezuela.bdvdigital",
+            "com.bancodevenezuela.app",
+            "com.bancodevenezuela.bdvenlinea",
+            "com.bancodevenezuela.personas",
+            "com.bancodevenezuela"
+        ),
         country = CountryCode.VE
     ),
     PROVINCIAL(

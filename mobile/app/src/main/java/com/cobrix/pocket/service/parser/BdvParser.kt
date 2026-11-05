@@ -17,6 +17,9 @@ class BdvParser : BankParser {
         val combined = "$title $text".lowercase(Locale.ROOT)
         return combined.contains("pagoclave") || combined.contains("pago clave") ||
                 combined.contains("bdv") || combined.contains("banco de venezuela") ||
+                combined.contains("pagomovil") || combined.contains("pago movil") ||
+                combined.contains("pagomóvil") || combined.contains("pago móvil") ||
+                combined.contains("bdvapp") || combined.contains("bdv digital") ||
                 combined.contains("26371") || combined.contains("772")
     }
 
@@ -31,7 +34,8 @@ class BdvParser : BankParser {
         if (ParserUtils.isEmailPackage(packageName) && !ParserUtils.hasIncomingIndicators(combined) && !isOutgoing) return null
 
         val (amount, amountRaw) = ParserUtils.extractAmount(combined) ?: return null
-        val reference = ParserUtils.extractReference(combined) ?: return null
+        val reference = ParserUtils.extractReference(combined)
+            ?: (postTimeMillis % 10000).toString().padStart(4, '0')
         val phone = ParserUtils.extractPhone(combined)
         val bankDetected = ParserUtils.extractBankName(combined) ?: "Banco de Venezuela"
 
