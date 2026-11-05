@@ -87,9 +87,9 @@ class DebtorsAdapter(
                     } else {
                         String.format(
                             Locale.US,
-                            "Monto a conciliar: %s %.2f (%s)",
+                            "Total adeudado: %s %.2f (%s)",
                             localSym,
-                            concilVes,
+                            debtUsd,
                             countryProfile.localCurrencyCode
                         )
                     }

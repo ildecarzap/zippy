@@ -103,18 +103,20 @@ object WhatsAppHelper {
         val isPartial = targetUsd < totalDebtUsd - 0.005
         val rate = if (countryProfile.supportsExchangeRate && bcvRate > 0) bcvRate else 1.0
 
-        val totalDebtVes = Math.round(totalDebtUsd * rate * 100.0) / 100.0
-        val targetBaseVes = Math.round(targetUsd * rate * 100.0) / 100.0
-        val concilVes = if (includeConciliationCents) {
+        val totalDebtVes = if (countryProfile.supportsExchangeRate) Math.round(totalDebtUsd * rate * 100.0) / 100.0 else totalDebtUsd
+        val targetBaseVes = if (countryProfile.supportsExchangeRate) Math.round(targetUsd * rate * 100.0) / 100.0 else targetUsd
+        val concilVes = if (includeConciliationCents && countryProfile.supportsExchangeRate) {
             Math.round((targetBaseVes + conciliationCents) * 100.0) / 100.0
         } else {
             targetBaseVes
         }
 
+        val isWholeCurrency = (countryProfile.code == CountryCode.CO)
+        val numDecimals = if (isWholeCurrency) "%.0f" else "%.2f"
         val totalDebtUsdFmt = String.format(Locale.US, "%.2f", totalDebtUsd)
-        val totalDebtVesFmt = String.format(Locale.US, "%.2f", totalDebtVes)
-        val targetUsdFmt = String.format(Locale.US, "%.2f", targetUsd)
-        val concilVesFmt = String.format(Locale.US, "%.2f", concilVes)
+        val totalDebtVesFmt = String.format(Locale.US, numDecimals, totalDebtVes)
+        val targetUsdFmt = String.format(Locale.US, numDecimals, targetUsd)
+        val concilVesFmt = String.format(Locale.US, numDecimals, concilVes)
         val noteSection = if (recentConcept.isNotBlank()) "📝 *Concepto:* $recentConcept\n" else ""
         val merchant = if (profile.merchantName.isNotBlank()) profile.merchantName else "tu comercio amigo"
         val qrBlock = if (hasQr) "\n📸 _Le adjuntamos nuestro código QR para su comodidad al transferir._\n" else "\n"
@@ -128,7 +130,7 @@ object WhatsAppHelper {
                 """.trimIndent()
             } else {
                 """
-                👉 *Monto exacto a transferir:* *$sym $concilVesFmt*
+                👉 *Monto a transferir:* *$sym $concilVesFmt*
                 """.trimIndent()
             }
 

@@ -891,7 +891,11 @@ object ReportHelper {
             style = Paint.Style.FILL
         }
         canvas.drawRoundRect(kpi3X, y, kpi3X + kpiWidth, y + kpiHeight, 6f, 6f, paintBalBg)
-        val finalTotalLocal = if (autoConcilAllowed) debtor.getConciliationVes(rate) else debtor.getEquivalentVes(rate)
+        val finalTotalLocal = if (supportsExchange) {
+            if (autoConcilAllowed) debtor.getConciliationVes(rate) else debtor.getEquivalentVes(rate)
+        } else {
+            debtor.debtAmountUsd
+        }
 
         if (debtor.isDebtor) {
             canvas.drawText("SALDO ADEUDADO", kpi3X + 8f, y + 15f, paintCharge)

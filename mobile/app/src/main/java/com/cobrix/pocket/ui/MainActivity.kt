@@ -1312,10 +1312,14 @@ class MainActivity : AppCompatActivity() {
         binding.btnChargeInPerson.setOnClickListener {
             val amount = currentInput.toDoubleOrNull() ?: 0.0
             val profile = PreferencesHelper.getUserProfile(this)
+            val countryProfile = PreferencesHelper.getCountryProfile(this)
             val amountVes: Double
             val amountUsd: Double
 
-            if (amount > 0.0) {
+            if (!countryProfile.supportsExchangeRate) {
+                amountVes = amount
+                amountUsd = amount
+            } else if (amount > 0.0) {
                 if (isVesMode) {
                     amountVes = amount
                     amountUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
@@ -1357,10 +1361,14 @@ class MainActivity : AppCompatActivity() {
             }
 
             val profile = PreferencesHelper.getUserProfile(this)
+            val countryProfile = PreferencesHelper.getCountryProfile(this)
             val amountVes: Double
             val amountUsd: Double
 
-            if (isVesMode) {
+            if (!countryProfile.supportsExchangeRate) {
+                amountVes = amount
+                amountUsd = amount
+            } else if (isVesMode) {
                 amountVes = amount
                 amountUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
             } else {
@@ -1374,7 +1382,7 @@ class MainActivity : AppCompatActivity() {
                 amountUsd = amountUsd,
                 bankName = activeCashierBankName,
                 bankCode = activeCashierBankCode,
-                countryProfile = PreferencesHelper.getCountryProfile(this)
+                countryProfile = countryProfile
             )
             val qrUri = PreferencesHelper.getBankQrUri(this, activeCashierBankCode)?.let { Uri.parse(it) }
             WhatsAppHelper.sendViaWhatsApp(this, "", message, qrUri)
@@ -1384,8 +1392,9 @@ class MainActivity : AppCompatActivity() {
             val amount = currentInput.toDoubleOrNull() ?: 0.0
             if (amount > 0.0) {
                 val profile = PreferencesHelper.getUserProfile(this)
-                val amountVes = if (isVesMode) amount else amount * profile.bcvRate
-                val amountUsd = if (isVesMode) (if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0) else amount
+                val countryProfile = PreferencesHelper.getCountryProfile(this)
+                val amountVes = if (!countryProfile.supportsExchangeRate) amount else if (isVesMode) amount else amount * profile.bcvRate
+                val amountUsd = if (!countryProfile.supportsExchangeRate) amount else if (isVesMode) (if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0) else amount
                 showWhatsAppPromptDialog(amountVes, amountUsd)
             } else {
                 showWhatsAppChargeDialog()
@@ -1777,7 +1786,10 @@ class MainActivity : AppCompatActivity() {
 
             val amountVes: Double
             val amountUsd: Double
-            if (isWsVesMode) {
+            if (!countryProfile.supportsExchangeRate) {
+                amountVes = amount
+                amountUsd = amount
+            } else if (isWsVesMode) {
                 amountVes = amount
                 amountUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
             } else {
@@ -1960,7 +1972,7 @@ class MainActivity : AppCompatActivity() {
                 val amountStr = input.text.toString().replace(',', '.').trim()
                 val amount = amountStr.toDoubleOrNull() ?: 0.0
                 val profile = PreferencesHelper.getUserProfile(this)
-                val amountUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
+                val amountUsd = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) amount / profile.bcvRate else amount
 
                 val intent = Intent(this, FullScreenQrActivity::class.java).apply {
                     putExtra(FullScreenQrActivity.EXTRA_AMOUNT_VES, amount)
@@ -2726,7 +2738,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(48, 36, 48, 36)
         }
 
-        val concilNotice = if (autoConcilAllowed) {
+        val concilNotice = if (autoConcilAllowed && countryProfile.supportsExchangeRate) {
             "\n\n✨ Se sumarán +${countryProfile.localCurrencySymbol} ${String.format(Locale.US, "%.2f", debtor.conciliationCents)} de centavos de conciliación para descontar automáticamente al llegar el pago."
         } else ""
 
@@ -2743,12 +2755,12 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, "Ingresa un monto válido mayor a 0", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
-                val baseVes = Math.round(partialUsd * rate * 100.0) / 100.0
-                val exactConcilVes = if (autoConcilAllowed) {
+                val baseVes = if (countryProfile.supportsExchangeRate) Math.round(partialUsd * rate * 100.0) / 100.0 else partialUsd
+                val exactConcilVes = if (autoConcilAllowed && countryProfile.supportsExchangeRate) {
                     Math.round((baseVes + debtor.conciliationCents) * 100.0) / 100.0
                 } else baseVes
 
-                if (autoConcilAllowed) {
+                if (autoConcilAllowed && countryProfile.supportsExchangeRate) {
                     PreferencesHelper.savePendingDebtorConciliation(this, debtor.id, exactConcilVes, partialUsd)
                 }
 
@@ -2796,9 +2808,9 @@ class MainActivity : AppCompatActivity() {
             } else {
                 String.format(
                     Locale.US,
-                    "\nMonto exacto a conciliar: %s %.2f (%s)",
+                    "\nTotal adeudado: %s %.2f (%s)",
                     countryProfile.localCurrencySymbol,
-                    debtor.getConciliationVes(rate),
+                    debtor.debtAmountUsd,
                     countryProfile.localCurrencyCode
                 )
             }
@@ -3082,7 +3094,9 @@ class MainActivity : AppCompatActivity() {
         val rate = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) profile.bcvRate else 1.0
 
         // Calcular equivalencias según modo VES / USD actual
-        val (amountUsd, amountVes) = if (isVesMode && countryProfile.supportsExchangeRate) {
+        val (amountUsd, amountVes) = if (!countryProfile.supportsExchangeRate) {
+            Pair(actualAmount, actualAmount)
+        } else if (isVesMode) {
             Pair(actualAmount / rate, actualAmount)
         } else {
             Pair(actualAmount, actualAmount * rate)
@@ -3138,7 +3152,7 @@ class MainActivity : AppCompatActivity() {
                     debtorId = targetDebtor.id,
                     amountUsd = amountUsd,
                     amountVes = amountVes,
-                    bcvRate = rate,
+                    bcvRate = if (countryProfile.supportsExchangeRate) rate else 1.0,
                     notes = concept.ifBlank { "Fiado desde caja" }
                 )
                 Toast.makeText(this, "✅ Fiado anotado a ${targetDebtor.name}", Toast.LENGTH_SHORT).show()
@@ -3328,7 +3342,10 @@ class MainActivity : AppCompatActivity() {
 
             val amountVes: Double
             val amountUsd: Double
-            if (isIncomeVes) {
+            if (!countryProfile.supportsExchangeRate) {
+                amountVes = rawAmount
+                amountUsd = rawAmount
+            } else if (isIncomeVes) {
                 amountVes = rawAmount
                 amountUsd = if (profile.bcvRate > 0) rawAmount / profile.bcvRate else 0.0
             } else {
@@ -3395,7 +3412,8 @@ class MainActivity : AppCompatActivity() {
 
             val note = dialogBinding.etExpenseNote.text.toString().trim()
             val profile = PreferencesHelper.getUserProfile(this)
-            val amountUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
+            val countryProfile = PreferencesHelper.getCountryProfile(this)
+            val amountUsd = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) amount / profile.bcvRate else amount
 
             val tx = Transaction(
                 amount = amount,
@@ -3464,7 +3482,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             val profile = PreferencesHelper.getUserProfile(this)
-            val amountUsd = if (profile.bcvRate > 0) amount / profile.bcvRate else 0.0
+            val countryProfile = PreferencesHelper.getCountryProfile(this)
+            val amountUsd = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) amount / profile.bcvRate else amount
             val updated = tx.copy(
                 amount = amount,
                 amountUsd = amountUsd,
@@ -3478,9 +3497,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialogBinding.btnDeleteTx.setOnClickListener {
+            val countryProfile = PreferencesHelper.getCountryProfile(this)
+            val deleteSym = if (countryProfile.supportsExchangeRate) "Bs." else countryProfile.localCurrencySymbol
             AlertDialog.Builder(this)
                 .setTitle("¿Eliminar Movimiento?")
-                .setMessage("Esta acción eliminará el registro de Bs. ${String.format(Locale.US, "%.2f", tx.amount)} del balance de hoy.")
+                .setMessage("Esta acción eliminará el registro de $deleteSym ${String.format(Locale.US, "%.2f", tx.amount)} del balance de hoy.")
                 .setPositiveButton("Eliminar") { _, _ ->
                     dbHelper.deleteTransaction(tx.id)
                     dialog.dismiss()
@@ -3507,7 +3528,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         val profile = PreferencesHelper.getUserProfile(this)
-        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        val rate = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) profile.bcvRate else 1.0
 
         // Ordenar priorizando deudores con deuda activa
         val sortedDebtors = allDebtors.sortedWith(
@@ -3517,21 +3539,29 @@ class MainActivity : AppCompatActivity() {
         )
 
         val items = sortedDebtors.map { d ->
-            when {
-                d.isDebtor -> String.format(
-                    Locale.US,
-                    "🔴 %s — Debe $%.2f (Bs. %.2f)",
-                    d.name,
-                    d.debtAmountUsd,
-                    d.getEquivalentVes(rate)
-                )
-                d.hasCredit -> String.format(
-                    Locale.US,
-                    "🟢 %s — A favor $%.2f",
-                    d.name,
-                    d.creditAmountUsd
-                )
-                else -> "⚪ ${d.name} — Al día ($0.00)"
+            if (!countryProfile.supportsExchangeRate) {
+                when {
+                    d.isDebtor -> String.format(Locale.US, "🔴 %s — Debe %s %.2f", d.name, countryProfile.localCurrencySymbol, d.debtAmountUsd)
+                    d.hasCredit -> String.format(Locale.US, "🟢 %s — A favor %s %.2f", d.name, countryProfile.localCurrencySymbol, d.creditAmountUsd)
+                    else -> "⚪ ${d.name} — Al día (${countryProfile.localCurrencySymbol} 0.00)"
+                }
+            } else {
+                when {
+                    d.isDebtor -> String.format(
+                        Locale.US,
+                        "🔴 %s — Debe $%.2f (Bs. %.2f)",
+                        d.name,
+                        d.debtAmountUsd,
+                        d.getEquivalentVes(rate)
+                    )
+                    d.hasCredit -> String.format(
+                        Locale.US,
+                        "🟢 %s — A favor $%.2f",
+                        d.name,
+                        d.creditAmountUsd
+                    )
+                    else -> "⚪ ${d.name} — Al día ($0.00)"
+                }
             }
         }.toTypedArray()
 
@@ -3542,7 +3572,7 @@ class MainActivity : AppCompatActivity() {
                 val baseDebtVes = selectedDebtor.getEquivalentVes(rate)
                 val concilDebtVes = selectedDebtor.getConciliationVes(rate)
 
-                // Si el monto en Bs coincide con la deuda base o el monto de conciliación (margen 1.00 Bs), saldar deuda exacta
+                // Si el monto coincide con la deuda base o el monto de conciliación, saldar deuda exacta
                 val discountUsd = if (selectedDebtor.isDebtor &&
                     (Math.abs(tx.amount - baseDebtVes) <= 1.0 || Math.abs(tx.amount - concilDebtVes) <= 1.0)
                 ) {
@@ -3550,7 +3580,7 @@ class MainActivity : AppCompatActivity() {
                 } else if (tx.amountUsd > 0.0) {
                     tx.amountUsd
                 } else {
-                    tx.amount / rate
+                    if (countryProfile.supportsExchangeRate) tx.amount / rate else tx.amount
                 }
 
                 val refLabel = if (tx.reference.isNotBlank()) "Ref: ${tx.reference}" else "S/R"
@@ -3560,7 +3590,7 @@ class MainActivity : AppCompatActivity() {
                     debtorId = selectedDebtor.id,
                     amountUsd = discountUsd,
                     amountVes = tx.amount,
-                    bcvRate = rate,
+                    bcvRate = if (countryProfile.supportsExchangeRate) rate else 1.0,
                     matchedTxId = tx.id,
                     notes = "Aplicado desde Jornada ($bankLabel • $refLabel)"
                 )
@@ -3710,8 +3740,9 @@ class MainActivity : AppCompatActivity() {
             currentFilteredTransactions = dbHelper.getTransactionsBetween(filterStartTime, filterEndTime)
             dialogBinding.tvReportPeriodLabel.text = "📅 Periodo: $filterPeriodLabel"
 
-            val financials = ReportHelper.calculateFinancials(currentFilteredTransactions, profile.bcvRate)
             val countryProfile = PreferencesHelper.getCountryProfile(this)
+            val effectiveRate = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) profile.bcvRate else 1.0
+            val financials = ReportHelper.calculateFinancials(currentFilteredTransactions, effectiveRate)
             dialogBinding.tvReportSummaryBadge.text = if (countryProfile.supportsExchangeRate) {
                 "${currentFilteredTransactions.size} movimientos • Bs. ${String.format(Locale.US, "%.2f", financials.totalIncomeVes)} ($${String.format(Locale.US, "%.2f", financials.totalIncomeUsd)}) • Tasa BCV: Bs. ${String.format(Locale.US, "%.2f", profile.bcvRate)}"
             } else {
@@ -3887,9 +3918,13 @@ class MainActivity : AppCompatActivity() {
         val profile = PreferencesHelper.getUserProfile(this)
         val bcvRate = if (profile.bcvRate > 0) profile.bcvRate else 45.0
 
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
         val amountVes: Double
         val amountUsd: Double
-        if (isUsd) {
+        if (!countryProfile.supportsExchangeRate) {
+            amountVes = parsedRawAmount
+            amountUsd = parsedRawAmount
+        } else if (isUsd) {
             amountUsd = parsedRawAmount
             amountVes = parsedRawAmount * bcvRate
         } else {

@@ -117,7 +117,8 @@
         android:text="≈ Bs. 0,00 (Tasa BCV: 45.00)"
         android:textColor="@color/text_primary"
         android:textStyle="bold"
-        android:textSize="14.5sp" />
+        android:textSize="14.5sp"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/tvChargeBcvNotice"

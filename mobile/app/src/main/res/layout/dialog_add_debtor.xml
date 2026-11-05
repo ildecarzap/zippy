@@ -67,7 +67,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:hint="Teléfono WhatsApp (ej. 04141234567)">
+        android:hint="Teléfono WhatsApp">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etNewDebtorPhone"
