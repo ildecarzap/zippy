@@ -47,6 +47,14 @@ class MultibankParserRouter {
         postTimeMillis: Long,
         enabledBankCodes: Set<BankCode> = emptySet()
     ): ParsedPayment? {
+        val cleanPkg = packageName.lowercase(java.util.Locale.ROOT)
+
+        // 0. CAPA DE SEGURIDAD DEFENSIVA (ANTI-SPOOFING): Bloqueo total e inmediato de mensajería (WhatsApp, Telegram, etc.)
+        if (ParserUtils.isProhibitedMessagingPackage(cleanPkg)) {
+            Log.w(TAG, "Bloqueo de seguridad anti-spoofing: paquete de mensajería descartado de inmediato ($packageName)")
+            return null
+        }
+
         val parsersToUse = if (enabledBankCodes.isEmpty()) {
             allParsers
         } else {
@@ -55,7 +63,7 @@ class MultibankParserRouter {
 
         val combined = "$title $text"
 
-        // 0. FILTRO ANTI-ESTAFAS PARA SMS: Si la notificación proviene de una app de SMS (Google Messages, etc.),
+        // 1. FILTRO ANTI-ESTAFAS PARA SMS: Si la notificación proviene de una app de SMS (Google Messages, etc.),
         // el remitente (title) DEBE ser un código corto bancario oficial o un nombre institucional de banco.
         // Se bloquea de inmediato cualquier SMS proveniente de números celulares personales (0414, 0424, 0412, etc.).
         if (ParserUtils.isSmsPackage(packageName)) {

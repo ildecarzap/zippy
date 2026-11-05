@@ -166,6 +166,82 @@ object ParserUtils {
         return if (detectedName != null) com.cobrix.pocket.data.model.BankCatalog.findByNameOrCode(detectedName)?.code else null
     }
 
+    // =========================================================================
+    // BLACKLIST INQUEBRANTABLE DE MENSAJERÍA Y REDES SOCIALES (ANTI-SPOOFING)
+    // =========================================================================
+    val PROHIBITED_MESSAGING_PACKAGES = setOf(
+        // WhatsApp y variantes
+        "com.whatsapp",
+        "com.whatsapp.w4b",
+        "com.gbwhatsapp",
+        "com.yowhatsapp",
+        "com.fmwhatsapp",
+        // Telegram y clientes alternativos
+        "org.telegram.messenger",
+        "org.telegram.messenger.web",
+        "org.telegram.plus",
+        "org.thunderdog.chatterino",
+        "nekox.messenger",
+        // Meta (Facebook, Messenger, Instagram)
+        "com.facebook.orca",
+        "com.facebook.mlite",
+        "com.facebook.katana",
+        "com.instagram.android",
+        // Signal
+        "org.thoughtcrime.securesms",
+        // Discord
+        "com.discord",
+        // Otras mensajerías y redes sociales
+        "com.viber.voip",
+        "com.skype.raider",
+        "com.tencent.mm",
+        "jp.naver.line.android",
+        "com.snapchat.android",
+        "com.twitter.android",
+        "com.zhiliaoapp.musically",
+        "com.ss.android.ugc.trill",
+        "com.reddit.frontpage",
+        "com.Slack",
+        "com.microsoft.teams"
+    )
+
+    /**
+     * Retorna true si el paquete pertenece a una aplicación de mensajería o red social prohibida.
+     * NUNCA se debe procesar ninguna notificación proveniente de estas aplicaciones.
+     */
+    fun isProhibitedMessagingPackage(packageName: String?): Boolean {
+        if (packageName.isNullOrBlank()) return true
+        val lower = packageName.lowercase(Locale.ROOT)
+        if (PROHIBITED_MESSAGING_PACKAGES.contains(lower)) return true
+        return lower.contains("whatsapp") ||
+                lower.contains("telegram") ||
+                lower.contains("orca") ||
+                lower.contains("instagram") ||
+                lower.contains("discord") ||
+                lower.contains("viber") ||
+                lower.contains("wechat") ||
+                lower.contains("signal")
+    }
+
+    // Paquetes oficiales de telefonía / SMS del sistema Android
+    val OFFICIAL_SMS_PACKAGES = setOf(
+        "com.google.android.apps.messaging",
+        "com.samsung.android.messaging",
+        "com.android.mms",
+        "com.android.messaging",
+        "com.motorola.messaging",
+        "com.sonyericsson.conversations",
+        "com.asus.message"
+    )
+
+    fun isSmsPackage(packageName: String): Boolean {
+        val lower = packageName.lowercase(Locale.ROOT)
+        if (isProhibitedMessagingPackage(lower)) return false
+        if (OFFICIAL_SMS_PACKAGES.contains(lower)) return true
+        return (lower.endsWith(".mms") || lower.endsWith(".messaging") || lower.contains(".telephony")) &&
+                !lower.contains("telegram") && !lower.contains("whatsapp") && !lower.contains("facebook")
+    }
+
     // Códigos cortos SMS oficiales asignados a la banca en Venezuela
     val OFFICIAL_BANK_SMS_SHORTCODES = setOf(
         "26371", "772",          // BDV (Banco de Venezuela)
@@ -180,13 +256,15 @@ object ParserUtils {
         "8244"                   // Ubii
     )
 
-    fun isSmsPackage(packageName: String): Boolean {
-        val lower = packageName.lowercase(Locale.ROOT)
-        return lower.contains("mms") ||
-               lower.contains("messaging") ||
-               lower.contains("message") ||
-               lower.contains("telephony")
-    }
+    // Sender IDs alfanuméricos institucionales verificados de bancos oficiales
+    val OFFICIAL_BANK_SMS_ALPHA_SENDER_IDS = setOf(
+        "bdv", "bancodevenezuela", "banco de venezuela",
+        "banesco", "mercantil", "banco mercantil",
+        "bbva", "provincial", "bbva provincial",
+        "bnc", "bancamiga", "ubii", "ubiipagos", "bancaribe",
+        "banco del tesoro", "tesoro", "banplus", "100% banco", "100%banco",
+        "banco plaza", "banco activo", "sofitasa"
+    )
 
     /**
      * Valida si el remitente de una notificación SMS es un emisor bancario institucional legítimo.
@@ -195,22 +273,25 @@ object ParserUtils {
      */
     fun isLegitimateBankSmsSender(sender: String?): Boolean {
         if (sender.isNullOrBlank()) return false
-        val clean = sender.replace("+", "").replace("-", "").replace(" ", "").trim().lowercase(Locale.ROOT)
+        val clean = sender.replace("+", "").replace("-", "").replace(" ", "")
+            .replace("(", "").replace(")", "").trim().lowercase(Locale.ROOT)
 
-        // 1. Si el remitente es un número celular personal venezolano o estándar internacional -> BLOQUEAR
+        // 1. Bloqueo inmediato si el remitente es un número celular personal (VE, CO, AR o internacional)
         val isMobileNumber = clean.startsWith("58414") || clean.startsWith("58424") || clean.startsWith("58412") ||
                 clean.startsWith("58416") || clean.startsWith("58426") ||
                 clean.startsWith("0414") || clean.startsWith("0424") || clean.startsWith("0412") ||
                 clean.startsWith("0416") || clean.startsWith("0426") ||
                 clean.startsWith("414") || clean.startsWith("424") || clean.startsWith("412") ||
-                clean.startsWith("416") || clean.startsWith("426")
+                clean.startsWith("416") || clean.startsWith("426") ||
+                clean.matches(Regex("^(?:57)?3[0-9]{9}$")) ||
+                clean.matches(Regex("^(?:549?|11|15)[0-9]{8,10}$"))
 
         if (isMobileNumber) {
-            return false // Es un teléfono celular común y corriente de persona, NUNCA un banco
+            return false // Número celular personal de persona natural -> DESCARTE TOTAL
         }
 
-        // Si es una cadena numérica de más de 6 dígitos que no sea un shortcode conocido -> BLOQUEAR
-        if (clean.all { it.isDigit() } && clean.length > 6 && !OFFICIAL_BANK_SMS_SHORTCODES.contains(clean)) {
+        // Si es una cadena numérica de 7 o más dígitos y NO está en los shortcodes oficiales -> BLOQUEO
+        if (clean.all { it.isDigit() } && clean.length >= 7 && !OFFICIAL_BANK_SMS_SHORTCODES.contains(clean)) {
             return false
         }
 
@@ -219,18 +300,8 @@ object ParserUtils {
             return true
         }
 
-        // 3. Si el remitente es un nombre corporativo / Alphanumeric Sender ID oficial de banco -> VÁLIDO
-        val hasBankKeyword = clean.contains("bdv") || clean.contains("venezuela") ||
-                clean.contains("banesco") || clean.contains("mercantil") ||
-                clean.contains("provincial") || clean.contains("bbva") ||
-                clean.contains("bnc") || clean.contains("bancamiga") ||
-                clean.contains("bancaribe") || clean.contains("tesoro") ||
-                clean.contains("banplus") || clean.contains("plaza") ||
-                clean.contains("sofitasa") || clean.contains("ubii") ||
-                clean.contains("100% banco") || clean.contains("100%banco") ||
-                clean.contains("banco")
-
-        return hasBankKeyword
+        // 3. Si el remitente coincide con un Sender ID alfanumérico verificado del catálogo -> VÁLIDO
+        return OFFICIAL_BANK_SMS_ALPHA_SENDER_IDS.contains(clean)
     }
 
     /**

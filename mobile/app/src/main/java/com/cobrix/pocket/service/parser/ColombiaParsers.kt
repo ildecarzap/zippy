@@ -13,9 +13,11 @@ class NequiParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
         val combined = "${title.orEmpty()} $text".lowercase(Locale.ROOT)
         val isNequiOrigin = pkg == "com.nequi.mobileapp" ||
-                ((ParserUtils.isSmsPackage(pkg) || ParserUtils.isEmailPackage(pkg)) && combined.contains("nequi"))
+                BankCode.CO_NEQUI.knownPackageNames.any { pkg.equals(it, ignoreCase = true) } ||
+                ((ParserUtils.isSmsPackage(pkg) && ParserUtils.isLegitimateBankSmsSender(title) || ParserUtils.isEmailPackage(pkg)) && combined.contains("nequi"))
         val isIncoming = combined.contains("recibiste") ||
                 combined.contains("te envió") ||
                 combined.contains("te envio") ||
@@ -55,9 +57,11 @@ class DaviPlataParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
         val combined = "${title.orEmpty()} $text".lowercase(Locale.ROOT)
         val isDaviOrigin = pkg == "com.davivienda.daviplataapp" ||
-                ((ParserUtils.isSmsPackage(pkg) || ParserUtils.isEmailPackage(pkg)) && combined.contains("daviplata"))
+                BankCode.CO_DAVIPLATA.knownPackageNames.any { pkg.equals(it, ignoreCase = true) } ||
+                ((ParserUtils.isSmsPackage(pkg) && ParserUtils.isLegitimateBankSmsSender(title) || ParserUtils.isEmailPackage(pkg)) && combined.contains("daviplata"))
         val isIncoming = combined.contains("recibio") ||
                 combined.contains("recibió") ||
                 combined.contains("recibiste") ||
@@ -97,11 +101,13 @@ class BancolombiaParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
         val combined = "${title.orEmpty()} $text".lowercase(Locale.ROOT)
         val isBcolOrigin = pkg == "kt.bancolombia" ||
                 pkg == "com.todo1.mobile" ||
                 pkg == "com.bancolombia.alamanov2" ||
-                ((ParserUtils.isSmsPackage(pkg) || ParserUtils.isEmailPackage(pkg)) && combined.contains("bancolombia"))
+                BankCode.CO_BANCOLOMBIA.knownPackageNames.any { pkg.equals(it, ignoreCase = true) } ||
+                ((ParserUtils.isSmsPackage(pkg) && ParserUtils.isLegitimateBankSmsSender(title) || ParserUtils.isEmailPackage(pkg)) && combined.contains("bancolombia"))
         val isIncoming = combined.contains("recibiste una transferencia") ||
                 combined.contains("recibiste un pago") ||
                 combined.contains("recibiste $") ||

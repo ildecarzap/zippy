@@ -118,5 +118,46 @@ object CountryProfileCatalog {
     }
 
     fun getAllProfiles(): List<CountryProfile> = listOf(VENEZUELA, COLOMBIA, ARGENTINA)
+
+    /**
+     * Retorna la lista blanca estricta de packageNames autorizados para operar en el país indicado.
+     * Ninguna notificación proveniente de una app ajena a esta lista (ej. mensajería o redes sociales)
+     * debe ser procesada por Zeasy.
+     */
+    fun getAllowedPackagesForCountry(
+        country: CountryCode,
+        includeSms: Boolean = true,
+        includeBinance: Boolean = true
+    ): Set<String> {
+        val packages = mutableSetOf<String>()
+
+        // 1. Bancos y billeteras oficiales del país activo
+        val countryBanks = BankCode.values().filter { it.country == country }
+        countryBanks.forEach { bank ->
+            bank.knownPackageNames.forEach { pkg ->
+                packages.add(pkg.lowercase(Locale.ROOT))
+            }
+        }
+
+        // 2. Mensajería SMS bancaria del sistema (Sólo en Venezuela y si el usuario activó SMS en Ajustes)
+        if (country == CountryCode.VE && includeSms) {
+            BankCode.SMS.knownPackageNames.forEach { pkg ->
+                packages.add(pkg.lowercase(Locale.ROOT))
+            }
+            packages.add("com.motorola.messaging")
+            packages.add("com.sonyericsson.conversations")
+            packages.add("com.asus.message")
+            packages.add("com.android.messaging")
+        }
+
+        // 3. Binance Pay (Transversal, si está activo)
+        if (includeBinance) {
+            BankCode.BINANCE.knownPackageNames.forEach { pkg ->
+                packages.add(pkg.lowercase(Locale.ROOT))
+            }
+        }
+
+        return packages
+    }
 }
 

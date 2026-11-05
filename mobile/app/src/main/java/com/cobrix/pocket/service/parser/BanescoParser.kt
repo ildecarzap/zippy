@@ -9,10 +9,15 @@ class BanescoParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
-        if (pkg.contains("banesco")) return true
-        if (pkg.contains("mercantil") || pkg.contains("provincial") || pkg.contains("bbva") ||
-            pkg.contains("bnc") || pkg.contains("bdv") || pkg.contains("bancodevenezuela") ||
-            pkg.contains("bancamiga") || pkg.contains("ubii")) return false
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
+
+        val isBanescoApp = pkg.contains("banesco") ||
+                BankCode.BANESCO.knownPackageNames.any { pkg.equals(it, ignoreCase = true) }
+        val isSms = ParserUtils.isSmsPackage(pkg) && ParserUtils.isLegitimateBankSmsSender(title) &&
+                (title?.contains("2661") == true || title?.contains("2662") == true || title?.contains("2846") == true || title?.lowercase(Locale.ROOT)?.contains("banesco") == true)
+        val isEmail = ParserUtils.isEmailPackage(pkg) && title?.lowercase(Locale.ROOT)?.contains("banesco") == true
+
+        if (!isBanescoApp && !isSms && !isEmail) return false
 
         val combined = "$title $text".lowercase(Locale.ROOT)
         return combined.contains("banesco") || combined.contains("pago movil banesco") ||

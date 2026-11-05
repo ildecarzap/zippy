@@ -9,13 +9,21 @@ class UbiiParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
-        if (pkg.contains("ubii")) return true
-        if (pkg.contains("mercantil") || pkg.contains("banesco") || pkg.contains("provincial") ||
-            pkg.contains("bbva") || pkg.contains("bnc") || pkg.contains("bdv") ||
-            pkg.contains("bancodevenezuela") || pkg.contains("bancamiga")) return false
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
+
+        val isUbiiApp = pkg.contains("ubii") ||
+                BankCode.UBII.knownPackageNames.any { pkg.equals(it, ignoreCase = true) }
+        if (isUbiiApp) return true
+
+        val isSms = ParserUtils.isSmsPackage(pkg) && ParserUtils.isLegitimateBankSmsSender(title) &&
+                (title?.contains("8244") == true || title?.lowercase(Locale.ROOT)?.contains("ubii") == true)
+        val isEmail = ParserUtils.isEmailPackage(pkg) && title?.lowercase(Locale.ROOT)?.contains("ubii") == true
+
+        if (!isSms && !isEmail) return false
 
         val combined = "$title $text".lowercase(Locale.ROOT)
-        return combined.contains("ubii") || combined.contains("ubiipagos")
+        return combined.contains("ubii") || combined.contains("ubiipagos") ||
+                combined.contains("pago movil ubii") || combined.contains("8244")
     }
 
     override fun parse(

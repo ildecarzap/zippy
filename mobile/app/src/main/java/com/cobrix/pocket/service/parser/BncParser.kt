@@ -9,13 +9,20 @@ class BncParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
-        if (pkg.contains("bnc")) return true
-        if (pkg.contains("mercantil") || pkg.contains("banesco") || pkg.contains("provincial") ||
-            pkg.contains("bbva") || pkg.contains("bdv") || pkg.contains("bancodevenezuela") ||
-            pkg.contains("bancamiga") || pkg.contains("ubii")) return false
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
+
+        val isBncApp = pkg.contains("bnc") ||
+                BankCode.BNC.knownPackageNames.any { pkg.equals(it, ignoreCase = true) }
+        val isSms = ParserUtils.isSmsPackage(pkg) && ParserUtils.isLegitimateBankSmsSender(title) &&
+                (title?.contains("2620") == true || title?.contains("2621") == true || title?.lowercase(Locale.ROOT)?.contains("bnc") == true)
+        val isEmail = ParserUtils.isEmailPackage(pkg) && title?.lowercase(Locale.ROOT)?.contains("bnc") == true
+
+        if (!isBncApp && !isSms && !isEmail) return false
 
         val combined = "$title $text".lowercase(Locale.ROOT)
-        return combined.contains("bnc") || combined.contains("banco nacional de credito")
+        return combined.contains("bnc") || combined.contains("pago movil bnc") ||
+                combined.contains("banco nacional de credito") || combined.contains("banco nacional de crédito") ||
+                combined.contains("2620") || combined.contains("2621")
     }
 
     override fun parse(

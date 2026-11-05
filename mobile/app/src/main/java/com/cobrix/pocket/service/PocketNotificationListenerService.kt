@@ -20,6 +20,7 @@ import com.cobrix.pocket.R
 import com.cobrix.pocket.data.db.PocketDatabaseHelper
 import com.cobrix.pocket.data.model.BankCatalog
 import com.cobrix.pocket.data.model.BankCode
+import com.cobrix.pocket.data.model.CountryProfileCatalog
 import com.cobrix.pocket.data.model.Transaction
 import com.cobrix.pocket.data.model.TransactionType
 import com.cobrix.pocket.service.parser.MultibankParserRouter
@@ -175,6 +176,27 @@ class PocketNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
+        val pkg = sbn.packageName?.lowercase(Locale.ROOT) ?: return
+
+        // 1. GUARD CLAUSE INMEDIATO: Blacklist inquebrantable de mensajería (Anti-Spoofing WhatsApp/Telegram)
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) {
+            return
+        }
+
+        // 2. GUARD CLAUSE INMEDIATO: Whitelist estricta de bancos autorizados por país
+        val activeCountry = PreferencesHelper.getCountryCode(this)
+        val isSmsEnabled = PreferencesHelper.isSmsDetectionEnabled(this)
+        val isBinanceEnabled = PreferencesHelper.isBinanceEnabled(this)
+        val allowedPackages = CountryProfileCatalog.getAllowedPackagesForCountry(
+            country = activeCountry,
+            includeSms = isSmsEnabled,
+            includeBinance = isBinanceEnabled
+        )
+
+        if (!allowedPackages.contains(pkg)) {
+            return // Descarte instantáneo de cualquier aplicación ajena a bancos autorizados
+        }
+
         processStatusBarNotification(sbn, playSound = true)
     }
 
@@ -247,10 +269,31 @@ class PocketNotificationListenerService : NotificationListenerService() {
     }
 
     private fun processStatusBarNotification(sbn: StatusBarNotification, playSound: Boolean): Boolean {
-        // 0. Filtros de seguridad del sistema Android:
+        val sbnPackageName = sbn.packageName?.lowercase(Locale.ROOT) ?: return false
+
+        // 0. CAPA DE SEGURIDAD 1: Blacklist estricta de mensajería (Anti-Spoofing WhatsApp/Telegram)
+        if (ParserUtils.isProhibitedMessagingPackage(sbnPackageName)) {
+            Log.w(TAG, "Notificación descartada por seguridad: paquete prohibido de mensajería ($sbnPackageName)")
+            return false
+        }
+
+        // CAPA DE SEGURIDAD 2: Whitelist estricta por CountryProfile y configuración del comercio
+        val activeCountry = PreferencesHelper.getCountryCode(this)
+        val isSmsEnabled = PreferencesHelper.isSmsDetectionEnabled(this)
+        val isBinanceEnabled = PreferencesHelper.isBinanceEnabled(this)
+        val allowedPackages = CountryProfileCatalog.getAllowedPackagesForCountry(
+            country = activeCountry,
+            includeSms = isSmsEnabled,
+            includeBinance = isBinanceEnabled
+        )
+
+        if (!allowedPackages.contains(sbnPackageName)) {
+            Log.d(TAG, "Notificación descartada: paquete $sbnPackageName no está en la lista blanca autorizada de $activeCountry")
+            return false
+        }
+
         // Descartar notificaciones emitidas por Zeasy (evita feedback loop y falsos cobros de Binance Pay)
-        val sbnPackageName = sbn.packageName
-        if (sbnPackageName == packageName || sbnPackageName.contains("cobrix") || sbnPackageName.contains("zeasy") || sbnPackageName.contains("zippy")) {
+        if (sbnPackageName == packageName.lowercase(Locale.ROOT) || sbnPackageName.contains("cobrix") || sbnPackageName.contains("zeasy") || sbnPackageName.contains("zippy")) {
             return false
         }
 

@@ -9,11 +9,13 @@ class GenericSmsParser : BankParser {
     override val bankCode: BankCode = BankCode.SMS
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
-        val combined = "$title $text"
-        val isOutgoing = ParserUtils.isOutgoingTransaction(combined)
-
+        if (ParserUtils.isProhibitedMessagingPackage(packageName)) return false
         val isSms = ParserUtils.isSmsPackage(packageName)
         if (!isSms) return false
+        if (!ParserUtils.isLegitimateBankSmsSender(title)) return false
+
+        val combined = "$title $text"
+        val isOutgoing = ParserUtils.isOutgoingTransaction(combined)
 
         val lower = combined.lowercase(Locale.ROOT)
         val hasPaymentWords = ParserUtils.hasIncomingIndicators(combined) ||

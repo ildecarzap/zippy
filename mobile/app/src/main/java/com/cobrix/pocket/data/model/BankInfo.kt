@@ -113,6 +113,13 @@ enum class BankCode(
         knownPackageNames = listOf("com.bna.bnamas"),
         country = CountryCode.AR
     ),
+    AR_UALA(
+        sudebanCode = "AR_UALA",
+        displayName = "Ualá",
+        defaultKeywords = listOf("ualá", "uala", "recibiste una transferencia", "te enviaron", "te transfirieron"),
+        knownPackageNames = listOf("com.uala", "ar.com.uala"),
+        country = CountryCode.AR
+    ),
 
     // --- TRANSVERSALES (SMS & BINANCE PAY) ---
     SMS(
@@ -190,6 +197,7 @@ object BankCatalog {
         BankCatalogEntry("AR_MP", "Mercado Pago", true, CountryCode.AR),
         BankCatalogEntry("AR_CDNI", "Cuenta DNI (Banco Provincia)", true, CountryCode.AR),
         BankCatalogEntry("AR_BNA", "BNA+ (Banco Nación / MODO)", true, CountryCode.AR),
+        BankCatalogEntry("AR_UALA", "Ualá", true, CountryCode.AR),
         BankCatalogEntry("AR_GAL", "Banco Galicia", false, CountryCode.AR),
         BankCatalogEntry("AR_BRU", "Brubank", false, CountryCode.AR),
         BankCatalogEntry("AR_SANT", "Banco Santander Argentina", false, CountryCode.AR)
@@ -261,6 +269,7 @@ object BankCatalog {
             "AR_MP" -> "Mercado Pago"
             "AR_CDNI" -> "Cuenta DNI"
             "AR_BNA" -> "BNA+"
+            "AR_UALA" -> "Ualá"
             "AR_GAL" -> "Galicia"
             "AR_BRU" -> "Brubank"
             "AR_SANT" -> "Santander AR"
@@ -286,6 +295,7 @@ object BankCatalog {
             "AR_MP" -> android.graphics.Color.parseColor("#009EE3") // Mercado Pago Cyan
             "AR_CDNI" -> android.graphics.Color.parseColor("#00875A") // Cuenta DNI Green
             "AR_BNA" -> android.graphics.Color.parseColor("#00529B") // BNA+ Blue
+            "AR_UALA" -> android.graphics.Color.parseColor("#E61E54") // Ualá Red/Pink
             else -> android.graphics.Color.parseColor("#0A2540")
         }
     }

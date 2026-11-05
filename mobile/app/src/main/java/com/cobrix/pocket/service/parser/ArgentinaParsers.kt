@@ -13,17 +13,18 @@ class MercadoPagoParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
+
+        val isMpOrigin = pkg.contains("mercadopago") ||
+                pkg.contains("mercadolibre") ||
+                BankCode.AR_MERCADOPAGO.knownPackageNames.any { pkg.equals(it, ignoreCase = true) }
+        if (!isMpOrigin) return false
+
         val clean = "${title.orEmpty()} $text"
             .replace('\u00A0', ' ')
             .replace('\u202F', ' ')
             .trim()
         val combined = clean.lowercase(Locale.ROOT)
-
-        val isMpOrigin = pkg.contains("mercadopago") ||
-                pkg.contains("mercadolibre") ||
-                pkg == "com.mercadopago.wallet" ||
-                combined.contains("mercado pago") ||
-                combined.contains("mercadopago")
 
         val isIncoming = combined.contains("recibiste") ||
                 combined.contains("te transfirieron") ||
@@ -80,15 +81,17 @@ class CuentaDniParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
+
+        val isCdniOrigin = pkg.contains("cuentadni") ||
+                BankCode.AR_CUENTADNI.knownPackageNames.any { pkg.equals(it, ignoreCase = true) }
+        if (!isCdniOrigin) return false
+
         val clean = "${title.orEmpty()} $text"
             .replace('\u00A0', ' ')
             .replace('\u202F', ' ')
             .trim()
         val combined = clean.lowercase(Locale.ROOT)
-
-        val isCdniOrigin = pkg.contains("cuentadni") ||
-                pkg == "ar.com.bapro.cuentadni" ||
-                combined.contains("cuenta dni")
 
         val isIncoming = combined.contains("recibiste") ||
                 combined.contains("se acreditó") ||
@@ -134,18 +137,17 @@ class BnaMasParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
+
+        val isBnaOrigin = pkg.contains("bnamas") || pkg.contains("bna") ||
+                BankCode.AR_BNA_MAS.knownPackageNames.any { pkg.equals(it, ignoreCase = true) }
+        if (!isBnaOrigin) return false
+
         val clean = "${title.orEmpty()} $text"
             .replace('\u00A0', ' ')
             .replace('\u202F', ' ')
             .trim()
         val combined = clean.lowercase(Locale.ROOT)
-
-        val isBnaOrigin = pkg.contains("bnamas") ||
-                pkg == "com.bna.bnamas" ||
-                combined.contains("bna+") ||
-                combined.contains("banco nacion") ||
-                combined.contains("banco nación") ||
-                combined.contains("modo")
 
         val isIncoming = combined.contains("recibiste") ||
                 combined.contains("transferencia recibida") ||

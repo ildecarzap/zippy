@@ -9,10 +9,15 @@ class BdvParser : BankParser {
 
     override fun canHandle(packageName: String, title: String?, text: String): Boolean {
         val pkg = packageName.lowercase(Locale.ROOT)
-        if (pkg.contains("bdv") || pkg.contains("bancodevenezuela")) return true
-        if (pkg.contains("mercantil") || pkg.contains("banesco") || pkg.contains("provincial") ||
-            pkg.contains("bbva") || pkg.contains("bnc") || pkg.contains("bancamiga") ||
-            pkg.contains("ubii")) return false
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
+
+        val isBdvApp = pkg.contains("bdv") || pkg.contains("bancodevenezuela") ||
+                BankCode.BDV.knownPackageNames.any { pkg.equals(it, ignoreCase = true) }
+        val isSms = ParserUtils.isSmsPackage(pkg) && ParserUtils.isLegitimateBankSmsSender(title) &&
+                (title?.contains("26371") == true || title?.contains("772") == true || title?.lowercase(Locale.ROOT)?.contains("bdv") == true || title?.lowercase(Locale.ROOT)?.contains("venezuela") == true)
+        val isEmail = ParserUtils.isEmailPackage(pkg) && (title?.lowercase(Locale.ROOT)?.contains("venezuela") == true || title?.lowercase(Locale.ROOT)?.contains("bdv") == true)
+
+        if (!isBdvApp && !isSms && !isEmail) return false
 
         val combined = "$title $text".lowercase(Locale.ROOT)
         return combined.contains("pagoclave") || combined.contains("pago clave") ||
