@@ -1597,6 +1597,14 @@ class MainActivity : AppCompatActivity() {
      * Muestra el modal de cobro por WhatsApp con teclado numérico integrado.
      */
     private fun showWhatsAppChargeDialog() {
+        val configuredCodes = PreferencesHelper.getConfiguredBankCodes(this)
+        val profile = PreferencesHelper.getUserProfile(this)
+        if (activeCashierBankCode.isBlank() && profile.bankCode.isBlank() && configuredCodes.isEmpty()) {
+            Toast.makeText(this, "⚙️ Por favor configura primero tu banco o datos de cobro en Ajustes", Toast.LENGTH_LONG).show()
+            binding.bottomNavigation.selectedItemId = R.id.nav_settings
+            return
+        }
+
         val dialog = Dialog(this)
         val dialogBinding = DialogWhatsappChargeBinding.inflate(layoutInflater)
         dialog.setContentView(dialogBinding.root)
@@ -1606,7 +1614,6 @@ class MainActivity : AppCompatActivity() {
         )
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
-        val profile = PreferencesHelper.getUserProfile(this)
         val countryProfile = PreferencesHelper.getCountryProfile(this)
         var wsBankCode = activeCashierBankCode
         var wsBankName = activeCashierBankName
@@ -1658,7 +1665,6 @@ class MainActivity : AppCompatActivity() {
         val isMultibank = PlanCapabilityManager.canUseMultibank(this)
         val canWallets = PlanCapabilityManager.canUseWallets(this)
         val hasBinance = canWallets && PreferencesHelper.isBinanceEnabled(this) && PreferencesHelper.getBinanceQrUri(this) != null
-        val configuredCodes = PreferencesHelper.getConfiguredBankCodes(this)
         val totalOptions = (if (isMultibank) configuredCodes.size else 1) + (if (hasBinance) 1 else 0)
 
         if (totalOptions > 1) {
@@ -5722,11 +5728,6 @@ class MainActivity : AppCompatActivity() {
                     refreshSetupWizardStepUi()
                 }
                 3 -> {
-                    val curProfile = PreferencesHelper.getUserProfile(this)
-                    if (curProfile.bankCode.isBlank()) {
-                        Toast.makeText(this, "🏦 Por favor toca el banco donde recibes tus pagos", Toast.LENGTH_LONG).show()
-                        return@setOnClickListener
-                    }
                     currentWizardStep = 4
                     PreferencesHelper.setOnboardingStep(this, 4)
                     refreshSetupWizardStepUi()
@@ -5859,15 +5860,20 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val countryBanks = BankCatalog.getBanksForCountry(cProf.code).filter { it.code != "0000" }
-                val activeCode = uProf.bankCode.ifBlank { countryBanks.firstOrNull()?.code ?: "" }
-                val activeName = BankCatalog.findByCode(activeCode)?.name ?: uProf.bankName
+                val activeCode = uProf.bankCode
+                val activeName = if (activeCode.isNotBlank()) BankCatalog.findByCode(activeCode)?.name ?: uProf.bankName else ""
 
-                wBinding.tvWizardSelectedBank.text = "✅ $activeName"
-                wBinding.tvWizardSelectedBank.setTextColor(Color.parseColor("#00875A"))
+                if (activeCode.isNotBlank()) {
+                    wBinding.tvWizardSelectedBank.text = "✅ $activeName"
+                    wBinding.tvWizardSelectedBank.setTextColor(Color.parseColor("#00875A"))
+                } else {
+                    wBinding.tvWizardSelectedBank.text = "👆 Toca tu banco o billetera abajo (Opcional)"
+                    wBinding.tvWizardSelectedBank.setTextColor(Color.parseColor("#64748B"))
+                }
 
                 wBinding.layoutWizardBanksContainer.removeAllViews()
                 countryBanks.forEach { bankEntry ->
-                    val isSelected = bankEntry.code.equals(activeCode, ignoreCase = true)
+                    val isSelected = activeCode.isNotBlank() && bankEntry.code.equals(activeCode, ignoreCase = true)
                     val btn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
                         layoutParams = ViewGroup.MarginLayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -5909,12 +5915,17 @@ class MainActivity : AppCompatActivity() {
                     wBinding.layoutWizardBanksContainer.addView(btn)
                 }
 
-                val hasQr = !PreferencesHelper.getBankQrUri(this, activeCode).isNullOrEmpty()
+                val hasQr = activeCode.isNotBlank() && !PreferencesHelper.getBankQrUri(this, activeCode).isNullOrEmpty()
                 wBinding.btnWizardUploadQr.setTextColor(Color.parseColor("#0A192F"))
                 wBinding.btnWizardUploadQr.strokeColor = ColorStateList.valueOf(Color.parseColor("#CBD5E1"))
                 wBinding.btnWizardUploadQr.backgroundTintList = ColorStateList.valueOf(Color.WHITE)
 
-                if (cProf.code == CountryCode.AR) {
+                if (activeCode.isBlank()) {
+                    wBinding.tvWizardQrStatus.text = "💡 Puedes elegir tu banco arriba o continuar y configurarlo más tarde."
+                    wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#64748B"))
+                    wBinding.btnWizardUploadQr.visibility = View.GONE
+                } else if (cProf.code == CountryCode.AR) {
+                    wBinding.btnWizardUploadQr.visibility = View.VISIBLE
                     if (hasQr) {
                         wBinding.tvWizardQrStatus.text = "✅ Ya subiste el código QR de $activeName (Opcional)"
                         wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#00875A"))
@@ -5925,6 +5936,7 @@ class MainActivity : AppCompatActivity() {
                         wBinding.btnWizardUploadQr.text = "📸 Subir QR (Opcional)"
                     }
                 } else {
+                    wBinding.btnWizardUploadQr.visibility = View.VISIBLE
                     if (hasQr) {
                         wBinding.tvWizardQrStatus.text = "✅ ¡Excelente! Ya subiste el código QR de $activeName"
                         wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#00875A"))
@@ -5936,7 +5948,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                wBinding.btnWizardNext.text = "Guardar Banco y Continuar ➔"
+                wBinding.btnWizardNext.text = if (activeCode.isNotBlank()) "Guardar Banco y Continuar ➔" else "Continuar ➔"
             }
             4 -> {
                 wBinding.tvWizardStepTitle.text = "🔔 4. Permiso para Cantar los Pagos"

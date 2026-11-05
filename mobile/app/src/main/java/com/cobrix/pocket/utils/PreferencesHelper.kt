@@ -444,11 +444,11 @@ object PreferencesHelper {
             }
         }
 
-        // 3. Garantizar que el banco principal pertenezca al país de operación actual
+        // 3. Garantizar que el banco principal pertenezca al país de operación actual (solo si ya se configuró un banco)
         val currentCountry = getCountryCode(context)
         val countryBanks = BankCatalog.getBanksForCountry(currentCountry)
         val currentBankCode = prefs.getString(KEY_BANK_CODE, null)
-        if (currentBankCode.isNullOrEmpty() || countryBanks.none { it.code.equals(currentBankCode, ignoreCase = true) }) {
+        if (!currentBankCode.isNullOrEmpty() && countryBanks.none { it.code.equals(currentBankCode, ignoreCase = true) }) {
             val defaultBank = BankCatalog.getDefaultBankForCountry(currentCountry)
             setPrimaryBank(context, defaultBank.code, defaultBank.name)
             if (!PlanCapabilityManager.canUseMultibank(context)) {
@@ -879,10 +879,10 @@ object PreferencesHelper {
             .putBoolean(KEY_COUNTRY_SELECTED_INITIAL, true)
             .apply()
 
-        // Si el banco principal actual no pertenece al nuevo país seleccionado, asignar el banco principal de ese país
+        // Si el usuario ya tenía un banco configurado y no pertenece al nuevo país seleccionado, adaptar al banco de ese país
         val currentBankCode = getPrimaryBankCode(context)
         val countryBanks = BankCatalog.getBanksForCountry(country)
-        if (countryBanks.none { it.code.equals(currentBankCode, ignoreCase = true) }) {
+        if (currentBankCode.isNotEmpty() && countryBanks.none { it.code.equals(currentBankCode, ignoreCase = true) }) {
             val defaultBank = BankCatalog.getDefaultBankForCountry(country)
             setPrimaryBank(context, defaultBank.code, defaultBank.name)
             // Filtrar bancos habilitados para mantener solo los del país activo y respetar restricciones de plan
@@ -896,7 +896,7 @@ object PreferencesHelper {
             } else {
                 prefs.edit().putStringSet(KEY_ENABLED_BANKS, filtered).apply()
             }
-        } else if (previous != country) {
+        } else if (previous != country && currentBankCode.isNotEmpty()) {
             sanitizeBasicPlanBank(context)
         }
     }
