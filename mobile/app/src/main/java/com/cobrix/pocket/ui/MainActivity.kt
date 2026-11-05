@@ -434,11 +434,8 @@ class MainActivity : AppCompatActivity() {
             androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO)
         }
 
-        // Habilitar Edge-to-Edge nativo para Android 15+ (targetSdk 35/36) con retrocompatibilidad
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
-        )
+        // Habilitar Edge-to-Edge nativo para Android 15+ (targetSdk 35/36) con APIs modernas no obsoletas
+        enableEdgeToEdge()
 
         super.onCreate(savedInstanceState)
         PreferencesHelper.sanitizeBasicPlanBank(this)
@@ -840,26 +837,23 @@ class MainActivity : AppCompatActivity() {
             CountryCode.VE -> {
                 binding.tvSettingsBankSectionTitle.text = "🏦 Pago Móvil y Bancos"
                 binding.tvSettingsBankSectionSubtitle.text = "Número receptor de Pago Móvil, Cédula o RIF y códigos QR"
-                binding.tilSettingsPhone.hint = "Teléfono Pago Móvil (ej. 04141234567)"
-                binding.etSettingsPhone.keyListener = android.text.method.DialerKeyListener.getInstance()
-                binding.etSettingsPhone.setRawInputType(InputType.TYPE_CLASS_PHONE)
-                binding.tilSettingsId.hint = "Cédula o RIF (ej. V12345678 o J123456789)"
+                binding.tilSettingsPhone.hint = "Teléfono Pago Móvil (ej. ${countryProfile.phonePlaceholder})"
+                binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_PHONE
+                binding.tilSettingsId.hint = "${countryProfile.nationalIdLabel} (ej. ${countryProfile.nationalIdPlaceholder})"
             }
             CountryCode.CO -> {
                 binding.tvSettingsBankSectionTitle.text = "🏦 Cobro por Transferencia y Bancos"
                 binding.tvSettingsBankSectionSubtitle.text = "Celular receptor Nequi/DaviPlata, Cédula/NIT y códigos QR"
-                binding.tilSettingsPhone.hint = "Celular Nequi / DaviPlata o Cuenta (ej. 3001234567)"
-                binding.etSettingsPhone.keyListener = android.text.method.DialerKeyListener.getInstance()
-                binding.etSettingsPhone.setRawInputType(InputType.TYPE_CLASS_PHONE)
-                binding.tilSettingsId.hint = "Cédula o NIT (ej. 1020304050 o 900123456-1)"
+                binding.tilSettingsPhone.hint = "Celular Nequi / DaviPlata o Cuenta (ej. ${countryProfile.phonePlaceholder})"
+                binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_PHONE
+                binding.tilSettingsId.hint = "${countryProfile.nationalIdLabel} (ej. ${countryProfile.nationalIdPlaceholder})"
             }
             CountryCode.AR -> {
                 binding.tvSettingsBankSectionTitle.text = "🏦 Cobro por Alias / CVU y Bancos"
                 binding.tvSettingsBankSectionSubtitle.text = "Tu Alias o CVU de Mercado Pago / Banco (0% de comisión)"
-                binding.tilSettingsPhone.hint = "Tu Alias o CVU de cobro (ej. mi.negocio.mp)"
-                binding.etSettingsPhone.keyListener = android.text.method.TextKeyListener.getInstance()
-                binding.etSettingsPhone.setRawInputType(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS)
-                binding.tilSettingsId.hint = "CUIT, CUIL o DNI (ej. 20-12345678-9)"
+                binding.tilSettingsPhone.hint = "Tu Alias o CVU de cobro (ej. ${countryProfile.phonePlaceholder})"
+                binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                binding.tilSettingsId.hint = "${countryProfile.nationalIdLabel} (ej. ${countryProfile.nationalIdPlaceholder})"
             }
         }
 
@@ -2257,7 +2251,7 @@ class MainActivity : AppCompatActivity() {
         dialog.setContentView(dBinding.root)
 
         val countryProfile = PreferencesHelper.getCountryProfile(this)
-        dBinding.tilNewDebtorPhone.hint = "Teléfono WhatsApp (ej. ${countryProfile.phonePlaceholder})"
+        dBinding.tilNewDebtorPhone.hint = "Teléfono WhatsApp (ej. ${countryProfile.mobilePhonePlaceholder})"
         dBinding.tilNewDebtorId.hint = "${countryProfile.nationalIdLabel} (Opcional, ej. ${countryProfile.nationalIdPlaceholder})"
 
         dBinding.btnPickContactNewDebtor.setOnClickListener {
@@ -2952,7 +2946,7 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
         val countryProfile = PreferencesHelper.getCountryProfile(this)
-        dBinding.tilEditDebtorPhone.hint = "Teléfono WhatsApp (ej. ${countryProfile.phonePlaceholder})"
+        dBinding.tilEditDebtorPhone.hint = "Teléfono WhatsApp (ej. ${countryProfile.mobilePhonePlaceholder})"
         dBinding.tilEditDebtorId.hint = "${countryProfile.nationalIdLabel} (Opcional, ej. ${countryProfile.nationalIdPlaceholder})"
 
         dBinding.etEditDebtorName.setText(debtor.name)

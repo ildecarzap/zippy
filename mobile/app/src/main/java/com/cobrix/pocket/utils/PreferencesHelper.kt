@@ -287,14 +287,6 @@ object PreferencesHelper {
             val file = java.io.File(Uri.parse(specific).path ?: specific)
             if (file.exists()) return specific
         }
-        val activeBank = prefs.getString(KEY_BANK_CODE, "")
-        if (bankCode == activeBank && !activeBank.isNullOrEmpty()) {
-            val legacy = prefs.getString(KEY_QR_URI, null)
-            if (!legacy.isNullOrEmpty()) {
-                val file = java.io.File(Uri.parse(legacy).path ?: legacy)
-                if (file.exists()) return legacy
-            }
-        }
         return null
     }
 
@@ -449,11 +441,14 @@ object PreferencesHelper {
         val countryBanks = BankCatalog.getBanksForCountry(currentCountry)
         val currentBankCode = prefs.getString(KEY_BANK_CODE, null)
         if (!currentBankCode.isNullOrEmpty() && countryBanks.none { it.code.equals(currentBankCode, ignoreCase = true) }) {
-            val defaultBank = BankCatalog.getDefaultBankForCountry(currentCountry)
-            setPrimaryBank(context, defaultBank.code, defaultBank.name)
-            if (!PlanCapabilityManager.canUseMultibank(context)) {
-                prefs.edit().putStringSet(KEY_ENABLED_BANKS, setOf(defaultBank.code)).apply()
-            }
+            // El banco configurado pertenece a otro país (ej. BDV de Venezuela mientras opera en Argentina).
+            // Se limpia para no forzar bancos cruzados en pantalla principal ni en Ajustes.
+            prefs.edit()
+                .remove(KEY_BANK_CODE)
+                .remove(KEY_BANK_NAME)
+                .remove(KEY_QR_URI)
+                .putStringSet(KEY_ENABLED_BANKS, emptySet())
+                .apply()
         }
 
         if (PlanCapabilityManager.canUseMultibank(context)) return

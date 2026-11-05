@@ -47,7 +47,8 @@ data class CountryProfile(
     val idDocumentHint: String,          // Ejemplo visual adaptado al país
     val phoneHint: String,               // Ejemplo de teléfono local
     val instantPaySystemName: String,    // VE: "Pago Móvil", CO: "Transferencia / QR", AR: "Transferencias 3.0"
-    val billingStrategy: PrimaryBillingStrategy
+    val billingStrategy: PrimaryBillingStrategy,
+    val mobilePhonePlaceholder: String = phoneHint
 ) {
     val code: CountryCode get() = country
     val flagEmoji: String get() = country.flagEmoji
@@ -106,7 +107,8 @@ object CountryProfileCatalog {
         idDocumentHint = "20-12345678-9 o DNI",
         phoneHint = "mi.negocio.mp o 1123456789",
         instantPaySystemName = "Transferencia (Alias / CVU)",
-        billingStrategy = PrimaryBillingStrategy.GOOGLE_PLAY_BILLING_FIRST
+        billingStrategy = PrimaryBillingStrategy.GOOGLE_PLAY_BILLING_FIRST,
+        mobilePhonePlaceholder = "1123456789"
     )
 
     fun getProfile(code: CountryCode): CountryProfile {
