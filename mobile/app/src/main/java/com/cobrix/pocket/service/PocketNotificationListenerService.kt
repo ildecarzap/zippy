@@ -183,18 +183,28 @@ class PocketNotificationListenerService : NotificationListenerService() {
             return
         }
 
-        // 2. GUARD CLAUSE INMEDIATO: Whitelist estricta de bancos autorizados por país
-        val activeCountry = PreferencesHelper.getCountryCode(this)
+        // 2. GUARD CLAUSE INMEDIATO: Whitelist estricta de bancos autorizados y ACTIVOS en Ajustes
+        val activeBankCodes = PreferencesHelper.getActiveListeningBankCodes(this)
         val isSmsEnabled = PreferencesHelper.isSmsDetectionEnabled(this)
-        val isBinanceEnabled = PreferencesHelper.isBinanceEnabled(this)
-        val allowedPackages = CountryProfileCatalog.getAllowedPackagesForCountry(
-            country = activeCountry,
-            includeSms = isSmsEnabled,
-            includeBinance = isBinanceEnabled
-        )
+        val isBinanceEnabled = PreferencesHelper.isBinanceEnabled(this) && PlanCapabilityManager.canUseWallets(this)
 
-        if (!allowedPackages.contains(pkg)) {
-            return // Descarte instantáneo de cualquier aplicación ajena a bancos autorizados
+        val activeAllowedPackages = mutableSetOf<String>()
+        activeBankCodes.forEach { code ->
+            BankCode.fromSudeban(code)?.knownPackageNames?.forEach {
+                activeAllowedPackages.add(it.lowercase(Locale.ROOT))
+            }
+        }
+        if (isBinanceEnabled) {
+            BankCode.BINANCE.knownPackageNames.forEach {
+                activeAllowedPackages.add(it.lowercase(Locale.ROOT))
+            }
+        }
+        if (isSmsEnabled) {
+            activeAllowedPackages.addAll(ParserUtils.OFFICIAL_SMS_PACKAGES)
+        }
+
+        if (!activeAllowedPackages.contains(pkg)) {
+            return // Descarte instantáneo si el banco no está configurado y activado en Ajustes
         }
 
         processStatusBarNotification(sbn, playSound = true)
@@ -277,18 +287,28 @@ class PocketNotificationListenerService : NotificationListenerService() {
             return false
         }
 
-        // CAPA DE SEGURIDAD 2: Whitelist estricta por CountryProfile y configuración del comercio
-        val activeCountry = PreferencesHelper.getCountryCode(this)
+        // CAPA DE SEGURIDAD 2: Whitelist estricta de bancos autorizados y ACTIVOS en Ajustes
+        val activeBankCodes = PreferencesHelper.getActiveListeningBankCodes(this)
         val isSmsEnabled = PreferencesHelper.isSmsDetectionEnabled(this)
-        val isBinanceEnabled = PreferencesHelper.isBinanceEnabled(this)
-        val allowedPackages = CountryProfileCatalog.getAllowedPackagesForCountry(
-            country = activeCountry,
-            includeSms = isSmsEnabled,
-            includeBinance = isBinanceEnabled
-        )
+        val isBinanceEnabled = PreferencesHelper.isBinanceEnabled(this) && PlanCapabilityManager.canUseWallets(this)
 
-        if (!allowedPackages.contains(sbnPackageName)) {
-            Log.d(TAG, "Notificación descartada: paquete $sbnPackageName no está en la lista blanca autorizada de $activeCountry")
+        val activeAllowedPackages = mutableSetOf<String>()
+        activeBankCodes.forEach { code ->
+            BankCode.fromSudeban(code)?.knownPackageNames?.forEach {
+                activeAllowedPackages.add(it.lowercase(Locale.ROOT))
+            }
+        }
+        if (isBinanceEnabled) {
+            BankCode.BINANCE.knownPackageNames.forEach {
+                activeAllowedPackages.add(it.lowercase(Locale.ROOT))
+            }
+        }
+        if (isSmsEnabled) {
+            activeAllowedPackages.addAll(ParserUtils.OFFICIAL_SMS_PACKAGES)
+        }
+
+        if (!activeAllowedPackages.contains(sbnPackageName)) {
+            Log.d(TAG, "Notificación descartada: paquete $sbnPackageName no pertenece a los bancos configurados y activos en Ajustes.")
             return false
         }
 
@@ -334,10 +354,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
         val isPro = PlanCapabilityManager.isPro(this)
         val profile = PreferencesHelper.getUserProfile(this)
 
-        // 3. Obtener códigos bancarios activos y configurados por el usuario
-        val activeBankCodes = PreferencesHelper.getActiveListeningBankCodes(this)
-
-        // Mapear códigos de bancos activos a BankCode enums para restringir los parsers
+        // 3. Mapear códigos de bancos activos a BankCode enums para restringir los parsers
         val enabledBankEnums = mutableSetOf<BankCode>()
         activeBankCodes.forEach { code ->
             BankCode.fromSudeban(code)?.let { enabledBankEnums.add(it) }

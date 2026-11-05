@@ -170,3 +170,4 @@ class AntiSpoofingSecurityTest {
         assertTrue(arWhitelist.contains("com.uala"))
     }
 }
+
