@@ -10,6 +10,8 @@ import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.cobrix.pocket.data.model.CountryProfile
+import com.cobrix.pocket.data.model.CountryProfileCatalog
 import com.cobrix.pocket.data.model.Debtor
 import com.cobrix.pocket.data.model.LedgerEntry
 import com.cobrix.pocket.data.model.LedgerEntryType
@@ -108,11 +110,14 @@ object ReportHelper {
         profile: UserProfile,
         transactions: List<Transaction>,
         periodLabel: String = "Hoy",
-        debtorsSummary: com.cobrix.pocket.data.model.DebtorsSummary? = null
+        debtorsSummary: com.cobrix.pocket.data.model.DebtorsSummary? = null,
+        countryProfile: CountryProfile = CountryProfileCatalog.VENEZUELA
     ): String {
         val now = Date()
-        val financials = calculateFinancials(transactions, profile.bcvRate)
+        val isBiCurrency = countryProfile.supportsExchangeRate
+        val financials = calculateFinancials(transactions, if (isBiCurrency) profile.bcvRate else 1.0)
         val sb = StringBuilder()
+        val currencySym = if (isBiCurrency) "Bs." else countryProfile.localCurrencySymbol
 
         sb.append("📊 *REPORTE DE CIERRE - ZEASY*\n")
         sb.append("─────────────────────────────────\n")
@@ -120,7 +125,11 @@ object ReportHelper {
         sb.append("🏷️ *Rubro:* ${profile.businessCategory}\n")
         sb.append("📅 *Periodo:* $periodLabel\n")
         sb.append("🕒 *Emitido el:* ${FULL_DATETIME_FORMAT.format(now)}\n")
-        sb.append("💵 *Tasa BCV Referencial:* Bs. ${String.format(Locale.US, "%.2f", profile.bcvRate)} / USD\n")
+        if (isBiCurrency) {
+            sb.append("💵 *Tasa BCV Referencial:* Bs. ${String.format(Locale.US, "%.2f", profile.bcvRate)} / USD\n")
+        } else {
+            sb.append("🌎 *Moneda Operativa:* ${countryProfile.localCurrencyDisplay}\n")
+        }
         sb.append("─────────────────────────────────\n\n")
 
         sb.append("📈 *DESGLOSE DE INGRESOS POR TIPO:*\n")
@@ -129,16 +138,29 @@ object ReportHelper {
         } else {
             financials.incomeByCategory.forEach { (category, data) ->
                 val (amountVes, count) = data
-                val amountUsd = if (profile.bcvRate > 0) amountVes / profile.bcvRate else 0.0
                 val displayName = TransactionCategories.getCategoryDisplayName(category)
-                sb.append("• $displayName ($count): Bs. ${String.format(Locale.US, "%.2f", amountVes)} ($${String.format(Locale.US, "%.2f", amountUsd)})\n")
+                if (isBiCurrency) {
+                    val amountUsd = if (profile.bcvRate > 0) amountVes / profile.bcvRate else 0.0
+                    sb.append("• $displayName ($count): Bs. ${String.format(Locale.US, "%.2f", amountVes)} ($${String.format(Locale.US, "%.2f", amountUsd)})\n")
+                } else {
+                    sb.append("• $displayName ($count): $currencySym ${String.format(Locale.US, "%.2f", amountVes)}\n")
+                }
             }
             if (financials.fiadoRecoveryVes > 0.0) {
-                sb.append("   ├─ 🛒 Ventas directas de contado: Bs. ${String.format(Locale.US, "%.2f", financials.directSalesVes)} ($${String.format(Locale.US, "%.2f", financials.directSalesUsd)})\n")
-                sb.append("   └─ 📒 Cobranza de fiados (Libreta): Bs. ${String.format(Locale.US, "%.2f", financials.fiadoRecoveryVes)} ($${String.format(Locale.US, "%.2f", financials.fiadoRecoveryUsd)})\n")
+                if (isBiCurrency) {
+                    sb.append("   ├─ 🛒 Ventas directas de contado: Bs. ${String.format(Locale.US, "%.2f", financials.directSalesVes)} ($${String.format(Locale.US, "%.2f", financials.directSalesUsd)})\n")
+                    sb.append("   └─ 📒 Cobranza de fiados (Libreta): Bs. ${String.format(Locale.US, "%.2f", financials.fiadoRecoveryVes)} ($${String.format(Locale.US, "%.2f", financials.fiadoRecoveryUsd)})\n")
+                } else {
+                    sb.append("   ├─ 🛒 Ventas directas de contado: $currencySym ${String.format(Locale.US, "%.2f", financials.directSalesVes)}\n")
+                    sb.append("   └─ 📒 Cobranza de fiados (Libreta): $currencySym ${String.format(Locale.US, "%.2f", financials.fiadoRecoveryVes)}\n")
+                }
             }
         }
-        sb.append("🟢 *TOTAL INGRESOS EN CAJA:* Bs. ${String.format(Locale.US, "%.2f", financials.totalIncomeVes)} ($${String.format(Locale.US, "%.2f", financials.totalIncomeUsd)})\n\n")
+        if (isBiCurrency) {
+            sb.append("🟢 *TOTAL INGRESOS EN CAJA:* Bs. ${String.format(Locale.US, "%.2f", financials.totalIncomeVes)} ($${String.format(Locale.US, "%.2f", financials.totalIncomeUsd)})\n\n")
+        } else {
+            sb.append("🟢 *TOTAL INGRESOS EN CAJA:* $currencySym ${String.format(Locale.US, "%.2f", financials.totalIncomeVes)}\n\n")
+        }
 
         sb.append("📉 *DESGLOSE DE GASTOS OPERATIVOS:*\n")
         if (financials.expenseByCategory.isEmpty()) {
@@ -146,33 +168,54 @@ object ReportHelper {
         } else {
             financials.expenseByCategory.forEach { (category, data) ->
                 val (amountVes, count) = data
-                val amountUsd = if (profile.bcvRate > 0) amountVes / profile.bcvRate else 0.0
                 val displayName = TransactionCategories.getCategoryDisplayName(category)
-                sb.append("• $displayName ($count): Bs. ${String.format(Locale.US, "%.2f", amountVes)} ($${String.format(Locale.US, "%.2f", amountUsd)})\n")
+                if (isBiCurrency) {
+                    val amountUsd = if (profile.bcvRate > 0) amountVes / profile.bcvRate else 0.0
+                    sb.append("• $displayName ($count): Bs. ${String.format(Locale.US, "%.2f", amountVes)} ($${String.format(Locale.US, "%.2f", amountUsd)})\n")
+                } else {
+                    sb.append("• $displayName ($count): $currencySym ${String.format(Locale.US, "%.2f", amountVes)}\n")
+                }
             }
         }
-        sb.append("🔴 *TOTAL GASTOS:* Bs. ${String.format(Locale.US, "%.2f", financials.totalExpenseVes)} ($${String.format(Locale.US, "%.2f", financials.totalExpenseUsd)})\n\n")
+        if (isBiCurrency) {
+            sb.append("🔴 *TOTAL GASTOS:* Bs. ${String.format(Locale.US, "%.2f", financials.totalExpenseVes)} ($${String.format(Locale.US, "%.2f", financials.totalExpenseUsd)})\n\n")
+        } else {
+            sb.append("🔴 *TOTAL GASTOS:* $currencySym ${String.format(Locale.US, "%.2f", financials.totalExpenseVes)}\n\n")
+        }
 
         sb.append("─────────────────────────────────\n")
         sb.append("🏁 *BALANCE FINAL - GANANCIA NETA REAL:*\n")
-        sb.append("👉 *Bs. ${String.format(Locale.US, "%.2f", financials.netProfitVes)}* ($${String.format(Locale.US, "%.2f", financials.netProfitUsd)} USD)\n")
+        if (isBiCurrency) {
+            sb.append("👉 *Bs. ${String.format(Locale.US, "%.2f", financials.netProfitVes)}* ($${String.format(Locale.US, "%.2f", financials.netProfitUsd)} USD)\n")
+        } else {
+            sb.append("👉 *$currencySym ${String.format(Locale.US, "%.2f", financials.netProfitVes)}* (${countryProfile.localCurrencyCode})\n")
+        }
         sb.append("─────────────────────────────────\n")
 
         // Inclusión de la Libreta de Cuentas por Cobrar y Saldos a Favor
         if (debtorsSummary != null && (debtorsSummary.debtorsCount > 0 || debtorsSummary.creditsCount > 0)) {
             sb.append("\n📒 *LIBRETA DE CLIENTES Y CUENTAS POR COBRAR:*\n")
             if (debtorsSummary.debtorsCount > 0) {
-                val totalStreetVes = debtorsSummary.totalDebtUsd * (if (profile.bcvRate > 0) profile.bcvRate else 1.0)
-                sb.append("• 🔴 Fiados por cobrar: $${String.format(Locale.US, "%.2f", debtorsSummary.totalDebtUsd)} USD (≈ Bs. ${String.format(Locale.US, "%.2f", totalStreetVes)})\n")
+                if (isBiCurrency) {
+                    val totalStreetVes = debtorsSummary.totalDebtUsd * (if (profile.bcvRate > 0) profile.bcvRate else 1.0)
+                    sb.append("• 🔴 Fiados por cobrar: $${String.format(Locale.US, "%.2f", debtorsSummary.totalDebtUsd)} USD (≈ Bs. ${String.format(Locale.US, "%.2f", totalStreetVes)})\n")
+                } else {
+                    sb.append("• 🔴 Cuentas por cobrar: $currencySym ${String.format(Locale.US, "%.2f", debtorsSummary.totalDebtUsd)} (${countryProfile.localCurrencyCode})\n")
+                }
                 sb.append("   ↳ Clientes con deuda pendiente: ${debtorsSummary.debtorsCount}\n")
             }
             if (debtorsSummary.creditsCount > 0) {
-                sb.append("• 🟢 Saldos a favor de clientes: $${String.format(Locale.US, "%.2f", debtorsSummary.totalCreditUsd)} USD (${debtorsSummary.creditsCount} clientes con crédito disponible)\n")
+                if (isBiCurrency) {
+                    sb.append("• 🟢 Saldos a favor de clientes: $${String.format(Locale.US, "%.2f", debtorsSummary.totalCreditUsd)} USD (${debtorsSummary.creditsCount} clientes con crédito disponible)\n")
+                } else {
+                    sb.append("• 🟢 Saldos a favor de clientes: $currencySym ${String.format(Locale.US, "%.2f", debtorsSummary.totalCreditUsd)} (${debtorsSummary.creditsCount} clientes con crédito disponible)\n")
+                }
             }
             sb.append("─────────────────────────────────\n")
         }
 
-        sb.append("\n📝 *DETALLE DE MOVIMIENTOS CON TASA HISTÓRICA:* (${transactions.size})\n")
+        val movementsTitle = if (isBiCurrency) "DETALLE DE MOVIMIENTOS CON TASA HISTÓRICA:" else "DETALLE DE MOVIMIENTOS:"
+        sb.append("\n📝 *$movementsTitle* (${transactions.size})\n")
         if (transactions.isEmpty()) {
             sb.append("• No hubo movimientos registrados en el periodo seleccionado.\n")
         } else {
@@ -181,12 +224,16 @@ object ReportHelper {
                 val dtStr = dateTimeFormat.format(Date(tx.timestamp))
                 val sign = if (tx.type == TransactionType.INCOME) "+" else "-"
                 val catName = TransactionCategories.getCategoryDisplayName(tx.category)
-                val txRate = if (tx.amountUsd > 0) tx.amount / tx.amountUsd else profile.bcvRate
-                val rateStr = "tasa: Bs. ${String.format(Locale.US, "%.2f", txRate)}"
                 val refStr = if (tx.reference.isNotEmpty()) "🔢 *Ref: ${tx.reference}*" else "🔢 *Ref: S/R*"
                 val bankTag = if (tx.bankName.isNotEmpty()) " • ${tx.bankName}" else ""
                 val noteTag = if (tx.note.isNotEmpty()) " (${tx.note})" else ""
-                sb.append("• [$dtStr] $sign Bs. ${String.format(Locale.US, "%.2f", tx.amount)} ($${String.format(Locale.US, "%.2f", tx.amountUsd)} @ $rateStr)\n")
+                if (isBiCurrency) {
+                    val txRate = if (tx.amountUsd > 0) tx.amount / tx.amountUsd else profile.bcvRate
+                    val rateStr = "tasa: Bs. ${String.format(Locale.US, "%.2f", txRate)}"
+                    sb.append("• [$dtStr] $sign Bs. ${String.format(Locale.US, "%.2f", tx.amount)} ($${String.format(Locale.US, "%.2f", tx.amountUsd)} @ $rateStr)\n")
+                } else {
+                    sb.append("• [$dtStr] $sign $currencySym ${String.format(Locale.US, "%.2f", tx.amount)}\n")
+                }
                 sb.append("   ↳ $refStr$bankTag | $catName$noteTag\n")
             }
             if (transactions.size > 30) {
@@ -235,7 +282,10 @@ object ReportHelper {
         transactions: List<Transaction>,
         periodLabel: String = "Hoy"
     ): File? {
-        val financials = calculateFinancials(transactions, profile.bcvRate)
+        val countryProfile = PreferencesHelper.getCountryProfile(context)
+        val isBiCurrency = countryProfile.supportsExchangeRate
+        val currencySym = if (isBiCurrency) "Bs." else countryProfile.localCurrencySymbol
+        val financials = calculateFinancials(transactions, if (isBiCurrency) profile.bcvRate else 1.0)
 
         val pageWidth = 595 // A4 standard width in points (72 dpi)
         val pageHeight = 842 // A4 standard height
@@ -337,8 +387,13 @@ object ReportHelper {
         canvas.drawText("Periodo Consultado:", col2, y + 18f, paintLabel)
         canvas.drawText(periodLabel, col2, y + 32f, paintValue)
 
-        canvas.drawText("Tasa BCV Referencial:", col2, y + 46f, paintLabel)
-        canvas.drawText("Bs. ${String.format(Locale.US, "%.2f", profile.bcvRate)} / USD", col2, y + 58f, paintValue)
+        if (isBiCurrency) {
+            canvas.drawText("Tasa BCV Referencial:", col2, y + 46f, paintLabel)
+            canvas.drawText("Bs. ${String.format(Locale.US, "%.2f", profile.bcvRate)} / USD", col2, y + 58f, paintValue)
+        } else {
+            canvas.drawText("Moneda Operativa:", col2, y + 46f, paintLabel)
+            canvas.drawText("${countryProfile.displayName} (${countryProfile.localCurrencyCode})", col2, y + 58f, paintValue)
+        }
 
         y += 80f
 
@@ -349,15 +404,23 @@ object ReportHelper {
         // KPI Ingresos
         canvas.drawRoundRect(margin, y, margin + kpiWidth, y + kpiHeight, 6f, 6f, paintBoxBg)
         canvas.drawText("TOTAL INGRESOS (${financials.incomeCount})", margin + 8f, y + 16f, paintLabel)
-        canvas.drawText("Bs. ${String.format(Locale.US, "%.2f", financials.totalIncomeVes)}", margin + 8f, y + 32f, paintIncome)
-        canvas.drawText("≈ $${String.format(Locale.US, "%.2f", financials.totalIncomeUsd)} USD", margin + 8f, y + 45f, paintLabel)
+        canvas.drawText("$currencySym ${String.format(Locale.US, "%.2f", financials.totalIncomeVes)}", margin + 8f, y + 32f, paintIncome)
+        if (isBiCurrency) {
+            canvas.drawText("≈ $${String.format(Locale.US, "%.2f", financials.totalIncomeUsd)} USD", margin + 8f, y + 45f, paintLabel)
+        } else {
+            canvas.drawText("${countryProfile.localCurrencyCode} directo", margin + 8f, y + 45f, paintLabel)
+        }
 
         // KPI Gastos
         val kpi2X = margin + kpiWidth + 8f
         canvas.drawRoundRect(kpi2X, y, kpi2X + kpiWidth, y + kpiHeight, 6f, 6f, paintBoxBg)
         canvas.drawText("TOTAL GASTOS (${financials.expenseCount})", kpi2X + 8f, y + 16f, paintLabel)
-        canvas.drawText("Bs. ${String.format(Locale.US, "%.2f", financials.totalExpenseVes)}", kpi2X + 8f, y + 32f, paintExpense)
-        canvas.drawText("≈ $${String.format(Locale.US, "%.2f", financials.totalExpenseUsd)} USD", kpi2X + 8f, y + 45f, paintLabel)
+        canvas.drawText("$currencySym ${String.format(Locale.US, "%.2f", financials.totalExpenseVes)}", kpi2X + 8f, y + 32f, paintExpense)
+        if (isBiCurrency) {
+            canvas.drawText("≈ $${String.format(Locale.US, "%.2f", financials.totalExpenseUsd)} USD", kpi2X + 8f, y + 45f, paintLabel)
+        } else {
+            canvas.drawText("${countryProfile.localCurrencyCode} directo", kpi2X + 8f, y + 45f, paintLabel)
+        }
 
         // KPI Ganancia Neta
         val kpi3X = kpi2X + kpiWidth + 8f
@@ -367,8 +430,12 @@ object ReportHelper {
         }
         canvas.drawRoundRect(kpi3X, y, kpi3X + kpiWidth, y + kpiHeight, 6f, 6f, paintNetBg)
         canvas.drawText("GANANCIA NETA REAL", kpi3X + 8f, y + 16f, paintSubtitle)
-        canvas.drawText("Bs. ${String.format(Locale.US, "%.2f", financials.netProfitVes)}", kpi3X + 8f, y + 32f, paintTitle)
-        canvas.drawText("≈ $${String.format(Locale.US, "%.2f", financials.netProfitUsd)} USD", kpi3X + 8f, y + 45f, paintSubtitle)
+        canvas.drawText("$currencySym ${String.format(Locale.US, "%.2f", financials.netProfitVes)}", kpi3X + 8f, y + 32f, paintTitle)
+        if (isBiCurrency) {
+            canvas.drawText("≈ $${String.format(Locale.US, "%.2f", financials.netProfitUsd)} USD", kpi3X + 8f, y + 45f, paintSubtitle)
+        } else {
+            canvas.drawText("Balance Operativo", kpi3X + 8f, y + 45f, paintSubtitle)
+        }
 
         y += 70f
 
@@ -380,8 +447,10 @@ object ReportHelper {
 
         canvas.drawText("Tipo de Ingreso / Origen", margin, y, paintLabel)
         canvas.drawText("Operaciones", margin + 260f, y, paintLabel)
-        canvas.drawText("Subtotal Bs.", margin + 350f, y, paintLabel)
-        canvas.drawText("Subtotal USD", margin + 440f, y, paintLabel)
+        canvas.drawText(if (isBiCurrency) "Subtotal Bs." else "Subtotal (${countryProfile.localCurrencyCode})", margin + 350f, y, paintLabel)
+        if (isBiCurrency) {
+            canvas.drawText("Subtotal USD", margin + 440f, y, paintLabel)
+        }
         y += 6f
         canvas.drawLine(margin, y, margin + contentWidth, y, paintLine)
         y += 14f
@@ -392,12 +461,14 @@ object ReportHelper {
         } else {
             financials.incomeByCategory.forEach { (category, data) ->
                 val (amtVes, count) = data
-                val amtUsd = if (profile.bcvRate > 0) amtVes / profile.bcvRate else 0.0
                 val displayName = TransactionCategories.getCategoryDisplayName(category)
                 canvas.drawText(displayName, margin, y, paintTableText)
                 canvas.drawText("$count cobros", margin + 260f, y, paintTableText)
-                canvas.drawText("Bs. ${String.format(Locale.US, "%.2f", amtVes)}", margin + 350f, y, paintIncome)
-                canvas.drawText("$${String.format(Locale.US, "%.2f", amtUsd)}", margin + 440f, y, paintTableText)
+                canvas.drawText("$currencySym ${String.format(Locale.US, "%.2f", amtVes)}", margin + 350f, y, paintIncome)
+                if (isBiCurrency) {
+                    val amtUsd = if (profile.bcvRate > 0) amtVes / profile.bcvRate else 0.0
+                    canvas.drawText("$${String.format(Locale.US, "%.2f", amtUsd)}", margin + 440f, y, paintTableText)
+                }
                 y += 16f
             }
         }
@@ -412,8 +483,10 @@ object ReportHelper {
 
         canvas.drawText("Categoría de Gasto", margin, y, paintLabel)
         canvas.drawText("Registros", margin + 260f, y, paintLabel)
-        canvas.drawText("Subtotal Bs.", margin + 350f, y, paintLabel)
-        canvas.drawText("Subtotal USD", margin + 440f, y, paintLabel)
+        canvas.drawText(if (isBiCurrency) "Subtotal Bs." else "Subtotal (${countryProfile.localCurrencyCode})", margin + 350f, y, paintLabel)
+        if (isBiCurrency) {
+            canvas.drawText("Subtotal USD", margin + 440f, y, paintLabel)
+        }
         y += 6f
         canvas.drawLine(margin, y, margin + contentWidth, y, paintLine)
         y += 14f
@@ -424,12 +497,14 @@ object ReportHelper {
         } else {
             financials.expenseByCategory.forEach { (category, data) ->
                 val (amtVes, count) = data
-                val amtUsd = if (profile.bcvRate > 0) amtVes / profile.bcvRate else 0.0
                 val displayName = TransactionCategories.getCategoryDisplayName(category)
                 canvas.drawText(displayName, margin, y, paintTableText)
                 canvas.drawText("$count gastos", margin + 260f, y, paintTableText)
-                canvas.drawText("Bs. ${String.format(Locale.US, "%.2f", amtVes)}", margin + 350f, y, paintExpense)
-                canvas.drawText("$${String.format(Locale.US, "%.2f", amtUsd)}", margin + 440f, y, paintTableText)
+                canvas.drawText("$currencySym ${String.format(Locale.US, "%.2f", amtVes)}", margin + 350f, y, paintExpense)
+                if (isBiCurrency) {
+                    val amtUsd = if (profile.bcvRate > 0) amtVes / profile.bcvRate else 0.0
+                    canvas.drawText("$${String.format(Locale.US, "%.2f", amtUsd)}", margin + 440f, y, paintTableText)
+                }
                 y += 16f
             }
         }
@@ -445,8 +520,13 @@ object ReportHelper {
         canvas.drawText("Fecha/Hora", margin, y, paintLabel)
         canvas.drawText("Concepto / Tipo", margin + 65f, y, paintLabel)
         canvas.drawText("Ref / Nota", margin + 195f, y, paintLabel)
-        canvas.drawText("Tasa Dólar", margin + 335f, y, paintLabel)
-        canvas.drawText("Monto Bs. ($ USD)", margin + 415f, y, paintLabel)
+        if (isBiCurrency) {
+            canvas.drawText("Tasa Dólar", margin + 335f, y, paintLabel)
+            canvas.drawText("Monto Bs. ($ USD)", margin + 415f, y, paintLabel)
+        } else {
+            canvas.drawText("Moneda", margin + 335f, y, paintLabel)
+            canvas.drawText("Monto ($currencySym)", margin + 415f, y, paintLabel)
+        }
         y += 6f
         canvas.drawLine(margin, y, margin + contentWidth, y, paintLine)
         y += 14f
@@ -463,15 +543,21 @@ object ReportHelper {
             val sign = if (isIncome) "+" else "-"
             val catName = TransactionCategories.getCategoryDisplayName(tx.category)
             val refText = if (tx.reference.isNotEmpty()) "Ref: ${tx.reference}" else tx.note.ifEmpty { "S/R" }
-            val txRate = if (tx.amountUsd > 0) tx.amount / tx.amountUsd else profile.bcvRate
-            val rateStr = "Bs. ${String.format(Locale.US, "%.2f", txRate)}"
 
             canvas.drawText(dtStr, margin, y, paintTableText)
             canvas.drawText(catName.take(20), margin + 65f, y, paintTableText)
             canvas.drawText(refText.take(22), margin + 195f, y, paintTableText)
-            canvas.drawText(rateStr, margin + 335f, y, paintTableText)
-            val amountStr = "$sign${String.format(Locale.US, "%.2f", tx.amount)} ($${String.format(Locale.US, "%.2f", tx.amountUsd)})"
-            canvas.drawText(amountStr, margin + 415f, y, if (isIncome) paintIncome else paintExpense)
+            if (isBiCurrency) {
+                val txRate = if (tx.amountUsd > 0) tx.amount / tx.amountUsd else profile.bcvRate
+                val rateStr = "Bs. ${String.format(Locale.US, "%.2f", txRate)}"
+                canvas.drawText(rateStr, margin + 335f, y, paintTableText)
+                val amountStr = "$sign${String.format(Locale.US, "%.2f", tx.amount)} ($${String.format(Locale.US, "%.2f", tx.amountUsd)})"
+                canvas.drawText(amountStr, margin + 415f, y, if (isIncome) paintIncome else paintExpense)
+            } else {
+                canvas.drawText(countryProfile.localCurrencyCode, margin + 335f, y, paintTableText)
+                val amountStr = "$sign$currencySym ${String.format(Locale.US, "%.2f", tx.amount)}"
+                canvas.drawText(amountStr, margin + 415f, y, if (isIncome) paintIncome else paintExpense)
+            }
 
             y += 14f
         }
@@ -555,18 +641,28 @@ object ReportHelper {
         val csvFile = File(reportsDir, "reporte_jornada_${fileTimestamp}.csv")
 
         return try {
+            val countryProfile = PreferencesHelper.getCountryProfile(context)
+            val isBiCurrency = countryProfile.supportsExchangeRate
             val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.US)
             val timeFormat = SimpleDateFormat("HH:mm", Locale.US)
 
             val sb = StringBuilder()
             // Encabezado comercial
             sb.append("Comercio;").append("\"${profile.merchantName}\"").append("\n")
-            sb.append("RIF / Cedula;").append("\"${profile.idCard}\"").append("\n")
+            sb.append("${countryProfile.nationalIdLabel};").append("\"${profile.idCard}\"").append("\n")
             sb.append("Periodo;").append("\"$periodTitle\"").append("\n")
-            sb.append("Tasa BCV Referencial;").append(String.format(Locale.US, "%.2f", profile.bcvRate)).append("\n\n")
+            if (isBiCurrency) {
+                sb.append("Tasa BCV Referencial;").append(String.format(Locale.US, "%.2f", profile.bcvRate)).append("\n\n")
+            } else {
+                sb.append("Moneda Operativa;").append("\"${countryProfile.localCurrencyCode}\"").append("\n\n")
+            }
 
             // Columnas de la tabla de ventas
-            sb.append("Fecha;Hora;Tipo;Categoria;Banco / Metodo;Monto Bs;Monto USD;Referencia;Remitente / Pagador;Nota\n")
+            if (isBiCurrency) {
+                sb.append("Fecha;Hora;Tipo;Categoria;Banco / Metodo;Monto Bs;Monto USD;Referencia;Remitente / Pagador;Nota\n")
+            } else {
+                sb.append("Fecha;Hora;Tipo;Categoria;Banco / Metodo;Monto (${countryProfile.localCurrencyCode});Monto USD;Referencia;Remitente / Pagador;Nota\n")
+            }
 
             for (tx in transactions) {
                 val dateStr = dateFormat.format(Date(tx.timestamp))
@@ -589,17 +685,19 @@ object ReportHelper {
             val sumExpenseBs = totalExpense.sumOf { it.amount }
             val netBs = sumIncomeBs - sumExpenseBs
 
+            val currHeader = if (isBiCurrency) "BS" else countryProfile.localCurrencyCode
             sb.append("\n")
-            sb.append("TOTAL COBRADO (BS);;;;;" + String.format(Locale.US, "%.2f", sumIncomeBs) + "\n")
-            sb.append("TOTAL GASTOS (BS);;;;;" + String.format(Locale.US, "%.2f", sumExpenseBs) + "\n")
-            sb.append("BALANCE NETO (BS);;;;;" + String.format(Locale.US, "%.2f", netBs) + "\n")
+            sb.append("TOTAL COBRADO ($currHeader);;;;;" + String.format(Locale.US, "%.2f", sumIncomeBs) + "\n")
+            sb.append("TOTAL GASTOS ($currHeader);;;;;" + String.format(Locale.US, "%.2f", sumExpenseBs) + "\n")
+            sb.append("BALANCE NETO ($currHeader);;;;;" + String.format(Locale.US, "%.2f", netBs) + "\n")
 
             // Si hay clientes en la libreta, agregar sección al reporte Excel
             if (!debtors.isNullOrEmpty()) {
-                val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+                val rate = if (isBiCurrency && profile.bcvRate > 0) profile.bcvRate else 1.0
                 sb.append("\n\n")
-                sb.append("--- LIBRETA DE CLIENTES (FIADOS Y SALDOS A FAVOR) ---\n")
-                sb.append("Cliente;Telefono;Cedula;Estado;Saldo USD;Equivalente Bs\n")
+                sb.append("--- LIBRETA DE CLIENTES (CUENTAS POR COBRAR Y SALDOS A FAVOR) ---\n")
+                val equivCol = if (isBiCurrency) "Equivalente Bs" else "Saldo (${countryProfile.localCurrencyCode})"
+                sb.append("Cliente;Telefono;${countryProfile.nationalIdLabel};Estado;Saldo Base;$equivCol\n")
                 for (d in debtors) {
                     val status = when {
                         d.isDebtor -> "DEUDOR (FIADO)"

@@ -3743,14 +3743,16 @@ class MainActivity : AppCompatActivity() {
         dialogBinding.btnShareOptionWhatsApp.setOnClickListener {
             dialog.dismiss()
             val debtorsSummary = dbHelper.getDebtorsSummary()
-            val fullTextReport = ReportHelper.generateDetailedTextReport(profile, currentFilteredTransactions, filterPeriodLabel, debtorsSummary)
+            val countryProfile = PreferencesHelper.getCountryProfile(this)
+            val fullTextReport = ReportHelper.generateDetailedTextReport(profile, currentFilteredTransactions, filterPeriodLabel, debtorsSummary, countryProfile)
             WhatsAppHelper.sendViaWhatsApp(this, "", fullTextReport)
         }
 
         dialogBinding.btnShareOptionEmail.setOnClickListener {
             dialog.dismiss()
             val debtorsSummary = dbHelper.getDebtorsSummary()
-            val fullTextReport = ReportHelper.generateDetailedTextReport(profile, currentFilteredTransactions, filterPeriodLabel, debtorsSummary)
+            val countryProfile = PreferencesHelper.getCountryProfile(this)
+            val fullTextReport = ReportHelper.generateDetailedTextReport(profile, currentFilteredTransactions, filterPeriodLabel, debtorsSummary, countryProfile)
             ReportHelper.shareViaEmail(this, profile, fullTextReport, filterPeriodLabel)
         }
 
@@ -5274,6 +5276,9 @@ class MainActivity : AppCompatActivity() {
      * o al iniciar una nueva jornada diaria, manteniendo los cálculos al día sin intervención.
      */
     private fun autoSyncBcvRateDaily() {
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        if (!countryProfile.supportsExchangeRate) return
+
         val lastSync = PreferencesHelper.getLastBcvSyncTime(this)
         val fourHoursMs = 4 * 60 * 60 * 1000L
         if (System.currentTimeMillis() - lastSync >= fourHoursMs) {

@@ -348,9 +348,19 @@ class PocketNotificationListenerService : NotificationListenerService() {
         }
 
         // 5. Deduplicación en Base de Datos SQLite (garantiza que si la app se abre o reinicia no vuelva a duplicar)
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        val isBiCurrency = countryProfile.supportsExchangeRate
+        val effectiveRate = if (isBiCurrency && profile.bcvRate > 0) profile.bcvRate else 1.0
+
         val isUsdt = (parsedPayment.moneda == "USD")
-        val amountVes = if (isUsdt) (parsedPayment.monto * profile.bcvRate) else parsedPayment.monto
-        val amountUsd = if (isUsdt) parsedPayment.monto else (if (profile.bcvRate > 0) parsedPayment.monto / profile.bcvRate else 0.0)
+        val amountVes = if (isUsdt) (parsedPayment.monto * effectiveRate) else parsedPayment.monto
+        val amountUsd = if (isUsdt) {
+            parsedPayment.monto
+        } else if (isBiCurrency) {
+            if (effectiveRate > 0) parsedPayment.monto / effectiveRate else 0.0
+        } else {
+            parsedPayment.monto
+        }
 
         val cal = java.util.Calendar.getInstance().apply {
             set(java.util.Calendar.HOUR_OF_DAY, 0)
@@ -436,11 +446,11 @@ class PocketNotificationListenerService : NotificationListenerService() {
         }
 
         // 6. Verificar Conciliación Automática con Libreta de Fiados (por monto exacto con céntimos adicionales - Función PRO)
-        val concilMatch = if (!isUsdt && profile.bcvRate > 0 && PlanCapabilityManager.canUseAutoConciliation(this)) {
+        val concilMatch = if (!isUsdt && PlanCapabilityManager.canUseAutoConciliation(this)) {
             dbHelper.findDebtorForAutoConciliation(
                 context = this,
                 amountVes = amountVes,
-                bcvRate = profile.bcvRate,
+                bcvRate = effectiveRate,
                 senderPhone = parsedPayment.telefonoOrigen
             )
         } else null
@@ -481,16 +491,17 @@ class PocketNotificationListenerService : NotificationListenerService() {
         if (matchedDebtor != null && concilMatch != null && insertedTxId > 0L) {
             // Descontar deuda total o el monto del abono parcial acordado
             val discountUsd = concilMatch.discountUsd
+            val concilMethodName = if (countryProfile.supportsExchangeRate) "Pago Móvil" else countryProfile.instantPaySystemName
             dbHelper.addPayment(
                 debtorId = matchedDebtor.id,
                 amountUsd = discountUsd,
                 amountVes = amountVes,
-                bcvRate = profile.bcvRate,
+                bcvRate = effectiveRate,
                 matchedTxId = insertedTxId,
-                notes = "Conciliación automática Pago Móvil ${parsedPayment.bancoCodigo.displayName} (Ref: ${parsedPayment.referenciaUltimos4})"
+                notes = "Conciliación automática $concilMethodName ${parsedPayment.bancoCodigo.displayName} (Ref: ${parsedPayment.referenciaUltimos4})"
             )
             PreferencesHelper.clearPendingDebtorConciliation(this, matchedDebtor.id)
-            Log.i(TAG, "✅ Deuda de ${matchedDebtor.name} ($discountUsd USD) conciliada y descontada automáticamente con Pago Móvil Bs. $amountVes")
+            Log.i(TAG, "✅ Deuda de ${matchedDebtor.name} ($discountUsd ${if (countryProfile.supportsExchangeRate) "USD" else countryProfile.localCurrencyCode}) conciliada y descontada automáticamente con $concilMethodName por $amountVes")
         }
 
         // 7. Alerta Sonora y Voz según el modo de Soundbox configurado y capacidades del plan

@@ -90,8 +90,17 @@ object ParserUtils {
                     if (detectedPhone != null && (ref == detectedPhone || (ref.length >= 7 && detectedPhone.contains(ref)))) {
                         continue
                     }
+                    // Exclusión de números de teléfono móvil de Venezuela (0414, 0424, 0412, 0416, 0426, 584...)
                     if ((ref.startsWith("0414") || ref.startsWith("0424") || ref.startsWith("0412") ||
                          ref.startsWith("0416") || ref.startsWith("0426") || ref.startsWith("584")) && ref.length in 10..12) {
+                        continue
+                    }
+                    // Exclusión de números móviles de Colombia (prefijos 3xx, 573xx)
+                    if (ref.matches(Regex("^(?:57)?3[0-9]{9}$"))) {
+                        continue
+                    }
+                    // Exclusión de números móviles de Argentina (prefijos 11, 15, 549)
+                    if (ref.matches(Regex("^(?:549)?(?:11|15)[0-9]{8}$")) || ref.matches(Regex("^549[0-9]{9,11}$"))) {
                         continue
                     }
                     return ref
