@@ -82,10 +82,11 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilEditDebtorPhone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:hint="Teléfono WhatsApp (ej. 04141234567)">
+        android:hint="Teléfono WhatsApp">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etEditDebtorPhone"
@@ -97,10 +98,11 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilEditDebtorId"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:hint="Cédula / RIF (Opcional, ej. V-18456789)">
+        android:hint="Documento / Identificación (Opcional)">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etEditDebtorId"

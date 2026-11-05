@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import com.cobrix.pocket.data.model.CountryCode
 import com.cobrix.pocket.data.model.CountryProfile
 import com.cobrix.pocket.data.model.CountryProfileCatalog
 import com.cobrix.pocket.data.model.UserProfile
@@ -94,7 +95,8 @@ object WhatsAppHelper {
         conciliationCents: Double = 0.01,
         requestedAmountUsd: Double? = null,
         includeConciliationCents: Boolean = true,
-        countryProfile: CountryProfile = CountryProfileCatalog.VENEZUELA
+        countryProfile: CountryProfile = CountryProfileCatalog.VENEZUELA,
+        hasQr: Boolean = false
     ): String {
         val totalDebtUsd = Math.abs(balanceUsd)
         val targetUsd = (requestedAmountUsd ?: totalDebtUsd).coerceAtLeast(0.01)
@@ -115,6 +117,7 @@ object WhatsAppHelper {
         val concilVesFmt = String.format(Locale.US, "%.2f", concilVes)
         val noteSection = if (recentConcept.isNotBlank()) "📝 *Concepto:* $recentConcept\n" else ""
         val merchant = if (profile.merchantName.isNotBlank()) profile.merchantName else "tu comercio amigo"
+        val qrBlock = if (hasQr) "\n📸 _Le adjuntamos nuestro código QR para su comodidad al transferir._\n" else "\n"
 
         if (!countryProfile.supportsExchangeRate) {
             val sym = countryProfile.localCurrencySymbol
@@ -135,6 +138,8 @@ object WhatsAppHelper {
                 else -> Pair("Banco:", "Teléfono / Cuenta:")
             }
 
+            val idLine = if (profile.idCard.isNotBlank()) "• *${countryProfile.nationalIdLabel}:* ${profile.idCard}\n" else ""
+
             return """
                 👋 Hola *$debtorName*, un cordial saludo de *$merchant*.
                 
@@ -144,12 +149,9 @@ object WhatsAppHelper {
                 🏦 *Datos para ${countryProfile.instantPaymentSystemName}:*
                 • *$entityTitle* $bankName
                 • *$phoneTitle* ${profile.phoneNumber}
-                • *${countryProfile.nationalIdLabel}:* ${profile.idCard}
-                
-                📸 _Le adjuntamos nuestro código QR para su comodidad al transferir._
-                🙏 ¡Muchas gracias por su preferencia!
+                $idLine$qrBlock🙏 ¡Muchas gracias por su preferencia!
                 ⚡ *Enviado vía Zeasy*
-            """.trimIndent()
+            """.trimIndent().trim()
         }
 
         val amountBlock = if (isPartial) {
@@ -165,6 +167,8 @@ object WhatsAppHelper {
             """.trimIndent()
         }
 
+        val idLine = if (profile.idCard.isNotBlank()) "• *Cédula/RIF:* ${profile.idCard}\n" else ""
+
         return """
             👋 Hola *$debtorName*, un cordial saludo de *$merchant*.
             
@@ -174,12 +178,9 @@ object WhatsAppHelper {
             🏦 *Datos para Pago Móvil:*
             • *Banco:* $bankName ($bankCode)
             • *Teléfono:* ${profile.phoneNumber}
-            • *Cédula/RIF:* ${profile.idCard}
-            
-            📸 _Le adjuntamos nuestro código QR para su comodidad al transferir._
-            🙏 ¡Muchas gracias por su preferencia!
+            $idLine$qrBlock🙏 ¡Muchas gracias por su preferencia!
             ⚡ *Enviado vía Zeasy*
-        """.trimIndent()
+        """.trimIndent().trim()
     }
 
     /**

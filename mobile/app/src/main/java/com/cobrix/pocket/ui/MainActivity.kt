@@ -841,18 +841,21 @@ class MainActivity : AppCompatActivity() {
                 binding.tvSettingsBankSectionTitle.text = "🏦 Pago Móvil y Bancos"
                 binding.tvSettingsBankSectionSubtitle.text = "Número receptor de Pago Móvil, Cédula o RIF y códigos QR"
                 binding.tilSettingsPhone.hint = "Teléfono Pago Móvil (ej. 04141234567)"
+                binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_PHONE
                 binding.tilSettingsId.hint = "Cédula o RIF (ej. V12345678 o J123456789)"
             }
             CountryCode.CO -> {
                 binding.tvSettingsBankSectionTitle.text = "🏦 Cobro por Transferencia y Bancos"
                 binding.tvSettingsBankSectionSubtitle.text = "Celular receptor Nequi/DaviPlata, Cédula/NIT y códigos QR"
                 binding.tilSettingsPhone.hint = "Celular Nequi / DaviPlata o Cuenta (ej. 3001234567)"
+                binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_PHONE
                 binding.tilSettingsId.hint = "Cédula o NIT (ej. 1020304050 o 900123456-1)"
             }
             CountryCode.AR -> {
                 binding.tvSettingsBankSectionTitle.text = "🏦 Cobro por Alias / CVU y Bancos"
                 binding.tvSettingsBankSectionSubtitle.text = "Tu Alias o CVU de Mercado Pago / Banco (0% de comisión)"
                 binding.tilSettingsPhone.hint = "Tu Alias o CVU de cobro (ej. mi.negocio.mp)"
+                binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
                 binding.tilSettingsId.hint = "CUIT, CUIL o DNI (ej. 20-12345678-9)"
             }
         }
@@ -935,10 +938,23 @@ class MainActivity : AppCompatActivity() {
             return false
         }
 
-        // Validación estricta: NO permitir guardar valores por defecto o vacíos
-        if (phone.isEmpty() || phone in DUMMY_DEFAULT_VALUES) {
+        // Validación estricta adaptada al país: NO permitir guardar valores por defecto o vacíos
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        val isValidPhone = if (countryProfile.code == CountryCode.AR) {
+            phone.isNotBlank() && phone.length >= 3 && phone !in DUMMY_DEFAULT_VALUES
+        } else {
+            val cleanDigits = phone.replace(Regex("[^0-9]"), "")
+            cleanDigits.length >= 7 && phone !in DUMMY_DEFAULT_VALUES
+        }
+
+        if (!isValidPhone) {
             if (isExplicitClick) {
-                Toast.makeText(this, "⚠️ Por favor ingresa tu número de teléfono de Pago Móvil", Toast.LENGTH_LONG).show()
+                val errorMsg = when (countryProfile.code) {
+                    CountryCode.AR -> "⚠️ Por favor ingresa tu Alias o CVU de cobro (${countryProfile.phonePlaceholder})"
+                    CountryCode.CO -> "⚠️ Por favor ingresa tu Celular o Cuenta de cobro (${countryProfile.phonePlaceholder})"
+                    CountryCode.VE -> "⚠️ Por favor ingresa tu número de teléfono de Pago Móvil (${countryProfile.phonePlaceholder})"
+                }
+                Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show()
                 binding.etSettingsPhone.requestFocus()
             }
             return false
@@ -946,7 +962,7 @@ class MainActivity : AppCompatActivity() {
 
         if (idCard.isEmpty() || idCard in DUMMY_DEFAULT_VALUES) {
             if (isExplicitClick) {
-                Toast.makeText(this, "⚠️ Por favor ingresa tu número de Cédula o RIF", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "⚠️ Por favor ingresa tu ${countryProfile.nationalIdLabel} (${countryProfile.nationalIdPlaceholder})", Toast.LENGTH_LONG).show()
                 binding.etSettingsId.requestFocus()
             }
             return false
@@ -1569,7 +1585,9 @@ class MainActivity : AppCompatActivity() {
      */
     private fun updateCashierHeaderSummary() {
         if (activeCashierBankName.isNotEmpty()) {
-            binding.tvCashierWhatsAppSubtitle.text = "Toca para digitar monto y enviar datos de $activeCashierBankName con QR"
+            val hasQr = PreferencesHelper.getBankQrUri(this, activeCashierBankCode) != null
+            val qrSuffix = if (hasQr) " con QR" else ""
+            binding.tvCashierWhatsAppSubtitle.text = "Toca para digitar monto y enviar datos de $activeCashierBankName$qrSuffix"
         } else {
             binding.tvCashierWhatsAppSubtitle.text = "Toca para configurar tu banco y datos de cobro"
         }
@@ -2105,9 +2123,11 @@ class MainActivity : AppCompatActivity() {
     // =========================================================================
 
     private fun setupDebtorsModule() {
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        val initialRate = if (countryProfile.supportsExchangeRate) PreferencesHelper.getUserProfile(this).bcvRate else 1.0
         debtorsAdapter = DebtorsAdapter(
             items = emptyList(),
-            bcvRate = PreferencesHelper.getUserProfile(this).bcvRate,
+            bcvRate = initialRate,
             onChargeClick = { debtor -> showAddChargeDialog(debtor) },
             onPaymentClick = { debtor -> showAddPaymentDialog(debtor) },
             onWhatsAppClick = { debtor -> sendWhatsAppReminderToDebtor(debtor) },
@@ -2207,7 +2227,9 @@ class MainActivity : AppCompatActivity() {
         } else {
             binding.rvDebtors.visibility = View.VISIBLE
             binding.layoutEmptyDebtors.visibility = View.GONE
-            debtorsAdapter.updateData(filtered, profile.bcvRate)
+            val countryProfile = PreferencesHelper.getCountryProfile(this)
+            val effectiveRate = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) profile.bcvRate else 1.0
+            debtorsAdapter.updateData(filtered, effectiveRate)
         }
     }
 
@@ -2215,6 +2237,10 @@ class MainActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val dBinding = DialogAddDebtorBinding.inflate(layoutInflater)
         dialog.setContentView(dBinding.root)
+
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        dBinding.tilNewDebtorPhone.hint = "Teléfono WhatsApp (ej. ${countryProfile.phonePlaceholder})"
+        dBinding.tilNewDebtorId.hint = "${countryProfile.nationalIdLabel} (Opcional, ej. ${countryProfile.nationalIdPlaceholder})"
 
         dBinding.btnPickContactNewDebtor.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -2355,7 +2381,10 @@ class MainActivity : AppCompatActivity() {
 
             val amountUsd: Double
             val amountVes: Double
-            if (isChargeVesMode && countryProfile.supportsExchangeRate) {
+            if (!countryProfile.supportsExchangeRate) {
+                amountUsd = rawInput
+                amountVes = rawInput
+            } else if (isChargeVesMode) {
                 amountVes = rawInput
                 amountUsd = rawInput / rate
             } else {
@@ -2367,13 +2396,18 @@ class MainActivity : AppCompatActivity() {
                 debtorId = debtor.id,
                 amountUsd = amountUsd,
                 amountVes = amountVes,
-                bcvRate = rate,
+                bcvRate = if (countryProfile.supportsExchangeRate) rate else 1.0,
                 notes = concept.ifBlank { "Compra fiada" }
             )
 
+            val toastAmount = if (countryProfile.supportsExchangeRate) {
+                String.format(Locale.US, "$%.2f", amountUsd)
+            } else {
+                String.format(Locale.US, "%s %.2f", countryProfile.localCurrencySymbol, amountUsd)
+            }
             Toast.makeText(
                 this,
-                String.format(Locale.US, "✅ Fiado registrado a %s ($%.2f)", debtor.name, amountUsd),
+                "✅ Fiado registrado a ${debtor.name} ($toastAmount)",
                 Toast.LENGTH_SHORT
             ).show()
             dialog.dismiss()
@@ -2390,7 +2424,7 @@ class MainActivity : AppCompatActivity() {
 
         val profile = PreferencesHelper.getUserProfile(this)
         val countryProfile = PreferencesHelper.getCountryProfile(this)
-        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+        val rate = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) profile.bcvRate else 1.0
         var isPaymentVesMode = false
 
         dBinding.tvPaymentClientName.text = "Cliente: ${debtor.name}"
@@ -2523,7 +2557,10 @@ class MainActivity : AppCompatActivity() {
 
             val amountUsd: Double
             val amountVes: Double
-            if (isPaymentVesMode) {
+            if (!countryProfile.supportsExchangeRate) {
+                amountUsd = rawInput
+                amountVes = rawInput
+            } else if (isPaymentVesMode) {
                 amountVes = rawInput
                 // Si el pago en Bs cubre exactamente la deuda base o el monto de conciliación, saldar la deuda completa sin residuo de redondeo
                 val baseDebtVes = debtor.getEquivalentVes(rate)
@@ -2559,7 +2596,7 @@ class MainActivity : AppCompatActivity() {
                 debtorId = debtor.id,
                 amountUsd = amountUsd,
                 amountVes = amountVes,
-                bcvRate = rate,
+                bcvRate = if (countryProfile.supportsExchangeRate) rate else 1.0,
                 matchedTxId = if (insertedTxId > 0L) insertedTxId else null,
                 notes = cleanNote
             )
@@ -2633,7 +2670,8 @@ class MainActivity : AppCompatActivity() {
                             conciliationCents = debtor.conciliationCents,
                             requestedAmountUsd = null,
                             includeConciliationCents = autoConcilAllowed,
-                            countryProfile = countryProfile
+                            countryProfile = countryProfile,
+                            hasQr = (qrUri != null)
                         )
                         WhatsAppHelper.sendViaWhatsApp(this, phone, msg, qrUri)
                     } else {
@@ -2714,7 +2752,8 @@ class MainActivity : AppCompatActivity() {
                     conciliationCents = debtor.conciliationCents,
                     requestedAmountUsd = partialUsd,
                     includeConciliationCents = autoConcilAllowed,
-                    countryProfile = countryProfile
+                    countryProfile = countryProfile,
+                    hasQr = (qrUri != null)
                 )
                 WhatsAppHelper.sendViaWhatsApp(this, phone, msg, qrUri)
             }
@@ -2765,7 +2804,12 @@ class MainActivity : AppCompatActivity() {
                 }
                 dBinding.tvDetailBalanceBadge.setTextColor(Color.parseColor("#C62828"))
                 dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFEBEE"))
-                dBinding.btnDetailShareWhatsApp.text = "💬 Cobrar con QR"
+                dBinding.btnDetailShareWhatsApp.text = if (countryProfile.supportsExchangeRate) {
+                    val hasQr = !PreferencesHelper.getBankQrUri(this, profile.bankCode).isNullOrEmpty()
+                    if (hasQr) "💬 Cobrar con QR" else "💬 Cobrar por WhatsApp"
+                } else {
+                    "💬 Cobrar por WhatsApp"
+                }
             }
             debtor.hasCredit -> {
                 dBinding.tvDetailBalanceBadge.text = if (countryProfile.supportsExchangeRate) {
@@ -2885,6 +2929,10 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        dBinding.tilEditDebtorPhone.hint = "Teléfono WhatsApp (ej. ${countryProfile.phonePlaceholder})"
+        dBinding.tilEditDebtorId.hint = "${countryProfile.nationalIdLabel} (Opcional, ej. ${countryProfile.nationalIdPlaceholder})"
+
         dBinding.etEditDebtorName.setText(debtor.name)
         dBinding.etEditDebtorPhone.setText(debtor.phone ?: "")
         dBinding.etEditDebtorId.setText(debtor.identification ?: "")
@@ -2955,20 +3003,31 @@ class MainActivity : AppCompatActivity() {
      */
     private fun confirmAndDeleteDebtor(debtor: Debtor, parentDetailDialog: Dialog) {
         val profile = PreferencesHelper.getUserProfile(this)
-        val rate = if (profile.bcvRate > 0) profile.bcvRate else 1.0
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
+        val rate = if (countryProfile.supportsExchangeRate && profile.bcvRate > 0) profile.bcvRate else 1.0
 
         val alertMessage = when {
             debtor.isDebtor -> {
-                val debtVes = debtor.getEquivalentVes(rate)
+                val debtText = if (countryProfile.supportsExchangeRate) {
+                    val debtVes = debtor.getEquivalentVes(rate)
+                    "$${String.format(Locale.US, "%.2f", debtor.debtAmountUsd)} (≈ Bs. ${String.format(Locale.US, "%.2f", debtVes)})"
+                } else {
+                    "${countryProfile.localCurrencySymbol} ${String.format(Locale.US, "%.2f", debtor.debtAmountUsd)}"
+                }
                 "⚠️ ATENCIÓN: Este cliente tiene una deuda pendiente de:\n\n" +
-                        "• $${String.format(Locale.US, "%.2f", debtor.debtAmountUsd)} (≈ Bs. ${String.format(Locale.US, "%.2f", debtVes)})\n\n" +
+                        "• $debtText\n\n" +
                         "Si lo eliminas de la libreta, se borrará su saldo deudor y todo su historial de fiados y pagos.\n\n" +
                         "¿Estás seguro de que deseas eliminar a \"${debtor.name}\"?"
             }
             debtor.hasCredit -> {
-                val creditVes = debtor.getEquivalentVes(rate)
+                val creditText = if (countryProfile.supportsExchangeRate) {
+                    val creditVes = debtor.getEquivalentVes(rate)
+                    "$${String.format(Locale.US, "%.2f", debtor.creditAmountUsd)} (≈ Bs. ${String.format(Locale.US, "%.2f", creditVes)})"
+                } else {
+                    "${countryProfile.localCurrencySymbol} ${String.format(Locale.US, "%.2f", debtor.creditAmountUsd)}"
+                }
                 "⚠️ ATENCIÓN: Este cliente tiene un saldo a favor de:\n\n" +
-                        "• $${String.format(Locale.US, "%.2f", debtor.creditAmountUsd)} (≈ Bs. ${String.format(Locale.US, "%.2f", creditVes)})\n\n" +
+                        "• $creditText\n\n" +
                         "Si lo eliminas, se borrará este crédito disponible y sus registros.\n\n" +
                         "¿Estás seguro de que deseas eliminar a \"${debtor.name}\"?"
             }
@@ -5617,11 +5676,17 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this, "✍️ Paso 1: Escribe el nombre de tu negocio o taxi", Toast.LENGTH_LONG).show()
                         return@setOnClickListener
                     }
-                    val cleanDigits = phone.replace(Regex("[^0-9]"), "")
-                    if (cleanDigits.length < 7 || phone in DUMMY_DEFAULT_VALUES) {
-                        wBinding.etWizardPhone.error = "Ingresa tu teléfono de cobro (${cProf.phonePlaceholder})"
+                    val isValidPhone = if (cProf.code == CountryCode.AR) {
+                        phone.isNotBlank() && phone.length >= 3 && phone !in DUMMY_DEFAULT_VALUES
+                    } else {
+                        val cleanDigits = phone.replace(Regex("[^0-9]"), "")
+                        cleanDigits.length >= 7 && phone !in DUMMY_DEFAULT_VALUES
+                    }
+                    if (!isValidPhone) {
+                        val label = if (cProf.code == CountryCode.AR) "tu Alias o CVU de cobro" else "tu teléfono de cobro"
+                        wBinding.etWizardPhone.error = "Ingresa $label (${cProf.phonePlaceholder})"
                         wBinding.etWizardPhone.requestFocus()
-                        Toast.makeText(this, "📱 Paso 2: Ingresa el número donde recibes tus pagos (${cProf.phonePlaceholder})", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "📱 Paso 2: Ingresa $label (${cProf.phonePlaceholder})", Toast.LENGTH_LONG).show()
                         return@setOnClickListener
                     }
                     if (idDoc.length < 4 || idDoc in DUMMY_DEFAULT_VALUES) {
@@ -5734,8 +5799,13 @@ class MainActivity : AppCompatActivity() {
                     CountryCode.CO -> "2. Celular Nequi / DaviPlata o Cuenta:"
                     CountryCode.AR -> "2. Celular o Alias / CVU de cobro:"
                 }
-                val cleanPhoneHint = cProf.phonePlaceholder.removePrefix("Ej: ").trim()
-                val cleanIdHint = cProf.nationalIdPlaceholder.removePrefix("Ej: ").trim()
+                wBinding.etWizardPhone.inputType = if (cProf.code == CountryCode.AR) {
+                    InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                } else {
+                    InputType.TYPE_CLASS_PHONE
+                }
+                val cleanPhoneHint = cProf.phonePlaceholder.removePrefix("Ej: ").removePrefix("ej. ").trim()
+                val cleanIdHint = cProf.nationalIdPlaceholder.removePrefix("Ej: ").removePrefix("ej. ").trim()
                 wBinding.tilWizardPhone.hint = "Ej: $cleanPhoneHint"
 
                 wBinding.tvWizardIdLabel.text = "3. Tu ${cProf.nationalIdLabel}:"

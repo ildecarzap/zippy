@@ -439,6 +439,18 @@ object PreferencesHelper {
             }
         }
 
+        // 3. Garantizar que el banco principal pertenezca al país de operación actual
+        val currentCountry = getCountryCode(context)
+        val countryBanks = BankCatalog.getBanksForCountry(currentCountry)
+        val currentBankCode = prefs.getString(KEY_BANK_CODE, null)
+        if (currentBankCode.isNullOrEmpty() || countryBanks.none { it.code.equals(currentBankCode, ignoreCase = true) }) {
+            val defaultBank = BankCatalog.getDefaultBankForCountry(currentCountry)
+            setPrimaryBank(context, defaultBank.code, defaultBank.name)
+            if (!PlanCapabilityManager.canUseMultibank(context)) {
+                prefs.edit().putStringSet(KEY_ENABLED_BANKS, setOf(defaultBank.code)).apply()
+            }
+        }
+
         if (PlanCapabilityManager.canUseMultibank(context)) return
 
         val banescoQr = prefs.getString("qr_image_uri_0134", null)

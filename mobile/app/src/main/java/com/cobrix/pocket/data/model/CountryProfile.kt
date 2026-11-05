@@ -89,7 +89,7 @@ object CountryProfileCatalog {
         idDocumentLabel = "Cédula o NIT",
         idDocumentHint = "1020304050 o 900123456-1",
         phoneHint = "3001234567",
-        instantPaySystemName = "Nequi / DaviPlata / QR",
+        instantPaySystemName = "Transferencia (Nequi / Bancos)",
         billingStrategy = PrimaryBillingStrategy.GOOGLE_PLAY_BILLING_FIRST
     )
 
@@ -105,7 +105,7 @@ object CountryProfileCatalog {
         idDocumentLabel = "CUIT o DNI",
         idDocumentHint = "20-12345678-9 o DNI",
         phoneHint = "mi.negocio.mp o 1123456789",
-        instantPaySystemName = "Alias / CVU / QR",
+        instantPaySystemName = "Transferencia (Alias / CVU)",
         billingStrategy = PrimaryBillingStrategy.GOOGLE_PLAY_BILLING_FIRST
     )
 
