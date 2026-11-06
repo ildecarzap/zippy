@@ -16,14 +16,26 @@ enum class BankCode(
         sudebanCode = "0105",
         displayName = "Banco Mercantil",
         defaultKeywords = listOf("tpago", "mercantil"),
-        knownPackageNames = listOf("com.mercantilbanco.android.movil"),
+        knownPackageNames = listOf(
+            "com.mercantilbanco.mercantilmovil",
+            "com.mercantilbanco.android.movil",
+            "com.mercantil.movil",
+            "com.mercantilbanco.movil",
+            "com.mercantilbanco"
+        ),
         country = CountryCode.VE
     ),
     BANESCO(
         sudebanCode = "0134",
         displayName = "Banesco",
         defaultKeywords = listOf("banesco", "pago móvil", "pago movil"),
-        knownPackageNames = listOf("com.banesco.banescomovil"),
+        knownPackageNames = listOf(
+            "com.banesco.samfbancamovilunificada",
+            "com.banesco.banescomovil",
+            "com.banesco.movil",
+            "com.banesco",
+            "com.banescomovil"
+        ),
         country = CountryCode.VE
     ),
     BDV(
@@ -43,21 +55,34 @@ enum class BankCode(
         sudebanCode = "0108",
         displayName = "BBVA Provincial",
         defaultKeywords = listOf("provincial", "bbva"),
-        knownPackageNames = listOf("com.bbva.provincial.android"),
+        knownPackageNames = emptyList(), // Desactivado por capturas ambiguas de pagos salientes
         country = CountryCode.VE
     ),
     BNC(
         sudebanCode = "0191",
         displayName = "Banco Nacional de Crédito",
-        defaultKeywords = listOf("bnc", "banco nacional de credito"),
-        knownPackageNames = listOf("com.bnc.movil"),
+        defaultKeywords = listOf("bnc", "pago movil recibido", "pago móvil recibido", "banco nacional de credito", "banco nacional de crédito"),
+        knownPackageNames = listOf(
+            "bnc.bncnet.mobile2",
+            "bnc.bncnet.mobile",
+            "com.bnc.ve",
+            "com.bnc.movil",
+            "com.bnc.app",
+            "com.bnc.personas",
+            "com.bncenlinea"
+        ),
         country = CountryCode.VE
     ),
     BANCAMIGA(
         sudebanCode = "0172",
         displayName = "Bancamiga",
         defaultKeywords = listOf("bancamiga"),
-        knownPackageNames = listOf("com.bancamiga.movil"),
+        knownPackageNames = listOf(
+            "com.bancamiga",
+            "com.bancamiga.movil",
+            "com.bancamiga.bancamigamovil",
+            "com.bancamiga.personas"
+        ),
         country = CountryCode.VE
     ),
     UBII(
@@ -73,21 +98,21 @@ enum class BankCode(
         sudebanCode = "CO_NEQUI",
         displayName = "Nequi",
         defaultKeywords = listOf("nequi", "recibiste", "te envió", "te envio", "envio"),
-        knownPackageNames = listOf("com.nequi.MobileApp"),
+        knownPackageNames = listOf("com.nequi.MobileApp", "com.nequi.app", "com.nequi"),
         country = CountryCode.CO
     ),
     CO_DAVIPLATA(
         sudebanCode = "CO_DAVI",
         displayName = "DaviPlata",
         defaultKeywords = listOf("daviplata", "recibio", "recibiste", "pasar plata"),
-        knownPackageNames = listOf("com.davivienda.daviplataapp"),
+        knownPackageNames = listOf("com.davivienda.daviplataapp", "com.davivienda.daviplata", "com.daviplata"),
         country = CountryCode.CO
     ),
     CO_BANCOLOMBIA(
         sudebanCode = "CO_BCOL",
         displayName = "Bancolombia",
         defaultKeywords = listOf("bancolombia", "recibiste una transferencia", "transferencia", "qr bancolombia"),
-        knownPackageNames = listOf("KT.Bancolombia", "com.todo1.mobile", "com.bancolombia.alamanov2"),
+        knownPackageNames = listOf("KT.Bancolombia", "com.todo1.mobile", "com.bancolombia.alamanov2", "com.bancolombia.personas", "co.com.bancolombia"),
         country = CountryCode.CO
     ),
 
@@ -103,21 +128,21 @@ enum class BankCode(
         sudebanCode = "AR_CDNI",
         displayName = "Cuenta DNI",
         defaultKeywords = listOf("cuenta dni", "recibiste una transferencia", "banco provincia", "acredit"),
-        knownPackageNames = listOf("ar.com.bapro.cuentadni"),
+        knownPackageNames = listOf("ar.com.bapro.cuentadni", "com.bapro.cuentadni"),
         country = CountryCode.AR
     ),
     AR_BNA_MAS(
         sudebanCode = "AR_BNA",
         displayName = "BNA+ (Banco Nación)",
         defaultKeywords = listOf("bna+", "banco nacion", "recibiste", "transferencia recibida", "modo"),
-        knownPackageNames = listOf("com.bna.bnamas"),
+        knownPackageNames = listOf("com.bna.bnamas", "ar.com.bna.bnamas"),
         country = CountryCode.AR
     ),
     AR_UALA(
         sudebanCode = "AR_UALA",
         displayName = "Ualá",
         defaultKeywords = listOf("ualá", "uala", "recibiste una transferencia", "te enviaron", "te transfirieron"),
-        knownPackageNames = listOf("com.uala", "ar.com.uala"),
+        knownPackageNames = listOf("com.uala", "ar.com.uala", "com.itau.uala"),
         country = CountryCode.AR
     ),
 
@@ -165,42 +190,25 @@ data class BankCatalogEntry(
 object BankCatalog {
 
     val VE_BANKS = listOf(
-        BankCatalogEntry("0178", "Ubii App", true, CountryCode.VE),
-        BankCatalogEntry("0134", "Banesco Banco Universal", true, CountryCode.VE),
         BankCatalogEntry("0102", "Banco de Venezuela (BDV)", true, CountryCode.VE),
+        BankCatalogEntry("0134", "Banesco Banco Universal", true, CountryCode.VE),
         BankCatalogEntry("0105", "Banco Mercantil", true, CountryCode.VE),
-        BankCatalogEntry("0108", "BBVA Provincial", true, CountryCode.VE),
         BankCatalogEntry("0191", "Banco Nacional de Crédito (BNC)", true, CountryCode.VE),
         BankCatalogEntry("0172", "Bancamiga", true, CountryCode.VE),
-        BankCatalogEntry("0114", "Bancaribe", false, CountryCode.VE),
-        BankCatalogEntry("0174", "Banplus", false, CountryCode.VE),
-        BankCatalogEntry("0138", "Banco Plaza", false, CountryCode.VE),
-        BankCatalogEntry("0175", "Banco Bicentenario", false, CountryCode.VE),
-        BankCatalogEntry("0163", "Banco del Tesoro", false, CountryCode.VE),
-        BankCatalogEntry("0151", "BFC Banco Fondo Común", false, CountryCode.VE),
-        BankCatalogEntry("0115", "Banco Exterior", false, CountryCode.VE),
-        BankCatalogEntry("0156", "100% Banco", false, CountryCode.VE),
-        BankCatalogEntry("0171", "Banco Activo", false, CountryCode.VE),
-        BankCatalogEntry("0104", "Venezolano de Crédito", false, CountryCode.VE)
+        BankCatalogEntry("0178", "Ubii App", true, CountryCode.VE)
     )
 
     val CO_BANKS = listOf(
         BankCatalogEntry("CO_NEQUI", "Nequi Colombia", true, CountryCode.CO),
         BankCatalogEntry("CO_DAVI", "DaviPlata", true, CountryCode.CO),
-        BankCatalogEntry("CO_BCOL", "Bancolombia / A la Mano", true, CountryCode.CO),
-        BankCatalogEntry("CO_DAVIV", "Banco Davivienda", false, CountryCode.CO),
-        BankCatalogEntry("CO_BBVA", "BBVA Colombia", false, CountryCode.CO),
-        BankCatalogEntry("CO_BOG", "Banco de Bogotá", false, CountryCode.CO)
+        BankCatalogEntry("CO_BCOL", "Bancolombia / A la Mano", true, CountryCode.CO)
     )
 
     val AR_BANKS = listOf(
         BankCatalogEntry("AR_MP", "Mercado Pago", true, CountryCode.AR),
         BankCatalogEntry("AR_CDNI", "Cuenta DNI (Banco Provincia)", true, CountryCode.AR),
         BankCatalogEntry("AR_BNA", "BNA+ (Banco Nación / MODO)", true, CountryCode.AR),
-        BankCatalogEntry("AR_UALA", "Ualá", true, CountryCode.AR),
-        BankCatalogEntry("AR_GAL", "Banco Galicia", false, CountryCode.AR),
-        BankCatalogEntry("AR_BRU", "Brubank", false, CountryCode.AR),
-        BankCatalogEntry("AR_SANT", "Banco Santander Argentina", false, CountryCode.AR)
+        BankCatalogEntry("AR_UALA", "Ualá", true, CountryCode.AR)
     )
 
     val ALL_BANKS = VE_BANKS + CO_BANKS + AR_BANKS

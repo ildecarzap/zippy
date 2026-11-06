@@ -172,12 +172,12 @@ class AntiSpoofingSecurityTest {
             assertFalse("AR whitelist no debe contener $f", arWhitelist.contains(f))
         }
 
-        // Venezuela debe contener apps bancarias oficiales
+        // Venezuela debe contener apps bancarias oficiales verificadas
         assertTrue(veWhitelist.contains("com.bancodevenezuela.bdvdigital"))
         assertTrue(veWhitelist.contains("com.banesco.banescomovil"))
         assertTrue(veWhitelist.contains("com.mercantilbanco.android.movil"))
-        assertTrue(veWhitelist.contains("com.bbva.provincial.android"))
-        assertTrue(veWhitelist.contains("com.bnc.movil"))
+        assertTrue(veWhitelist.contains("bnc.bncnet.mobile2"))
+        assertTrue(veWhitelist.contains("com.bnc.ve"))
         assertTrue(veWhitelist.contains("com.bancamiga.movil"))
         assertTrue(veWhitelist.contains("com.ubiipagos.app"))
 
