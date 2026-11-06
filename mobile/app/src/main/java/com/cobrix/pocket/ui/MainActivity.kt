@@ -147,8 +147,14 @@ class MainActivity : AppCompatActivity() {
         if (uri != null) {
             val result = BackupManager.restoreFromUri(this, uri)
             if (result.success) {
+                PreferencesHelper.setOnboardingCompleted(this, true)
+                setupWizardDialog?.dismiss()
                 Toast.makeText(this, "✅ ${result.message} (${result.transactionsRestored} movimientos)", Toast.LENGTH_LONG).show()
-                loadSettings()
+                applyCountryProfileToUi()
+                loadSettings(forceReload = true)
+                setupCashierBankSelector()
+                renderCashierBankCards()
+                updateCashierHeaderSummary()
                 loadTodayLedger()
                 loadDebtors()
                 updateDisplayAmount()
@@ -5677,6 +5683,34 @@ class MainActivity : AppCompatActivity() {
                 it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 updateCountrySelectionButtons(CountryCode.AR)
             }
+        }
+
+        // Opciones sutiles del Paso 1: Restaurar respaldo existente u omitir configuración
+        wBinding.btnWizardRestoreBackup.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            restoreBackupLauncher.launch("*/*")
+        }
+
+        wBinding.btnWizardSkipOnboarding.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            AlertDialog.Builder(this)
+                .setTitle("⚙️ Configurar más tarde")
+                .setMessage("Puedes explorar Zeasy ahora, pero recuerda que para cantar pagos de tu banco y mostrar tu QR en mostrador deberás completar tus datos en Ajustes.\n\n¿Deseas continuar?")
+                .setPositiveButton("Sí, entrar a la app") { _, _ ->
+                    PreferencesHelper.setCountryCode(this, selectedCountry)
+                    PreferencesHelper.setOnboardingCompleted(this, true)
+                    applyCountryProfileToUi()
+                    loadSettings(forceReload = true)
+                    setupCashierBankSelector()
+                    renderCashierBankCards()
+                    updateCashierHeaderSummary()
+                    loadTodayLedger()
+                    loadDebtors()
+                    dialog.dismiss()
+                    Toast.makeText(this, "👋 ¡Bienvenido! Puedes configurar tus datos cuando quieras en la pestaña Ajustes ⚙️", Toast.LENGTH_LONG).show()
+                }
+                .setNegativeButton("Seguir configurando", null)
+                .show()
         }
 
         // Guardado progresivo instantáneo mientras el usuario escribe en el Paso 2

@@ -167,7 +167,7 @@ object BackupManager {
             if (!dir.exists()) dir.mkdirs()
 
             val timestamp = SimpleDateFormat("dd-MM-yy_HHmm", Locale.US).format(Date())
-            val file = File(dir, "zippy_respaldo_${timestamp}.json")
+            val file = File(dir, "zeasy_respaldo_${timestamp}.json")
             FileOutputStream(file).use { it.write(json.toByteArray()) }
             file
         } catch (e: Exception) {

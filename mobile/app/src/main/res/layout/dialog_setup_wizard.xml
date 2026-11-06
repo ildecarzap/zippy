@@ -164,6 +164,39 @@
                 android:text="🔒 Importante: El país queda configurado para tu contabilidad y moneda. Si luego necesitas cambiarlo, podrás restablecer la app desde la Zona de Peligro en Ajustes."
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp" />
+
+            <!-- Opciones sutiles de inicio: Restaurar respaldo existente u omitir -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnWizardRestoreBackup"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="46dp"
+                    android:text="📂 ¿Ya tienes un respaldo? Restaurar desde archivo"
+                    android:textAllCaps="false"
+                    android:textColor="@color/accent_cyan"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnWizardSkipOnboarding"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:minHeight="44dp"
+                    android:text="Omitir por ahora y configurar después"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- ===================================================== -->
