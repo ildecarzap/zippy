@@ -831,11 +831,11 @@ object PreferencesHelper {
     }
 
     fun getOnboardingStep(context: Context): Int {
-        return getPrefs(context).getInt(KEY_ONBOARDING_STEP, 1).coerceIn(1, 5)
+        return getPrefs(context).getInt(KEY_ONBOARDING_STEP, 1).coerceIn(1, 6)
     }
 
     fun setOnboardingStep(context: Context, step: Int) {
-        getPrefs(context).edit().putInt(KEY_ONBOARDING_STEP, step.coerceIn(1, 5)).apply()
+        getPrefs(context).edit().putInt(KEY_ONBOARDING_STEP, step.coerceIn(1, 6)).apply()
     }
 
     /**

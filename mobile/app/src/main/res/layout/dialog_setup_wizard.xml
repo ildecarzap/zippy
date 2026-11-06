@@ -38,7 +38,7 @@
                 android:backgroundTint="@color/accent_cyan"
                 android:paddingHorizontal="14dp"
                 android:paddingVertical="6dp"
-                android:text="PASO 1 DE 5"
+                android:text="PASO 1 DE 6"
                 android:textColor="@color/white"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -64,7 +64,7 @@
             android:layout_width="match_parent"
             android:layout_height="10dp"
             android:layout_marginTop="12dp"
-            android:max="5"
+            android:max="6"
             android:progress="1"
             android:progressTint="@color/accent_cyan" />
 
@@ -161,7 +161,7 @@
                 android:background="@drawable/bg_badge_rounded"
                 android:backgroundTint="@color/surface_variant"
                 android:padding="12dp"
-                android:text="🔒 Importante: El país queda fijo después de esta configuración inicial. Si luego necesitas cambiarlo, nuestro equipo de Atención al Cliente te asistirá."
+                android:text="🔒 Importante: El país queda configurado para tu contabilidad y moneda. Si luego necesitas cambiarlo, podrás restablecer la app desde la Zona de Peligro en Ajustes."
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp" />
         </LinearLayout>
@@ -367,48 +367,103 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
+        </LinearLayout>
 
-            <!-- Subir QR Opcional en este mismo paso -->
+        <!-- ===================================================== -->
+        <!-- PASO 4: CÓDIGO QR DEL BANCO (VISTA DEDICADA)          -->
+        <!-- ===================================================== -->
+        <LinearLayout
+            android:id="@+id/layoutWizardStep4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
             <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_badge_rounded"
+                android:backgroundTint="@color/surface_variant"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:id="@+id/tvWizardQrBankTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Banco Seleccionado"
+                    android:textColor="@color/accent_cyan"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <!-- Previsualización de QR -->
+                <ImageView
+                    android:id="@+id/ivWizardQrPreview"
+                    android:layout_width="140dp"
+                    android:layout_height="140dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_badge_rounded"
+                    android:backgroundTint="@color/white"
+                    android:contentDescription="Previsualización de QR"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_zeasy_icon" />
+
+                <TextView
+                    android:id="@+id/tvWizardQrStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="📸 Aún no has subido tu código QR"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14.5sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnWizardUploadQr"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:layout_marginTop="16dp"
+                    android:backgroundTint="@color/accent_cyan"
+                    android:text="📸 Subir Imagen de mi Código QR"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="14dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnWizardDeleteQr"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="🗑️ Quitar imagen de QR"
+                    android:textColor="@color/expense_red"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:background="@drawable/bg_badge_rounded"
                 android:backgroundTint="@color/surface_variant"
-                android:orientation="vertical"
-                android:padding="14dp">
-
-                <TextView
-                    android:id="@+id/tvWizardQrStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="📸 Código QR del banco (Opcional: puedes subirlo ahora o después)"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnWizardUploadQr"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="8dp"
-                    android:text="📸 Subir Imagen de mi QR"
-                    android:textAllCaps="false"
-                    android:textColor="#0A192F"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    app:strokeColor="@color/border"
-                    app:backgroundTint="@color/white"
-                    app:cornerRadius="12dp" />
-            </LinearLayout>
+                android:lineSpacingExtra="3dp"
+                android:padding="12dp"
+                android:text="💡 El código QR es opcional: si no lo tienes en tu galería en este momento, puedes continuar y subirlo luego desde Ajustes."
+                android:textColor="@color/text_secondary"
+                android:textSize="13.5sp" />
         </LinearLayout>
 
         <!-- ===================================================== -->
-        <!-- PASO 4: PERMISO DE ESCUCHA DE PAGOS                   -->
+        <!-- PASO 5: PERMISO DE ESCUCHA DE PAGOS                   -->
         <!-- ===================================================== -->
         <LinearLayout
-            android:id="@+id/layoutWizardStep4"
+            android:id="@+id/layoutWizardStep5"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
@@ -469,16 +524,17 @@
         </LinearLayout>
 
         <!-- ===================================================== -->
-        <!-- PASO 5: SEGUNDO PLANO Y PRUEBA DE SONIDO              -->
+        <!-- PASO 6: SEGUNDO PLANO Y PRUEBA DE SONIDO              -->
         <!-- ===================================================== -->
         <LinearLayout
-            android:id="@+id/layoutWizardStep5"
+            android:id="@+id/layoutWizardStep6"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:orientation="vertical"
             android:visibility="gone">
 
+            <!-- Estado de Batería Dinámico -->
             <TextView
                 android:id="@+id/tvWizardBatteryStatusBadge"
                 android:layout_width="match_parent"
@@ -486,27 +542,134 @@
                 android:background="@drawable/bg_badge_rounded"
                 android:backgroundTint="@color/surface_variant"
                 android:padding="16dp"
-                android:text="🔋 Segundo plano: Permite que Zeasy funcione con la pantalla apagada"
-                android:textColor="@color/text_primary"
+                android:text="⚠️ Estado: Segundo plano con restricciones"
+                android:textColor="@color/warning_orange"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
+            <!-- Instrucciones Visuales 1-2-3 Ultra Claras -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_badge_rounded"
+                android:backgroundTint="@color/surface_variant"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="⚡ 3 Toques para que no se apague:"
+                    android:textColor="@color/text_primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <!-- Paso 1 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_badge_rounded"
+                        android:backgroundTint="@color/accent_cyan"
+                        android:gravity="center"
+                        android:text="1"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="Toca el botón azul de abajo &quot;Abrir Ajustes&quot;"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Paso 2 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_badge_rounded"
+                        android:backgroundTint="@color/accent_cyan"
+                        android:gravity="center"
+                        android:text="2"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="En la lista, toca la opción &quot;Batería&quot;"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Paso 3 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_badge_rounded"
+                        android:backgroundTint="@color/income_green"
+                        android:gravity="center"
+                        android:text="3"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="Elige &quot;Sin restricciones&quot; y regresa ✅"
+                        android:textColor="@color/income_green"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnWizardActivateBattery"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="58dp"
-                android:layout_marginTop="12dp"
-                android:text="🔋 Permitir Uso con Pantalla Apagada"
+                android:layout_marginTop="14dp"
+                android:backgroundTint="@color/accent_cyan"
+                android:text="👉 1. Abrir Ajustes de Batería"
                 android:textAllCaps="false"
-                android:textColor="#0A192F"
-                android:textSize="16sp"
+                android:textColor="@color/white"
+                android:textSize="16.5sp"
                 android:textStyle="bold"
-                app:cornerRadius="14dp"
-                app:backgroundTint="@color/white"
-                app:strokeColor="@color/accent_cyan"
-                app:strokeWidth="2dp" />
+                app:cornerRadius="14dp" />
 
+            <!-- Prueba de Sonido -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -519,7 +682,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="🔊 ¡Escucha cómo te avisará Zeasy!"
+                    android:text="🔊 Prueba de Altavoz y Sonido"
                     android:textColor="@color/text_primary"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -528,9 +691,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Toca este botón para escuchar una prueba de pago recibido:"
+                    android:text="Toca este botón para comprobar el volumen de cobro:"
                     android:textColor="@color/text_secondary"
-                    android:textSize="15sp" />
+                    android:textSize="14.5sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnWizardTestSound"
@@ -538,14 +701,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:layout_marginTop="10dp"
-                    android:text="🔊 Escuchar Prueba de Pago Ahora"
+                    android:text="🔔 Probar Caja y Locución de Voz"
                     android:textAllCaps="false"
                     android:textColor="#0A192F"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    app:strokeColor="@color/border"
                     app:backgroundTint="@color/white"
-                    app:cornerRadius="14dp" />
+                    app:cornerRadius="14dp"
+                    app:strokeColor="@color/border" />
             </LinearLayout>
         </LinearLayout>
 

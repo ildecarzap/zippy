@@ -4486,38 +4486,6 @@ class MainActivity : AppCompatActivity() {
 
     // --- TAB AJUSTES ---
     private fun setupSettings() {
-        binding.btnRequestCountryChange.setOnClickListener {
-            val profile = PreferencesHelper.getUserProfile(this)
-            val currentCountry = PreferencesHelper.getCountryProfile(this)
-            val deviceId = PlanCapabilityManager.getDeviceId(this)
-            val businessName = profile.merchantName.ifEmpty { "Mi Negocio" }
-
-            AlertDialog.Builder(this)
-                .setTitle("🌎 Solicitar Cambio de País")
-                .setMessage(
-                    "El país de operación (${currentCountry.flagEmoji} ${currentCountry.displayName}) queda fijo al instalar la aplicación para proteger la contabilidad y moneda de tu caja.\n\n" +
-                    "Si necesitas cambiar tu terminal a otro país (Venezuela, Colombia o Argentina), nuestro equipo de Atención al Cliente lo actualizará de inmediato en el sistema.\n\n" +
-                    "🔑 ID de tu Terminal: $deviceId"
-                )
-                .setPositiveButton("💬 Contactar Atención al Cliente") { _, _ ->
-                    val text = Uri.encode(
-                        "Hola equipo de Atención al Cliente Zeasy, solicito el cambio de país de operación para mi terminal.\n\n" +
-                        "🏪 Comercio: $businessName\n" +
-                        "🔑 ID de Terminal: $deviceId\n" +
-                        "🌎 País actual: ${currentCountry.flagEmoji} ${currentCountry.displayName} (${currentCountry.localCurrencyCode})\n" +
-                        "👉 Deseo cambiar a: "
-                    )
-                    val uri = Uri.parse("https://api.whatsapp.com/send?phone=${PlanCapabilityManager.SUPPORT_PHONE_CLEAN}&text=$text")
-                    try {
-                        startActivity(Intent(Intent.ACTION_VIEW, uri))
-                    } catch (_: Exception) {
-                        Toast.makeText(this, "WhatsApp Soporte: ${PlanCapabilityManager.SUPPORT_PHONE_DISPLAY}", Toast.LENGTH_LONG).show()
-                    }
-                }
-                .setNegativeButton("Cancelar", null)
-                .show()
-        }
-
         binding.toggleGroupTheme.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 if (checkedId == R.id.btnThemeLight) {
@@ -4840,9 +4808,19 @@ class MainActivity : AppCompatActivity() {
                     "• Todos los clientes, fiados y abonos de la Libreta.\n" +
                     "• Bancos configurados y códigos QR subidos.\n" +
                     "• Perfil comercial y ajustes.\n\n" +
-                    "La aplicación volverá a su estado inicial de bienvenida como recién instalada.\n\n" +
+                    "💡 SUGERENCIA DE SEGURIDAD:\n" +
+                    "Te sugerimos generar una copia de seguridad antes de continuar para conservar tus ventas y clientes guardados en tu teléfono.\n\n" +
                     "¿Deseas continuar?"
                 )
+                .setNeutralButton("💾 Hacer Respaldo Primero") { _, _ ->
+                    val file = BackupManager.exportBackupToFile(this)
+                    if (file != null) {
+                        BackupManager.shareBackupFile(this, file)
+                        Toast.makeText(this, "💾 Copia de seguridad generada. Guárdala en un lugar seguro.", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(this, "No se pudo generar el archivo de respaldo", Toast.LENGTH_SHORT).show()
+                    }
+                }
                 .setPositiveButton("Continuar con el borrado") { _, _ ->
                     requireSecurityAuth(
                         actionTitle = "Borrar Datos de Zeasy",
@@ -5623,7 +5601,7 @@ class MainActivity : AppCompatActivity() {
     private fun showSetupWizardDialog(isMandatory: Boolean = true, startStep: Int = 1) {
         setupWizardDialog?.dismiss()
         isWizardMandatory = isMandatory
-        currentWizardStep = startStep.coerceIn(1, 5)
+        currentWizardStep = startStep.coerceIn(1, 6)
 
         val dialog = Dialog(this, android.R.style.Theme_DeviceDefault_Light_NoActionBar_Fullscreen)
         val wBinding = DialogSetupWizardBinding.inflate(layoutInflater)
@@ -5744,7 +5722,18 @@ class MainActivity : AppCompatActivity() {
             if (currentBankCode.isNotEmpty()) {
                 launchCropForBank(currentBankCode)
             } else {
-                Toast.makeText(this, "Primero toca tu banco en la lista de arriba", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Primero selecciona un banco o billetera en el paso anterior", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        wBinding.btnWizardDeleteQr.setOnClickListener {
+            val currentBankCode = PreferencesHelper.getUserProfile(this).bankCode
+            if (currentBankCode.isNotEmpty()) {
+                PreferencesHelper.clearBankQr(this, currentBankCode)
+                renderCashierBankCards()
+                updateSelectedBankConfigCard()
+                refreshSetupWizardStepUi()
+                Toast.makeText(this, "🗑️ Imagen de QR eliminada", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -5871,11 +5860,18 @@ class MainActivity : AppCompatActivity() {
                     refreshSetupWizardStepUi()
                 }
                 3 -> {
+                    // Del paso 3 (Selección de banco) pasamos al paso 4 (Código QR)
                     currentWizardStep = 4
                     PreferencesHelper.setOnboardingStep(this, 4)
                     refreshSetupWizardStepUi()
                 }
                 4 -> {
+                    // Del paso 4 (Código QR) pasamos al paso 5 (Permiso de notificaciones)
+                    currentWizardStep = 5
+                    PreferencesHelper.setOnboardingStep(this, 5)
+                    refreshSetupWizardStepUi()
+                }
+                5 -> {
                     val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
                     val isListenerEnabled = enabledListeners != null && enabledListeners.contains(packageName)
                     if (!isListenerEnabled) {
@@ -5885,21 +5881,21 @@ class MainActivity : AppCompatActivity() {
                             .setPositiveButton("👉 Sí, Activar Ahora") { _, _ ->
                                 wBinding.btnWizardActivateNotif.performClick()
                             }
-                            .setNegativeButton("Pasar al último paso") { _, _ ->
-                                currentWizardStep = 5
-                                PreferencesHelper.setOnboardingStep(this, 5)
+                            .setNegativeButton("Pasar al siguiente paso") { _, _ ->
+                                currentWizardStep = 6
+                                PreferencesHelper.setOnboardingStep(this, 6)
                                 refreshSetupWizardStepUi()
                             }
                             .show()
                         return@setOnClickListener
                     }
-                    currentWizardStep = 5
-                    PreferencesHelper.setOnboardingStep(this, 5)
+                    currentWizardStep = 6
+                    PreferencesHelper.setOnboardingStep(this, 6)
                     refreshSetupWizardStepUi()
                 }
-                5 -> {
+                6 -> {
                     PreferencesHelper.setOnboardingCompleted(this, true)
-                    PreferencesHelper.setOnboardingStep(this, 5)
+                    PreferencesHelper.setOnboardingStep(this, 6)
                     loadSettings(forceReload = true)
                     setupCashierBankSelector()
                     renderCashierBankCards()
@@ -5924,7 +5920,7 @@ class MainActivity : AppCompatActivity() {
         val cProf = PreferencesHelper.getCountryProfile(this)
         val uProf = PreferencesHelper.getUserProfile(this)
 
-        wBinding.tvWizardStepBadge.text = "PASO $currentWizardStep DE 5"
+        wBinding.tvWizardStepBadge.text = "PASO $currentWizardStep DE 6"
         wBinding.progressWizard.progress = currentWizardStep
         wBinding.scrollWizardContent.scrollTo(0, 0)
 
@@ -5933,6 +5929,7 @@ class MainActivity : AppCompatActivity() {
         wBinding.layoutWizardStep3.visibility = if (currentWizardStep == 3) View.VISIBLE else View.GONE
         wBinding.layoutWizardStep4.visibility = if (currentWizardStep == 4) View.VISIBLE else View.GONE
         wBinding.layoutWizardStep5.visibility = if (currentWizardStep == 5) View.VISIBLE else View.GONE
+        wBinding.layoutWizardStep6.visibility = if (currentWizardStep == 6) View.VISIBLE else View.GONE
 
         wBinding.btnWizardBack.visibility = if (currentWizardStep > 1 || !isWizardMandatory) View.VISIBLE else View.GONE
         wBinding.btnWizardBack.text = if (currentWizardStep == 1 && !isWizardMandatory) "✖ Cerrar" else "⬅ Atrás"
@@ -5979,7 +5976,6 @@ class MainActivity : AppCompatActivity() {
                     if (wBinding.etWizardBcvRate.text.isNullOrBlank()) {
                         wBinding.etWizardBcvRate.setText(String.format(Locale.US, "%.2f", uProf.bcvRate))
                     }
-                    // Intentar actualizar la tasa BCV automáticamente en segundo plano
                     lifecycleScope.launch {
                         val res = BcvRateHelper.fetchOfficialRate()
                         if (res.isSuccess && res.rate > 0.0) {
@@ -6058,43 +6054,41 @@ class MainActivity : AppCompatActivity() {
                     wBinding.layoutWizardBanksContainer.addView(btn)
                 }
 
-                val hasQr = activeCode.isNotBlank() && !PreferencesHelper.getBankQrUri(this, activeCode).isNullOrEmpty()
-                wBinding.btnWizardUploadQr.setTextColor(Color.parseColor("#0A192F"))
-                wBinding.btnWizardUploadQr.strokeColor = ColorStateList.valueOf(Color.parseColor("#CBD5E1"))
-                wBinding.btnWizardUploadQr.backgroundTintList = ColorStateList.valueOf(Color.WHITE)
-
-                if (activeCode.isBlank()) {
-                    wBinding.tvWizardQrStatus.text = "💡 Puedes elegir tu banco arriba o continuar y configurarlo más tarde."
-                    wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#64748B"))
-                    wBinding.btnWizardUploadQr.visibility = View.GONE
-                } else if (cProf.code == CountryCode.AR) {
-                    wBinding.btnWizardUploadQr.visibility = View.VISIBLE
-                    if (hasQr) {
-                        wBinding.tvWizardQrStatus.text = "✅ Ya subiste el código QR de $activeName (Opcional)"
-                        wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#00875A"))
-                        wBinding.btnWizardUploadQr.text = "📸 Cambiar Imagen de mi QR"
-                    } else {
-                        wBinding.tvWizardQrStatus.text = "💡 En Argentina se cobra gratis (0% comisión) por Alias o CVU de Mercado Pago.\nEl código QR es totalmente opcional."
-                        wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#1E293B"))
-                        wBinding.btnWizardUploadQr.text = "📸 Subir QR (Opcional)"
-                    }
-                } else {
-                    wBinding.btnWizardUploadQr.visibility = View.VISIBLE
-                    if (hasQr) {
-                        wBinding.tvWizardQrStatus.text = "✅ ¡Excelente! Ya subiste el código QR de $activeName"
-                        wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#00875A"))
-                        wBinding.btnWizardUploadQr.text = "📸 Cambiar Imagen de mi QR"
-                    } else {
-                        wBinding.tvWizardQrStatus.text = "📸 Código QR de $activeName (Opcional: puedes subirlo ahora o después)"
-                        wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#1E293B"))
-                        wBinding.btnWizardUploadQr.text = "📸 Subir Imagen de mi QR"
-                    }
-                }
-
                 wBinding.btnWizardNext.text = if (activeCode.isNotBlank()) "Guardar Banco y Continuar ➔" else "Continuar ➔"
             }
             4 -> {
-                wBinding.tvWizardStepTitle.text = "🔔 4. Permiso para Cantar los Pagos"
+                wBinding.tvWizardStepTitle.text = "📸 4. Código QR de Cobro"
+                wBinding.tvWizardStepSubtitle.text = "Sube el código QR de tu cuenta para que tus clientes paguen escaneando con su celular."
+
+                val activeCode = uProf.bankCode
+                val activeBankName = if (activeCode.isNotBlank()) BankCatalog.findByCode(activeCode)?.name ?: uProf.bankName else "tu cuenta"
+                wBinding.tvWizardQrBankTitle.text = if (activeCode.isNotBlank()) "Banco: $activeBankName" else "Código QR de Cobro"
+
+                val qrUri = if (activeCode.isNotBlank()) PreferencesHelper.getBankQrUri(this, activeCode) else null
+                val hasQr = !qrUri.isNullOrEmpty()
+
+                if (hasQr) {
+                    try {
+                        wBinding.ivWizardQrPreview.setImageURI(Uri.parse(qrUri))
+                    } catch (_: Exception) {
+                        wBinding.ivWizardQrPreview.setImageResource(R.drawable.ic_zeasy_icon)
+                    }
+                    wBinding.tvWizardQrStatus.text = "✅ Código QR configurado para $activeBankName"
+                    wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#00875A"))
+                    wBinding.btnWizardUploadQr.text = "🔄 Cambiar Imagen de QR"
+                    wBinding.btnWizardDeleteQr.visibility = View.VISIBLE
+                    wBinding.btnWizardNext.text = "Siguiente Paso ➔"
+                } else {
+                    wBinding.ivWizardQrPreview.setImageResource(R.drawable.ic_zeasy_icon)
+                    wBinding.tvWizardQrStatus.text = "📸 Aún no has subido tu código QR"
+                    wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#64748B"))
+                    wBinding.btnWizardUploadQr.text = "📸 Subir Imagen de mi Código QR"
+                    wBinding.btnWizardDeleteQr.visibility = View.GONE
+                    wBinding.btnWizardNext.text = "Continuar sin QR (Opcional) ➔"
+                }
+            }
+            5 -> {
+                wBinding.tvWizardStepTitle.text = "🔔 5. Permiso para Cantar los Pagos"
                 wBinding.tvWizardStepSubtitle.text = "Este permiso es indispensable para que tu teléfono lea el aviso del banco y te cante el monto en voz alta."
 
                 val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
@@ -6106,37 +6100,37 @@ class MainActivity : AppCompatActivity() {
                     wBinding.btnWizardActivateNotif.text = "✅ Permiso Activado (Tocar si deseas revisarlo)"
                     wBinding.btnWizardNext.text = "Continuar al Último Paso ➔"
                 } else {
-                    wBinding.tvWizardNotifStatusBadge.text = "🔴 Falta activar: Toca el botón azul de abajo y prende el interruptor de Zeasy"
+                    wBinding.tvWizardNotifStatusBadge.text = "🔴 Falta activar: Toca el botón de abajo y prende el interruptor de Zeasy"
                     wBinding.tvWizardNotifStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.warning_orange))
                     wBinding.btnWizardActivateNotif.text = "👉 1. Tocar Aquí para Activar Permiso"
                     wBinding.btnWizardNext.text = "Ya lo activé, Siguiente Paso ➔"
                 }
             }
-            5 -> {
-                wBinding.tvWizardStepTitle.text = "🔊 5. ¡Último Paso y Prueba de Sonido!"
-                wBinding.tvWizardStepSubtitle.text = "Asegura que tu teléfono no se duerma y escucha cómo te avisará cuando te paguen."
+            6 -> {
+                wBinding.tvWizardStepTitle.text = "🔋 6. Segundo Plano y Prueba de Sonido"
+                wBinding.tvWizardStepSubtitle.text = "Garantiza que Zeasy cante tus pagos incluso con la pantalla apagada o bloqueada."
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
                     val isIgnoringBattery = pm?.isIgnoringBatteryOptimizations(packageName) == true
                     if (isIgnoringBattery) {
-                        wBinding.tvWizardBatteryStatusBadge.text = "🟢 ¡Perfecto! Tu teléfono no suspenderá a Zeasy cuando se apague la pantalla ✅"
+                        wBinding.tvWizardBatteryStatusBadge.text = "🟢 ¡Perfecto! Tu teléfono tiene activo 'Sin restricciones' y no suspenderá a Zeasy con la pantalla apagada ✅"
                         wBinding.tvWizardBatteryStatusBadge.setTextColor(Color.parseColor("#00875A"))
-                        wBinding.btnWizardActivateBattery.text = "✅ Uso con Pantalla Apagada Activado"
+                        wBinding.btnWizardActivateBattery.text = "✅ Modo Sin Restricciones Activo"
                         wBinding.btnWizardActivateBattery.setTextColor(Color.WHITE)
                         wBinding.btnWizardActivateBattery.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#00875A"))
                         wBinding.btnWizardActivateBattery.strokeColor = ColorStateList.valueOf(Color.parseColor("#006644"))
                     } else {
-                        wBinding.tvWizardBatteryStatusBadge.text = "⚠️ Toca el botón de abajo y elige 'Permitir' para que funcione con pantalla apagada:"
-                        wBinding.tvWizardBatteryStatusBadge.setTextColor(Color.parseColor("#FF8B00"))
-                        wBinding.btnWizardActivateBattery.text = "🔋 Permitir Uso con Pantalla Apagada"
-                        wBinding.btnWizardActivateBattery.setTextColor(Color.parseColor("#0A192F"))
-                        wBinding.btnWizardActivateBattery.backgroundTintList = ColorStateList.valueOf(Color.WHITE)
-                        wBinding.btnWizardActivateBattery.strokeColor = ColorStateList.valueOf(Color.parseColor("#0096C7"))
+                        wBinding.tvWizardBatteryStatusBadge.text = "⚠️ Sigue los 3 pasos numerados abajo para activar 'Sin restricciones':"
+                        wBinding.tvWizardBatteryStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.warning_orange))
+                        wBinding.btnWizardActivateBattery.text = "👉 1. Tocar Aquí para Abrir Ajustes de Zeasy"
+                        wBinding.btnWizardActivateBattery.setTextColor(Color.WHITE)
+                        wBinding.btnWizardActivateBattery.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#0096C7"))
+                        wBinding.btnWizardActivateBattery.strokeColor = ColorStateList.valueOf(Color.parseColor("#0077B6"))
                     }
                 }
 
-                wBinding.btnWizardNext.text = "✅ ¡Terminar y Empezar a Cobrar!"
+                wBinding.btnWizardNext.text = "🎉 ¡Terminar y Empezar a Cobrar!"
             }
         }
     }
