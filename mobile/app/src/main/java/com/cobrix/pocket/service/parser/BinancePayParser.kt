@@ -19,6 +19,7 @@ class BinancePayParser : BankParser {
             "campaña", "campaign", "concurso", "sorteo", "giveaway", "airdrop",
             "nuevo listado", "new listing", "launchpool", "launchpad", "invita a", "referral",
             "trading", "futuros", "futures", "liquidación", "liquidacion", "margen", "apalancamiento",
+            "spot", "orden spot", "spot order", "grid", "bot", "estrategia", "trailing",
             "comprar cripto", "compra btc", "invertir", "oportunidad", "criptomoneda", "mercado"
         )
 

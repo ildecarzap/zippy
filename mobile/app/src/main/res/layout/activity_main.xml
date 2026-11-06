@@ -2035,6 +2035,35 @@
                                                 android:visibility="gone" />
                                         </LinearLayout>
 
+                                        <!-- Recomendación de Rendimiento para Binance -->
+                                        <LinearLayout
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:orientation="horizontal"
+                                            android:background="@drawable/bg_badge_rounded"
+                                            android:backgroundTint="#FEF3C7"
+                                            android:padding="10dp"
+                                            android:layout_marginTop="10dp"
+                                            android:gravity="center_vertical">
+
+                                            <TextView
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="💡"
+                                                android:textSize="15sp"
+                                                android:layout_marginEnd="8dp" />
+
+                                            <TextView
+                                                android:layout_width="0dp"
+                                                android:layout_height="wrap_content"
+                                                android:layout_weight="1"
+                                                android:text="Recomendación para un mejor rendimiento: en tu app de Binance, ve a Notificaciones y mantén activas únicamente las alertas de Finanzas / Binance Pay."
+                                                android:textColor="#92400E"
+                                                android:textSize="12sp"
+                                                android:lineSpacingExtra="2dp"
+                                                android:textStyle="bold" />
+                                        </LinearLayout>
+
                                         <!-- Botón Quitar Binance Pay -->
                                         <com.google.android.material.button.MaterialButton
                                             android:id="@+id/btnRemoveBinanceWallet"

@@ -180,15 +180,15 @@
             android:textColor="@color/text_primary"
             app:cornerRadius="12dp" />
 
-        <!-- Opción Bloqueada en Plan Básico: + opciones de reporte -->
+        <!-- Opción Bloqueada en Plan Básico: Exportar reporte (PDF y Excel) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnShareOptionsProLocked"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="52dp"
             android:layout_marginTop="8dp"
-            android:text="➕ Opciones de Reporte 🔒 (PDF y Excel)"
-            android:textSize="13sp"
+            android:text="📄 Exportar reporte (PDF / CSV)"
+            android:textSize="13.5sp"
             android:textStyle="bold"
             android:textColor="@color/accent_cyan"
             app:strokeColor="@color/accent_cyan"
@@ -220,6 +220,34 @@
             android:textStyle="bold"
             android:textColor="@color/text_primary"
             app:cornerRadius="12dp" />
+
+        <!-- Nota Promocional Web Dashboard -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@drawable/bg_badge_rounded"
+            android:backgroundTint="@color/card_background"
+            android:padding="12dp"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="💻"
+                android:textSize="18sp"
+                android:layout_marginEnd="10dp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Puedes ver tus métricas en pantalla grande en tu computadora y auditar tus movimientos cargando tu archivo CSV en zeasy.app"
+                android:textColor="@color/text_secondary"
+                android:textSize="12.5sp"
+                android:lineSpacingExtra="2dp" />
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

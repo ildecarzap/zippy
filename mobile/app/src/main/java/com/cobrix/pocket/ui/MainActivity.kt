@@ -595,7 +595,8 @@ class MainActivity : AppCompatActivity() {
                         PreferencesHelper.setShiftActive(this, false)
                         updateShiftUI()
                         binding.bottomNavigation.selectedItemId = R.id.nav_ledger
-                        Toast.makeText(this, "Jornada pausada. Soundbox y detección inactivos.", Toast.LENGTH_SHORT).show()
+                        showShareReportDialog()
+                        Toast.makeText(this, "Jornada pausada. Mostrando balance del turno.", Toast.LENGTH_SHORT).show()
                     }
                     .setNegativeButton("Continuar Trabajando", null)
                     .show()
@@ -3797,7 +3798,22 @@ class MainActivity : AppCompatActivity() {
             dialogBinding.btnShareOptionCsv.visibility = View.GONE
             dialogBinding.btnShareOptionsProLocked.visibility = View.VISIBLE
             dialogBinding.btnShareOptionsProLocked.setOnClickListener {
-                showProUpgradeDialog("Exportación de Reportes Formales en PDF y Excel")
+                AlertDialog.Builder(this)
+                    .setTitle("💼 Función para Comercios")
+                    .setMessage(
+                        "La exportación de balances en PDF y CSV requiere una clave de activación comercial para negocios.\n\n" +
+                        "Puedes ingresar tu clave si ya la tienes o consultar con asistencia para activarla en tu dispositivo."
+                    )
+                    .setPositiveButton("🔑 Ingresar Clave") { _, _ ->
+                        dialog.dismiss()
+                        showRedeemCodeDialog()
+                    }
+                    .setNeutralButton("💬 Consultar con Asistencia") { _, _ ->
+                        dialog.dismiss()
+                        openSupportWhatsAppForPro("Exportación de balances en PDF y CSV")
+                    }
+                    .setNegativeButton("Cerrar", null)
+                    .show()
             }
         } else {
             dialogBinding.btnShareOptionPdf.visibility = View.VISIBLE
@@ -3899,11 +3915,27 @@ class MainActivity : AppCompatActivity() {
             .replace("noventa", "90")
             .replace("cien", "100")
             .replace("ciento", "100")
+            .replace("doscientos", "200")
+            .replace("trescientos", "300")
+            .replace("cuatrocientos", "400")
+            .replace("quinientos", "500")
+            .replace("seiscientos", "600")
+            .replace("setecientos", "700")
+            .replace("ochocientos", "800")
+            .replace("novecientos", "900")
 
         val conRegex = Regex("""(\d+)\s+con\s+(\d+)""")
         textForNumber = conRegex.replace(textForNumber) { matchResult ->
             "${matchResult.groupValues[1]}.${matchResult.groupValues[2]}"
         }
+
+        // Reconocimiento fonético para "mil" y "k" (ej: "50 mil" -> 50000, "1.5 mil" -> 1500)
+        val milRegex = Regex("""(?i)(\d+(?:[.,]\d+)?)\s*(?:mil|k)\b""")
+        textForNumber = milRegex.replace(textForNumber) { mr ->
+            val num = mr.groupValues[1].replace(',', '.').toDoubleOrNull() ?: 1.0
+            String.format(Locale.US, "%.0f", num * 1000.0)
+        }
+        textForNumber = textForNumber.replace(Regex("""(?i)\bmil\b"""), "1000")
 
         val numberRegex = Regex("""(\d+(?:[.,]\d+)?)""")
         val numberMatch = numberRegex.find(textForNumber)
@@ -4000,8 +4032,16 @@ class MainActivity : AppCompatActivity() {
             updateVoiceTypeChip()
         }
 
+        val countryProfile = PreferencesHelper.getCountryProfile(this)
         if (parsedRawAmount > 0.0) {
-            if (isUsd) {
+            if (!countryProfile.supportsExchangeRate) {
+                val formattedAmt = if (countryProfile.code == CountryCode.CO) {
+                    String.format(Locale.US, "%s %,.0f", countryProfile.localCurrencySymbol, amountVes)
+                } else {
+                    String.format(Locale.US, "%s %,.2f", countryProfile.localCurrencySymbol, amountVes)
+                }
+                dialogBinding.tvVoiceParsedAmount.text = "$formattedAmt (${countryProfile.localCurrencyCode})"
+            } else if (isUsd) {
                 dialogBinding.tvVoiceParsedAmount.text = String.format(Locale.US, "$%.2f USD\n(≈ Bs. %.2f)", amountUsd, amountVes)
             } else {
                 dialogBinding.tvVoiceParsedAmount.text = String.format(Locale.US, "Bs. %.2f\n(≈ $%.2f USD)", amountVes, amountUsd)
@@ -4033,7 +4073,7 @@ class MainActivity : AppCompatActivity() {
             loadTodayLedger()
 
             val profile = PreferencesHelper.getUserProfile(this)
-            val spokenAmt = if (isUsd) amountUsd else amountVes
+            val spokenAmt = if (countryProfile.supportsExchangeRate && isUsd) amountUsd else amountVes
             if (profile.voiceAnnouncementEnabled) {
                 if (currentIsExpense) {
                     soundHelper?.announceExpense(spokenAmt)
@@ -5483,18 +5523,27 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return
             if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-                try {
-                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                        data = Uri.parse("package:$packageName")
+                AlertDialog.Builder(this)
+                    .setTitle("🔋 Mantener Zeasy Activo en Segundo Plano")
+                    .setMessage(
+                        "Para que Zeasy cante tus pagos instantáneamente con la pantalla bloqueada o la app cerrada:\n\n" +
+                        "1. Presiona '👉 Abrir Ajustes'.\n" +
+                        "2. Busca la sección 'Batería' o 'Uso de batería de la app'.\n" +
+                        "3. Selecciona 'Sin restricciones' (o desactiva el ahorro de energía para Zeasy).\n\n" +
+                        "💡 En teléfonos Xiaomi / MIUI, Tecno o Samsung, este ajuste evita que Android suspenda la detección automática de cobros."
+                    )
+                    .setPositiveButton("👉 Abrir Ajustes") { _, _ ->
+                        try {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", packageName, null)
+                            }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(this, "Abre Ajustes > Aplicaciones > Zeasy > Batería > Sin restricciones", Toast.LENGTH_LONG).show()
+                        }
                     }
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    try {
-                        startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                    } catch (_: Exception) {
-                        Toast.makeText(this, "Abre Ajustes > Batería > Sin restricciones para Zeasy", Toast.LENGTH_LONG).show()
-                    }
-                }
+                    .setNegativeButton("Entendido", null)
+                    .show()
             } else {
                 Toast.makeText(this, "✅ La optimización de batería ya está configurada correctamente", Toast.LENGTH_SHORT).show()
             }
