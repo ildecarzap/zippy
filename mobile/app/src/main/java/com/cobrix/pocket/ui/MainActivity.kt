@@ -3842,6 +3842,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        dialogBinding.btnOpenWebDashboardLink.setOnClickListener {
+            val dashboardUrl = "${PlanCapabilityManager.OFFICIAL_WEBSITE}/dashboard"
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(dashboardUrl)))
+            } catch (e: Exception) {
+                Toast.makeText(this, "Abre $dashboardUrl en tu navegador", Toast.LENGTH_LONG).show()
+            }
+        }
+
         dialog.show()
     }
 
@@ -4748,7 +4757,7 @@ class MainActivity : AppCompatActivity() {
 
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle("💻 Tu Código de Acceso PC")
-                        .setMessage("Ingresa a dashboard.zeasy.app desde tu computadora e introduce tu teléfono y este código:\n\n" +
+                        .setMessage("Ingresa a zeasy.app (o a ${PlanCapabilityManager.OFFICIAL_WEBSITE}/dashboard) desde tu computadora e introduce tu teléfono y este código:\n\n" +
                             "👉  $formattedPin  👈\n\n" +
                             "• Teléfono: $phone\n" +
                             "• Válido por: 10 minutos\n\n" +
