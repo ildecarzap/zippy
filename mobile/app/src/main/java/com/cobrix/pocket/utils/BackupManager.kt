@@ -16,6 +16,7 @@ import com.cobrix.pocket.data.model.LedgerEntryType
 import com.cobrix.pocket.data.model.Transaction
 import com.cobrix.pocket.data.model.TransactionType
 import com.cobrix.pocket.data.model.UserProfile
+import com.cobrix.pocket.data.model.CountryProfile
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -30,7 +31,10 @@ data class BackupRestoreResult(
     val message: String,
     val transactionsRestored: Int = 0,
     val debtorsRestored: Int = 0,
-    val merchantName: String = ""
+    val merchantName: String = "",
+    val isCountryMismatch: Boolean = false,
+    val backupCountryName: String = "",
+    val currentCountryName: String = ""
 )
 
 /**
@@ -49,12 +53,17 @@ object BackupManager {
     fun createBackupJson(context: Context): String {
         val dbHelper = PocketDatabaseHelper.getInstance(context)
         val profile = PreferencesHelper.getUserProfile(context)
+        val currentCountry = PreferencesHelper.getCountryProfile(context)
         val transactions = dbHelper.getAllTransactions()
         val deviceId = PlanCapabilityManager.getDeviceId(context)
 
         val root = JSONObject()
         root.put("version", BACKUP_VERSION)
         root.put("app", "Zeasy")
+        root.put("countryCode", currentCountry.code.name)
+        root.put("countryDisplayName", "${currentCountry.flagEmoji} ${currentCountry.displayName}")
+        root.put("currencyCode", currentCountry.localCurrencyCode)
+        root.put("currencySymbol", currentCountry.localCurrencySymbol)
         root.put("createdAt", System.currentTimeMillis())
         root.put("createdAtFormatted", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()))
         root.put("sourceDeviceId", deviceId)
@@ -182,6 +191,68 @@ object BackupManager {
         context.startActivity(Intent.createChooser(intent, "Guardar o compartir copia de seguridad Zeasy"))
     }
 
+    data class CountryValidationResult(
+        val isCompatible: Boolean,
+        val inferredCountry: String,
+        val errorMessage: String? = null
+    )
+
+    /**
+     * Valida si el archivo de respaldo pertenece al mismo país configurado en la terminal.
+     * Si el archivo no tiene countryCode (respaldo legado), se asume "VE" (Venezuela).
+     */
+    fun validateCountryCompatibility(
+        backupCountryCode: String?,
+        currentCountry: CountryProfile,
+        backupDisplayName: String? = null,
+        backupCurrencyCode: String? = null
+    ): CountryValidationResult {
+        val rawBackupCountry = backupCountryCode?.trim()?.uppercase() ?: ""
+        val rawCurrencyCode = backupCurrencyCode?.trim()?.uppercase() ?: ""
+        val rawDisplayName = backupDisplayName?.trim() ?: ""
+
+        val inferredCountry = if (rawBackupCountry.isNotEmpty()) {
+            rawBackupCountry
+        } else {
+            "VE"
+        }
+
+        if (inferredCountry != currentCountry.code.name) {
+            val (originFlag, originName, originCurrency) = when (inferredCountry) {
+                "VE" -> Triple("🇻🇪", "Venezuela", "Bolívares (VES)")
+                "CO" -> Triple("🇨🇴", "Colombia", "Pesos Colombianos (COP)")
+                "AR" -> Triple("🇦🇷", "Argentina", "Pesos Argentinos (ARS)")
+                else -> Triple("🌎", rawDisplayName.ifEmpty { inferredCountry }, rawCurrencyCode.ifEmpty { "Moneda local" })
+            }
+
+            val msg = "Este archivo pertenece a un negocio configurado en $originFlag $originName ($originCurrency).\n\n" +
+                      "Tu terminal actual está operando en ${currentCountry.flagEmoji} ${currentCountry.displayName} (${currentCountry.localCurrencyCode}).\n\n" +
+                      "Para proteger la contabilidad de tu caja, la moneda y los bancos configurados, no se permite restaurar datos de un país diferente.\n\n" +
+                      "💡 Si deseas utilizar estos datos, debes restablecer la app desde Ajustes e iniciar seleccionando $originName."
+
+            return CountryValidationResult(
+                isCompatible = false,
+                inferredCountry = inferredCountry,
+                errorMessage = msg
+            )
+        }
+
+        return CountryValidationResult(
+            isCompatible = true,
+            inferredCountry = inferredCountry
+        )
+    }
+
+    fun validateCountryCompatibility(
+        rootJson: JSONObject,
+        currentCountry: CountryProfile
+    ): CountryValidationResult {
+        val rawBackupCountry = rootJson.optString("countryCode", "")
+        val rawCurrencyCode = rootJson.optString("currencyCode", "")
+        val rawDisplayName = rootJson.optString("countryDisplayName", "")
+        return validateCountryCompatibility(rawBackupCountry, currentCountry, rawDisplayName, rawCurrencyCode)
+    }
+
     /**
      * Restaura la configuración, imágenes de QR y transacciones a partir de una cadena JSON.
      */
@@ -191,6 +262,19 @@ object BackupManager {
             val app = root.optString("app", "")
             if (!app.equals("Zeasy", ignoreCase = true) && !app.equals("Zippy", ignoreCase = true) && !app.equals("Cobrix", ignoreCase = true)) {
                 return BackupRestoreResult(false, "El archivo seleccionado no es un respaldo válido de Zeasy.")
+            }
+
+            // Validación estricta de País (Evitar colisión o corrupción de monedas entre VE, CO y AR)
+            val currentCountry = PreferencesHelper.getCountryProfile(context)
+            val validation = validateCountryCompatibility(root, currentCountry)
+            if (!validation.isCompatible) {
+                return BackupRestoreResult(
+                    success = false,
+                    message = validation.errorMessage ?: "Respaldo incompatible con el país actual.",
+                    isCountryMismatch = true,
+                    backupCountryName = validation.inferredCountry,
+                    currentCountryName = currentCountry.displayName
+                )
             }
 
             // 1. Restaurar Perfil
@@ -209,20 +293,24 @@ object BackupManager {
                     enabledSet.addAll(PreferencesHelper.DEFAULT_ENABLED_BANKS)
                 }
 
+                val curProfile = PreferencesHelper.getUserProfile(context)
+                val defaultBankCode = curProfile.bankCode.ifEmpty { "0178" }
+                val defaultBankName = curProfile.bankName.ifEmpty { "Ubii App" }
+
                 val profile = UserProfile(
                     merchantName = merchant,
-                    businessCategory = p.optString("businessCategory", "Transporte / Taxi"),
-                    bankCode = p.optString("bankCode", "0178"),
-                    bankName = p.optString("bankName", "Ubii App"),
-                    phoneNumber = p.optString("phoneNumber", ""),
-                    idCard = p.optString("idCard", ""),
-                    email = p.optString("email", ""),
-                    bcvRate = p.optDouble("bcvRate", 45.0),
-                    soundboxMode = p.optString("soundboxMode", "VOICE"),
-                    voiceAnnouncementEnabled = p.optString("soundboxMode", "VOICE") == "VOICE",
-                    soundNotificationEnabled = p.optString("soundboxMode", "VOICE") != "MUTED",
+                    businessCategory = p.optString("businessCategory", curProfile.businessCategory.ifEmpty { "Comercio" }),
+                    bankCode = p.optString("bankCode", defaultBankCode),
+                    bankName = p.optString("bankName", defaultBankName),
+                    phoneNumber = p.optString("phoneNumber", curProfile.phoneNumber),
+                    idCard = p.optString("idCard", curProfile.idCard),
+                    email = p.optString("email", curProfile.email),
+                    bcvRate = p.optDouble("bcvRate", curProfile.bcvRate),
+                    soundboxMode = p.optString("soundboxMode", curProfile.soundboxMode),
+                    voiceAnnouncementEnabled = p.optString("soundboxMode", curProfile.soundboxMode) == "VOICE",
+                    soundNotificationEnabled = p.optString("soundboxMode", curProfile.soundboxMode) != "MUTED",
                     enabledBankCodes = enabledSet,
-                    biometricSecurityEnabled = p.optBoolean("biometricSecurityEnabled", false)
+                    biometricSecurityEnabled = p.optBoolean("biometricSecurityEnabled", curProfile.biometricSecurityEnabled)
                 )
                 PreferencesHelper.saveUserProfile(context, profile)
             }

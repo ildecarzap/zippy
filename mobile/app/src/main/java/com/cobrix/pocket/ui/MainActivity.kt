@@ -152,6 +152,12 @@ class MainActivity : AppCompatActivity() {
                 loadTodayLedger()
                 loadDebtors()
                 updateDisplayAmount()
+            } else if (result.isCountryMismatch) {
+                AlertDialog.Builder(this)
+                    .setTitle("🌎 Respaldo Incompatible")
+                    .setMessage(result.message)
+                    .setPositiveButton("Entendido", null)
+                    .show()
             } else {
                 Toast.makeText(this, "❌ ${result.message}", Toast.LENGTH_LONG).show()
             }
