@@ -4829,6 +4829,62 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, PlanCapabilityManager.SUPPORT_EMAIL, Toast.LENGTH_LONG).show()
             }
         }
+
+        // Botón Restablecer Datos de Fábrica (Zona de Peligro)
+        binding.btnFactoryResetData.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("🚨 ¿Restablecer Zeasy de Fábrica?")
+                .setMessage(
+                    "Esta acción es irreversible y eliminará permanentemente:\n\n" +
+                    "• Todo el historial de ventas, ingresos y egresos de la Jornada.\n" +
+                    "• Todos los clientes, fiados y abonos de la Libreta.\n" +
+                    "• Bancos configurados y códigos QR subidos.\n" +
+                    "• Perfil comercial y ajustes.\n\n" +
+                    "La aplicación volverá a su estado inicial de bienvenida como recién instalada.\n\n" +
+                    "¿Deseas continuar?"
+                )
+                .setPositiveButton("Continuar con el borrado") { _, _ ->
+                    requireSecurityAuth(
+                        actionTitle = "Borrar Datos de Zeasy",
+                        description = "Confirma con tu huella o PIN para autorizar el restablecimiento completo"
+                    ) {
+                        confirmFinalFactoryReset()
+                    }
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
+        }
+    }
+
+    private fun confirmFinalFactoryReset() {
+        AlertDialog.Builder(this)
+            .setTitle("⚠️ Confirmación Definitiva")
+            .setMessage("¿Estás 100% seguro de vaciar todos los datos de Zeasy ahora mismo?")
+            .setPositiveButton("🗑️ Sí, Borrar Todo") { _, _ ->
+                executeFactoryReset()
+            }
+            .setNegativeButton("No borrar", null)
+            .show()
+    }
+
+    private fun executeFactoryReset() {
+        dbHelper.resetAllData()
+        PreferencesHelper.resetToFactorySettings(this)
+
+        activeCashierBankCode = ""
+        activeCashierBankName = ""
+        allDebtorsList = emptyList()
+
+        loadSettings()
+        loadTodayLedger()
+        loadDebtors()
+        renderCashierBankCards()
+        updateLicenseBadge()
+        updateShiftUI()
+
+        Toast.makeText(this, "✅ Datos eliminados exitosamente. Iniciando configuración de bienvenida...", Toast.LENGTH_LONG).show()
+
+        showSetupWizardDialog(isMandatory = true, startStep = 1)
     }
 
     private fun saveCurrentSettingsDraft() {

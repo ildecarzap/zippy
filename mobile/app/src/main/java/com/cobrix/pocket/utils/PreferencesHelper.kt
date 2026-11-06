@@ -718,6 +718,26 @@ object PreferencesHelper {
             .apply()
     }
 
+    /**
+     * Restablece la app a su estado inicial de fábrica (eliminando configuración, perfil, bancos y QRs).
+     */
+    fun resetToFactorySettings(context: Context) {
+        val prefs = getPrefs(context)
+        prefs.edit().clear().apply()
+        // Establecer primer lanzamiento en true y onboarding incompleto
+        prefs.edit()
+            .putBoolean(KEY_FIRST_LAUNCH, true)
+            .putBoolean(KEY_ONBOARDING_COMPLETED, false)
+            .putInt(KEY_ONBOARDING_STEP, 1)
+            .apply()
+
+        // Eliminar archivos locales de QRs si existen
+        try {
+            val qrDir = java.io.File(context.filesDir, "bank_qrs")
+            if (qrDir.exists()) qrDir.deleteRecursively()
+        } catch (_: Exception) {}
+    }
+
     fun hasSettingsDraft(context: Context): Boolean {
         val prefs = getPrefs(context)
         return prefs.contains(KEY_DRAFT_PHONE) || prefs.contains(KEY_DRAFT_ID_CARD) || prefs.contains(KEY_DRAFT_MERCHANT_NAME)

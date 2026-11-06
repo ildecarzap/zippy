@@ -378,6 +378,21 @@ class PocketDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABAS
         return db.delete(TABLE_TRANSACTIONS, null, null)
     }
 
+    /**
+     * Vacía completamente todas las tablas de la base de datos (Transacciones, Deudores y Movimientos de Libreta).
+     */
+    fun resetAllData(): Boolean {
+        return try {
+            val db = writableDatabase
+            db.delete(TABLE_LEDGER_ENTRIES, null, null)
+            db.delete(TABLE_DEBTORS, null, null)
+            db.delete(TABLE_TRANSACTIONS, null, null)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     private fun cursorToTransaction(cursor: Cursor): Transaction {
         val isManualIndex = cursor.getColumnIndex(COL_IS_MANUAL)
         val isManual = if (isManualIndex >= 0) {

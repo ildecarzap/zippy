@@ -2561,6 +2561,72 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
+                    <!-- Zona de Peligro / Restablecimiento de Fábrica -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginBottom="16dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#FCA5A5"
+                        app:strokeWidth="1.5dp"
+                        app:cardBackgroundColor="#FEF2F2">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="⚠️"
+                                    android:textSize="20sp"
+                                    android:layout_marginEnd="8dp" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Zona de Peligro"
+                                    android:textStyle="bold"
+                                    android:textColor="#991B1B"
+                                    android:textSize="15sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Borra todas las ventas registradas, clientes de la libreta de fiados, bancos vinculados y códigos QR para reiniciar Zeasy desde cero."
+                                android:textColor="#7F1D1D"
+                                android:textSize="12.5sp"
+                                android:lineSpacingExtra="2dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnFactoryResetData"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="12dp"
+                                android:text="🗑️ Borrar Todos los Datos y Empezar de Cero"
+                                android:textColor="#B91C1C"
+                                android:textStyle="bold"
+                                android:textSize="13sp"
+                                app:backgroundTint="#FEE2E2"
+                                app:cornerRadius="10dp" />
+
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
                     <!-- Versión y Telemetría -->
                     <TextView
                         android:id="@+id/tvSubscriptionFooter"
