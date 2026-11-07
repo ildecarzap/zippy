@@ -18,10 +18,13 @@ enum class BankCode(
         defaultKeywords = listOf("tpago", "mercantil"),
         knownPackageNames = listOf(
             "com.mercantilbanco.mercantilmovil",
+            "com.mercantilbanco.empresas",
             "com.mercantilbanco.android.movil",
             "com.mercantil.movil",
             "com.mercantilbanco.movil",
-            "com.mercantilbanco"
+            "com.mercantilbanco",
+            "com.mercantil.personas",
+            "com.mercantilbanco.personas"
         ),
         country = CountryCode.VE
     ),
@@ -89,7 +92,19 @@ enum class BankCode(
         sudebanCode = "0178",
         displayName = "Ubii App",
         defaultKeywords = listOf("ubii", "ubiipagos", "pago móvil", "pago movil", "0178"),
-        knownPackageNames = listOf("com.ubiipagos.app", "com.ubii.app", "com.ubii.ubiipagos", "com.ubii"),
+        knownPackageNames = listOf(
+            "ubii.ubiipagos.com.ubiiapp",
+            "com.ubiipagos.ubii",
+            "com.ubiiapp.ubii",
+            "com.ubiipagos.app",
+            "com.ubii.app",
+            "com.ubii.ubiipagos",
+            "com.ubii",
+            "ubii.ubiipagos.com",
+            "com.ubapp",
+            "com.ub.app",
+            "com.ubiipagos.ubapp"
+        ),
         country = CountryCode.VE
     ),
 
@@ -120,8 +135,13 @@ enum class BankCode(
     AR_MERCADOPAGO(
         sudebanCode = "AR_MP",
         displayName = "Mercado Pago",
-        defaultKeywords = listOf("mercado pago", "mercadopago", "te transfirieron", "recibiste", "cobro aprobado", "cobraste", "transferencia"),
-        knownPackageNames = listOf("com.mercadopago.wallet", "com.mercadolibre", "com.mercadopago"),
+        defaultKeywords = listOf("mercado pago", "mercadopago", "te transfirieron", "te transfirio", "te transfirió", "recibiste", "cobro aprobado", "cobraste", "transferencia"),
+        knownPackageNames = listOf(
+            "com.mercadopago.wallet",
+            "com.mercadolibre",
+            "com.mercadopago",
+            "com.mercadolibre.android"
+        ),
         country = CountryCode.AR
     ),
     AR_CUENTADNI(
@@ -163,6 +183,33 @@ enum class BankCode(
         defaultKeywords = listOf("binance", "binance pay", "usdt", "you have received", "has recibido", "order"),
         knownPackageNames = listOf("com.binance.dev")
     );
+
+    /**
+     * Evalúa si el nombre de paquete de Android pertenece a la aplicación oficial de este banco o billetera,
+     * combinando la lista blanca explícita con tokens institucionales de paquete para tolerar sufijos de versión.
+     */
+    fun matchesPackage(packageName: String): Boolean {
+        val pkg = packageName.lowercase(java.util.Locale.ROOT)
+        if (knownPackageNames.any { it.equals(pkg, ignoreCase = true) }) return true
+        return when (this) {
+            MERCANTIL -> pkg.contains("mercantil")
+            BANESCO -> pkg.contains("banesco")
+            BDV -> pkg.contains("bdv") || pkg.contains("bancodevenezuela")
+            PROVINCIAL -> false
+            BNC -> pkg.contains("bnc")
+            BANCAMIGA -> pkg.contains("bancamiga")
+            UBII -> pkg.contains("ubii") || pkg.contains("ubapp") || pkg.startsWith("com.ub.")
+            CO_NEQUI -> pkg.contains("nequi")
+            CO_DAVIPLATA -> pkg.contains("daviplata") || pkg.contains("davivienda")
+            CO_BANCOLOMBIA -> pkg.contains("bancolombia") || pkg.contains("todo1")
+            AR_MERCADOPAGO -> pkg.contains("mercadopago") || pkg.contains("mercadolibre")
+            AR_CUENTADNI -> pkg.contains("cuentadni") || pkg.contains("bapro")
+            AR_BNA_MAS -> pkg.contains("bnamas") || pkg.contains("bna")
+            AR_UALA -> pkg.contains("uala")
+            SMS -> false
+            BINANCE -> pkg.contains("binance")
+        }
+    }
 
     companion object {
         fun fromCode(code: String?): BankCode? {

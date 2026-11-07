@@ -54,5 +54,18 @@ class MercadoPagoParserTest {
         assertEquals(25000.0, payment!!.monto, 0.001)
         assertEquals("8943", payment.referenciaUltimos4)
     }
+
+    @Test
+    fun testMercadoPagoWithRendimientosMentionIsNotBlocked() {
+        val router = MultibankParserRouter()
+        val packageName = "com.mercadopago.wallet"
+        val title = "¡Te transfirieron $ 12.500!"
+        val text = "De Carlos Gomez. Tu dinero ya está generando rendimientos en tu cuenta."
+
+        val payment = router.routeAndParse(packageName, title, text, 1729710000000L, setOf(BankCode.AR_MERCADOPAGO))
+        assertNotNull("Transferencia de Mercado Pago con mención de rendimientos no debe ser bloqueada", payment)
+        assertEquals(12500.0, payment!!.monto, 0.001)
+        assertEquals(BankCode.AR_MERCADOPAGO, payment.bancoCodigo)
+    }
 }
 

@@ -527,6 +527,13 @@ class MainActivity : AppCompatActivity() {
         val previouslyEnabled = wasNotificationListenerEnabled
         checkNotificationPermission()
         PocketNotificationListenerService.ensureServiceBound(this)
+        if (PocketNotificationListenerService.isPermissionGranted(this)) {
+            val missed = PocketNotificationListenerService.rescanActiveNotifications(playSound = true)
+            if (missed > 0) {
+                loadTodayLedger()
+                loadDebtors()
+            }
+        }
 
         if (!previouslyEnabled && wasNotificationListenerEnabled) {
             // Acaba de activar el permiso de escucha, sugerir optimización de batería si aún está con restricciones

@@ -14,17 +14,28 @@ class BdvParser : BankParser {
         val isBdvApp = pkg.contains("bdv") || pkg.contains("bancodevenezuela") ||
                 BankCode.BDV.knownPackageNames.any { pkg.equals(it, ignoreCase = true) }
         val isSms = ParserUtils.isSmsPackage(pkg) && ParserUtils.isLegitimateBankSmsSender(title) &&
-                (title?.contains("26371") == true || title?.contains("772") == true || title?.lowercase(Locale.ROOT)?.contains("bdv") == true || title?.lowercase(Locale.ROOT)?.contains("venezuela") == true)
+                (title?.contains("2661") == true || title?.contains("2662") == true || title?.contains("26371") == true || title?.contains("772") == true || title?.lowercase(Locale.ROOT)?.contains("bdv") == true || title?.lowercase(Locale.ROOT)?.contains("venezuela") == true)
         val isEmail = ParserUtils.isEmailPackage(pkg) && (title?.lowercase(Locale.ROOT)?.contains("venezuela") == true || title?.lowercase(Locale.ROOT)?.contains("bdv") == true)
 
         if (!isBdvApp && !isSms && !isEmail) return false
 
         val combined = "$title $text".lowercase(Locale.ROOT)
+        if (isBdvApp) {
+            return ParserUtils.hasIncomingIndicators(combined) ||
+                    combined.contains("pago") ||
+                    combined.contains("recib") ||
+                    combined.contains("bs") ||
+                    combined.contains("clave") ||
+                    combined.contains("bdv") ||
+                    ParserUtils.isOutgoingTransaction(combined)
+        }
+
         return combined.contains("pagoclave") || combined.contains("pago clave") ||
                 combined.contains("bdv") || combined.contains("banco de venezuela") ||
                 combined.contains("pagomovil") || combined.contains("pago movil") ||
                 combined.contains("pagomóvil") || combined.contains("pago móvil") ||
                 combined.contains("bdvapp") || combined.contains("bdv digital") ||
+                combined.contains("2661") || combined.contains("2662") ||
                 combined.contains("26371") || combined.contains("772")
     }
 

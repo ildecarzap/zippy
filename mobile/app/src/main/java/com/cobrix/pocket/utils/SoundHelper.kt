@@ -127,7 +127,8 @@ class SoundHelper(private val context: Context) : TextToSpeech.OnInitListener {
 
     /**
      * Reproduce el sonido auténtico de caja registradora ("Ka-ching").
-     * Si el teléfono está en modo Vibrar, ejecuta únicamente el patrón de vibración distintivo.
+     * En modo Vibrar, ejecuta únicamente el patrón de vibración distintivo sin emitir audio.
+     * En modo Silencio Total (No Molestar), no emite sonido ni vibración.
      */
     fun playCashRegisterSound() {
         val ringerMode = getRingerMode()
@@ -175,12 +176,10 @@ class SoundHelper(private val context: Context) : TextToSpeech.OnInitListener {
         val ringerMode = getRingerMode()
         if (ringerMode == AudioManager.RINGER_MODE_SILENT) return
         if (ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
-            // Si el teléfono está en vibrador, no hablar: emitir la vibración distintiva de cobro
             vibrateDistinctPaymentPattern()
             return
         }
 
-        // En modo normal: vibración distintiva + anuncio de voz (con soporte de cola en frío)
         vibrateDistinctPaymentPattern()
         if (!isTtsInitialized || tts == null) {
             pendingPhrasesQueue.offer(phrase)

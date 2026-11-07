@@ -14,15 +14,14 @@ class BanescoParser : BankParser {
         val isBanescoApp = pkg.contains("banesco") ||
                 BankCode.BANESCO.knownPackageNames.any { pkg.equals(it, ignoreCase = true) }
         val isSms = ParserUtils.isSmsPackage(pkg) && ParserUtils.isLegitimateBankSmsSender(title) &&
-                (title?.contains("2661") == true || title?.contains("2662") == true || title?.contains("2846") == true || title?.lowercase(Locale.ROOT)?.contains("banesco") == true)
+                (title?.contains("2846") == true || title?.lowercase(Locale.ROOT)?.contains("banesco") == true)
         val isEmail = ParserUtils.isEmailPackage(pkg) && title?.lowercase(Locale.ROOT)?.contains("banesco") == true
 
         if (!isBanescoApp && !isSms && !isEmail) return false
 
         val combined = "$title $text".lowercase(Locale.ROOT)
         return combined.contains("banesco") || combined.contains("pago movil banesco") ||
-                combined.contains("pago móvil banesco") || combined.contains("2846") ||
-                combined.contains("2661") || combined.contains("2662")
+                combined.contains("pago móvil banesco") || combined.contains("2846")
     }
 
     override fun parse(
@@ -36,7 +35,8 @@ class BanescoParser : BankParser {
         if (ParserUtils.isEmailPackage(packageName) && !ParserUtils.hasIncomingIndicators(combined) && !isOutgoing) return null
 
         val (amount, amountRaw) = ParserUtils.extractAmount(combined) ?: return null
-        val reference = ParserUtils.extractReference(combined) ?: return null
+        val reference = ParserUtils.extractReference(combined)
+            ?: (postTimeMillis % 10000).toString().padStart(4, '0')
         val phone = ParserUtils.extractPhone(combined)
         val bankDetected = ParserUtils.extractBankName(combined) ?: "Banesco"
 

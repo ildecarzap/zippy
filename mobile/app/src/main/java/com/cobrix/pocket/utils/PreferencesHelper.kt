@@ -228,40 +228,22 @@ object PreferencesHelper {
 
     /**
      * Obtiene los códigos bancarios y de billeteras que deben ser escuchados activamente por el servicio de notificaciones.
-     * En Plan Básico: Exclusivamente el banco receptor seleccionado por el usuario (ej: AR_MP Mercado Pago).
-     * En Plan PRO: Exclusivamente los bancos del país actual que el usuario ha configurado.
-     * En Argentina y Colombia, los cobros por Alias / CVU / transferencia no requieren QR obligatorio.
-     * Más Binance Pay sólo si fue activado explícitamente en Ajustes.
+     * Escucha todos los bancos y billeteras del catálogo oficial para el país activo de operación.
+     * De este modo, si el usuario tiene apps bancarias instaladas en su dispositivo (ej. BDV, BNC, Mercantil, Ubii en VE;
+     * o Mercado Pago, Cuenta DNI en AR; o Nequi, DaviPlata en CO), cualquier pago legítimo entrante es cantado.
+     * Más Binance Pay si fue activado explícitamente en Ajustes.
      */
     fun getActiveListeningBankCodes(context: Context): Set<String> {
-        val isMultibank = PlanCapabilityManager.canUseMultibank(context)
-        val profile = getUserProfile(context)
         val currentCountry = getCountryCode(context)
         val validCatalogCodes = BankCatalog.getBanksForCountry(currentCountry).map { it.code }.toSet()
         val result = mutableSetOf<String>()
 
-        // Siempre incluir el banco principal si corresponde al país actual
-        if (profile.bankCode.isNotEmpty() && profile.bankCode in validCatalogCodes) {
-            result.add(profile.bankCode)
-        }
+        // Incluir todos los bancos oficiales y verificados del país activo
+        result.addAll(validCatalogCodes)
 
-        if (isMultibank) {
-            // Plan PRO: Bancos configurados en el panel para el país actual
-            // Escuchar todos los bancos configurados por el comerciante, con o sin QR
-            val configured = getConfiguredBankCodes(context)
-            if (configured.isNotEmpty()) {
-                result.addAll(configured)
-            }
-
-            // Billetera Binance Pay (solo si el usuario la activó explícitamente)
-            if (isBinanceEnabled(context) && PlanCapabilityManager.canUseWallets(context)) {
-                result.add("BINANCE")
-            }
-        }
-
-        // Respaldo de seguridad: si no quedó ninguno, asegurar el banco principal
-        if (result.isEmpty() && profile.bankCode in validCatalogCodes) {
-            result.add(profile.bankCode)
+        // Billetera Binance Pay (solo si el usuario la activó explícitamente)
+        if (isBinanceEnabled(context) && PlanCapabilityManager.canUseWallets(context)) {
+            result.add("BINANCE")
         }
 
         return result

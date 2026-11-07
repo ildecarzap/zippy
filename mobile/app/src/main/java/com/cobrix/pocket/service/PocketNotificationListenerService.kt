@@ -59,6 +59,10 @@ class PocketNotificationListenerService : NotificationListenerService() {
         var instance: PocketNotificationListenerService? = null
             private set
 
+        @Volatile
+        var isListenerConnected: Boolean = false
+            private set
+
         /**
          * Verifica si el usuario ya concedió el permiso de acceso a notificaciones en Ajustes de Android.
          */
@@ -76,12 +80,25 @@ class PocketNotificationListenerService : NotificationListenerService() {
 
         /**
          * Fuerza la reconexión inmediata del servicio si el permiso ya está otorgado pero Android
-         * suspendió el proceso tras cerrar la app.
+         * suspendió el proceso o dejó el binder en estado zombie tras actualizar o abrir la app.
          */
         fun ensureServiceBound(context: Context) {
             if (!isPermissionGranted(context)) return
             try {
                 val componentName = ComponentName(context, PocketNotificationListenerService::class.java)
+                if (!isListenerConnected) {
+                    val pm = context.packageManager
+                    pm.setComponentEnabledSetting(
+                        componentName,
+                        android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        android.content.pm.PackageManager.DONT_KILL_APP
+                    )
+                    pm.setComponentEnabledSetting(
+                        componentName,
+                        android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                        android.content.pm.PackageManager.DONT_KILL_APP
+                    )
+                }
                 requestRebind(componentName)
                 val serviceIntent = Intent(context, PocketNotificationListenerService::class.java)
                 context.startService(serviceIntent)
@@ -107,7 +124,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
             return instance?.rescanInternal(playSound) ?: 0
         }
 
-        fun isServiceRunning(): Boolean = instance != null
+        fun isServiceRunning(): Boolean = instance != null && isListenerConnected
     }
 
     override fun onCreate() {
@@ -129,6 +146,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         instance = this
+        isListenerConnected = true
         applyForegroundState()
         Log.i(TAG, "Notification listener connected.")
         // Al reconectar (por ejemplo al despertar en segundo plano), escanear cobros pendientes en barra
@@ -141,6 +159,7 @@ class PocketNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
+        isListenerConnected = false
         if (instance == this) {
             instance = null
         }
@@ -166,12 +185,31 @@ class PocketNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onDestroy() {
+        isListenerConnected = false
         if (instance == this) {
             instance = null
         }
         releaseWakeLock()
         soundHelper?.shutdown()
         super.onDestroy()
+    }
+
+    private fun isPackageAllowedForActiveBanks(
+        pkg: String,
+        activeBankCodes: Set<String>,
+        isSmsEnabled: Boolean,
+        isBinanceEnabled: Boolean
+    ): Boolean {
+        if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
+        if (pkg == packageName.lowercase(Locale.ROOT) || pkg.contains("cobrix") || pkg.contains("zeasy") || pkg.contains("zippy")) {
+            return false
+        }
+        if (isSmsEnabled && ParserUtils.isSmsPackage(pkg)) return true
+        if ((activeBankCodes.isNotEmpty() || isBinanceEnabled) && ParserUtils.isEmailPackage(pkg)) return true
+        if (isBinanceEnabled && BankCode.BINANCE.matchesPackage(pkg)) return true
+        return activeBankCodes.any { code ->
+            BankCode.fromSudeban(code)?.matchesPackage(pkg) == true
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -183,28 +221,13 @@ class PocketNotificationListenerService : NotificationListenerService() {
             return
         }
 
-        // 2. GUARD CLAUSE INMEDIATO: Whitelist estricta de bancos autorizados y ACTIVOS en Ajustes
+        // 2. GUARD CLAUSE INMEDIATO: Whitelist inteligente de bancos autorizados y canales activos
         val activeBankCodes = PreferencesHelper.getActiveListeningBankCodes(this)
         val isSmsEnabled = PreferencesHelper.isSmsDetectionEnabled(this)
         val isBinanceEnabled = PreferencesHelper.isBinanceEnabled(this) && PlanCapabilityManager.canUseWallets(this)
 
-        val activeAllowedPackages = mutableSetOf<String>()
-        activeBankCodes.forEach { code ->
-            BankCode.fromSudeban(code)?.knownPackageNames?.forEach {
-                activeAllowedPackages.add(it.lowercase(Locale.ROOT))
-            }
-        }
-        if (isBinanceEnabled) {
-            BankCode.BINANCE.knownPackageNames.forEach {
-                activeAllowedPackages.add(it.lowercase(Locale.ROOT))
-            }
-        }
-        if (isSmsEnabled) {
-            activeAllowedPackages.addAll(ParserUtils.OFFICIAL_SMS_PACKAGES)
-        }
-
-        if (!activeAllowedPackages.contains(pkg)) {
-            return // Descarte instantáneo si el banco no está configurado y activado en Ajustes
+        if (!isPackageAllowedForActiveBanks(pkg, activeBankCodes, isSmsEnabled, isBinanceEnabled)) {
+            return
         }
 
         processStatusBarNotification(sbn, playSound = true)
@@ -287,28 +310,13 @@ class PocketNotificationListenerService : NotificationListenerService() {
             return false
         }
 
-        // CAPA DE SEGURIDAD 2: Whitelist estricta de bancos autorizados y ACTIVOS en Ajustes
+        // CAPA DE SEGURIDAD 2: Whitelist inteligente de bancos autorizados y canales activos
         val activeBankCodes = PreferencesHelper.getActiveListeningBankCodes(this)
         val isSmsEnabled = PreferencesHelper.isSmsDetectionEnabled(this)
         val isBinanceEnabled = PreferencesHelper.isBinanceEnabled(this) && PlanCapabilityManager.canUseWallets(this)
 
-        val activeAllowedPackages = mutableSetOf<String>()
-        activeBankCodes.forEach { code ->
-            BankCode.fromSudeban(code)?.knownPackageNames?.forEach {
-                activeAllowedPackages.add(it.lowercase(Locale.ROOT))
-            }
-        }
-        if (isBinanceEnabled) {
-            BankCode.BINANCE.knownPackageNames.forEach {
-                activeAllowedPackages.add(it.lowercase(Locale.ROOT))
-            }
-        }
-        if (isSmsEnabled) {
-            activeAllowedPackages.addAll(ParserUtils.OFFICIAL_SMS_PACKAGES)
-        }
-
-        if (!activeAllowedPackages.contains(sbnPackageName)) {
-            Log.d(TAG, "Notificación descartada: paquete $sbnPackageName no pertenece a los bancos configurados y activos en Ajustes.")
+        if (!isPackageAllowedForActiveBanks(sbnPackageName, activeBankCodes, isSmsEnabled, isBinanceEnabled)) {
+            Log.d(TAG, "Notificación descartada: paquete $sbnPackageName no pertenece a los bancos configurados y activos.")
             return false
         }
 
@@ -339,17 +347,20 @@ class PocketNotificationListenerService : NotificationListenerService() {
             return false
         }
 
-        // 2. Deduplicación por clave de notificación ya procesada como cobro
-        if (PaymentDeduplicator.isNotificationKeyAlreadyProcessed(sbn.key)) {
-            return false
-        }
-
         val extras = sbn.notification?.extras ?: return false
         val title = extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()?.trim()
             ?: extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim()
             ?: ""
         val text = extractFullNotificationText(extras)
         val postTime = sbn.postTime
+
+        // 2. Deduplicación por firma de notificación (incluye clave + postTime + hash del contenido
+        // para que cuando BNC, Mercado Pago, BDV o Ubii reutilicen el mismo notificationId horas después,
+        // el nuevo cobro NUNCA sea bloqueado por la firma de la mañana)
+        val notificationSignature = "${sbn.key}|$postTime|${title.hashCode()}|${text.hashCode()}"
+        if (PaymentDeduplicator.isNotificationKeyAlreadyProcessed(notificationSignature)) {
+            return false
+        }
 
         val isPro = PlanCapabilityManager.isPro(this)
         val profile = PreferencesHelper.getUserProfile(this)
@@ -371,46 +382,87 @@ class PocketNotificationListenerService : NotificationListenerService() {
             return false
         }
 
-        // Parseo mediante router bancario restringido a los bancos activos
-        val parsedPayment = parserRouter.routeAndParse(
-            packageName = sbnPackageName,
-            title = title,
-            text = text,
-            postTimeMillis = postTime,
-            enabledBankCodes = enabledBankEnums
-        ) ?: return false
-
-        // 3.1. Validación estricta: Descartar si el banco detectado NO está entre los bancos activos
-        val isBankAllowed = when (parsedPayment.bancoCodigo) {
-            BankCode.BINANCE -> activeBankCodes.contains("BINANCE")
-            BankCode.SMS -> {
-                val detectedSudeban = ParserUtils.extractBankSudebanCode(parsedPayment.textoCrudo, title)
-                    ?: BankCatalog.findByNameOrCode(parsedPayment.bancoEmisor)?.code
-                if (detectedSudeban != null) {
-                    activeBankCodes.contains(detectedSudeban)
-                } else {
-                    false
-                }
-            }
-            else -> activeBankCodes.contains(parsedPayment.bancoCodigo.sudebanCode)
-        }
-
-        if (!isBankAllowed) {
-            Log.d(TAG, "Notificación descartada: El banco ${parsedPayment.bancoCodigo.displayName} (${parsedPayment.bancoCodigo.sudebanCode}) no está en tus bancos activos configurados ($activeBankCodes).")
-            return false
-        }
-
-        // 4. Deduplicación profunda en memoria (Banco + Ref 4 dígitos + Monto)
-        if (PaymentDeduplicator.isPaymentDuplicate(parsedPayment)) {
-            Log.w(TAG, "Pago duplicado detectado en memoria: ${parsedPayment.referenciaUltimos4} por ${parsedPayment.monto}")
-            PaymentDeduplicator.markNotificationKeyProcessed(sbn.key)
-            return false
-        }
-
-        // 5. Deduplicación en Base de Datos SQLite (garantiza que si la app se abre o reinicia no vuelva a duplicar)
         val countryProfile = PreferencesHelper.getCountryProfile(this)
         val isBiCurrency = countryProfile.supportsExchangeRate
         val effectiveRate = if (isBiCurrency && profile.bcvRate > 0) profile.bcvRate else 1.0
+
+        val cal = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val startOfDay = cal.timeInMillis
+
+        // Candidatos de texto: primero el texto completo, y si Android apiló notificaciones antiguas
+        // junto con una nueva en InboxStyle/MessagingStyle, evaluar también cada línea individual (de más reciente a más antigua)
+        val candidateTexts = LinkedHashSet<String>().apply {
+            add(text)
+            addAll(extractIndividualNotificationLines(extras))
+        }
+
+        var selectedPayment: com.cobrix.pocket.data.model.ParsedPayment? = null
+        for (candidateText in candidateTexts) {
+            val candidateParsed = parserRouter.routeAndParse(
+                packageName = sbnPackageName,
+                title = title,
+                text = candidateText,
+                postTimeMillis = postTime,
+                enabledBankCodes = enabledBankEnums
+            ) ?: continue
+
+            val isBankAllowed = when (candidateParsed.bancoCodigo) {
+                BankCode.BINANCE -> activeBankCodes.contains("BINANCE")
+                BankCode.SMS -> {
+                    val detectedSudeban = ParserUtils.extractBankSudebanCode(candidateParsed.textoCrudo, title)
+                        ?: BankCatalog.findByNameOrCode(candidateParsed.bancoEmisor)?.code
+                    if (detectedSudeban != null) {
+                        activeBankCodes.contains(detectedSudeban)
+                    } else {
+                        false
+                    }
+                }
+                else -> activeBankCodes.contains(candidateParsed.bancoCodigo.sudebanCode)
+            }
+
+            if (!isBankAllowed) continue
+
+            val candIsUsdt = (candidateParsed.moneda == "USD")
+            val candAmountVes = if (candIsUsdt) (candidateParsed.monto * effectiveRate) else candidateParsed.monto
+            val candAmountUsd = if (candIsUsdt) {
+                candidateParsed.monto
+            } else if (isBiCurrency) {
+                if (effectiveRate > 0) candidateParsed.monto / effectiveRate else 0.0
+            } else {
+                candidateParsed.monto
+            }
+            val candTxType = if (candidateParsed.isOutgoing) TransactionType.EXPENSE else TransactionType.INCOME
+
+            // Verificar primero en BD y luego en memoria para no descartar un segundo cobro apilado en la misma notificación
+            if (dbHelper.hasDuplicateIncome(
+                    reference = candidateParsed.referenciaUltimos4,
+                    amountVes = candAmountVes,
+                    amountUsd = candAmountUsd,
+                    sinceTimestamp = startOfDay,
+                    isCrypto = candIsUsdt,
+                    sender = candidateParsed.telefonoOrigen,
+                    txType = candTxType
+                )) {
+                continue
+            }
+
+            if (PaymentDeduplicator.isPaymentDuplicate(candidateParsed)) {
+                continue
+            }
+
+            selectedPayment = candidateParsed
+            break
+        }
+
+        val parsedPayment = selectedPayment ?: run {
+            PaymentDeduplicator.markNotificationKeyProcessed(notificationSignature)
+            return false
+        }
 
         val isUsdt = (parsedPayment.moneda == "USD")
         val amountVes = if (isUsdt) (parsedPayment.monto * effectiveRate) else parsedPayment.monto
@@ -421,33 +473,9 @@ class PocketNotificationListenerService : NotificationListenerService() {
         } else {
             parsedPayment.monto
         }
-
-        val cal = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, 0)
-            set(java.util.Calendar.MINUTE, 0)
-            set(java.util.Calendar.SECOND, 0)
-            set(java.util.Calendar.MILLISECOND, 0)
-        }
-        val startOfDay = cal.timeInMillis
-
         val isOutgoing = parsedPayment.isOutgoing
-        val targetTxType = if (isOutgoing) TransactionType.EXPENSE else TransactionType.INCOME
 
-        if (dbHelper.hasDuplicateIncome(
-                reference = parsedPayment.referenciaUltimos4,
-                amountVes = amountVes,
-                amountUsd = amountUsd,
-                sinceTimestamp = startOfDay,
-                isCrypto = isUsdt,
-                sender = parsedPayment.telefonoOrigen,
-                txType = targetTxType
-            )) {
-            Log.w(TAG, "Movimiento ya registrado previamente en BD para la jornada: ref=${parsedPayment.referenciaUltimos4}, monto=$amountVes, tipo=$targetTxType")
-            PaymentDeduplicator.markNotificationKeyProcessed(sbn.key)
-            return false
-        }
-
-        PaymentDeduplicator.markNotificationKeyProcessed(sbn.key)
+        PaymentDeduplicator.markNotificationKeyProcessed(notificationSignature)
 
         // Si es una SALIDA / DÉBITO de un banco configurado: registrar silenciosamente en Jornada como EXPENSE
         if (isOutgoing) {
@@ -622,58 +650,29 @@ class PocketNotificationListenerService : NotificationListenerService() {
     /**
      * Extrae todo el contenido textual disponible de una notificación,
      * combinando BigTextStyle, InboxStyle y líneas múltiples (crucial para Gmail y apps bancarias).
+     * Ordena los arreglos de mensajes/líneas de más reciente a más antiguo para que, si hay varias
+     * notificaciones apiladas en la barra, el último pago recibido tenga prioridad inmediata.
      */
     private fun extractFullNotificationText(extras: Bundle): String {
         val parts = LinkedHashSet<String>()
 
-        // 1. android.text
-        extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
-            parts.add(it)
-        }
-
-        // 2. android.bigText (BigTextStyle para correos o notificaciones largas)
+        // 1. android.bigText (BigTextStyle completo sin truncar tiene prioridad sobre android.text)
         extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
             parts.add(it)
         }
 
-        // 3. android.textLines (InboxStyle con múltiples líneas)
-        val textLines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
-        if (textLines != null) {
-            for (line in textLines) {
-                val lineStr = line?.toString()?.trim()
-                if (!lineStr.isNullOrEmpty()) {
-                    parts.add(lineStr)
-                }
-            }
-        }
-
-        // 4. android.subText
-        extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
+        // 2. android.text
+        extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
             parts.add(it)
         }
 
-        // 5. android.summaryText
-        extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
-            parts.add(it)
-        }
-
-        // 6. android.messages & historicMessages (MessagingStyle para Google Messages / Samsung Messages)
+        // 3. android.messages (MessagingStyle: ordenar del más reciente al más antiguo; NO incluir historicMessages antiguos)
         try {
+            @Suppress("DEPRECATION")
             val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
             if (messages != null) {
-                for (msg in messages) {
-                    if (msg is Bundle) {
-                        val msgText = msg.getCharSequence("text")?.toString()?.trim()
-                        if (!msgText.isNullOrEmpty()) {
-                            parts.add(msgText)
-                        }
-                    }
-                }
-            }
-
-            val historic = extras.getParcelableArray(Notification.EXTRA_HISTORIC_MESSAGES)
-            if (historic != null) {
-                for (msg in historic) {
+                for (i in messages.indices.reversed()) {
+                    val msg = messages[i]
                     if (msg is Bundle) {
                         val msgText = msg.getCharSequence("text")?.toString()?.trim()
                         if (!msgText.isNullOrEmpty()) {
@@ -684,7 +683,67 @@ class PocketNotificationListenerService : NotificationListenerService() {
             }
         } catch (_: Exception) { }
 
+        // 4. android.textLines (InboxStyle: ordenar del más reciente al más antiguo)
+        val textLines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+        if (textLines != null) {
+            for (i in textLines.indices.reversed()) {
+                val lineStr = textLines[i]?.toString()?.trim()
+                if (!lineStr.isNullOrEmpty()) {
+                    parts.add(lineStr)
+                }
+            }
+        }
+
+        // 5. android.subText
+        extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            parts.add(it)
+        }
+
+        // 6. android.summaryText
+        extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            parts.add(it)
+        }
+
         return parts.joinToString("\n")
+    }
+
+    /**
+     * Extrae cada mensaje o línea individual de notificaciones apiladas (de más reciente a más antigua),
+     * permitiendo procesar un cobro nuevo aunque esté agrupado con notificaciones previas ya registradas.
+     */
+    private fun extractIndividualNotificationLines(extras: Bundle): List<String> {
+        val lines = LinkedHashSet<String>()
+        extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            lines.add(it)
+        }
+        extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            lines.add(it)
+        }
+        try {
+            @Suppress("DEPRECATION")
+            val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+            if (messages != null) {
+                for (i in messages.indices.reversed()) {
+                    val msg = messages[i]
+                    if (msg is Bundle) {
+                        val msgText = msg.getCharSequence("text")?.toString()?.trim()
+                        if (!msgText.isNullOrEmpty()) {
+                            lines.add(msgText)
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) { }
+        val textLines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+        if (textLines != null) {
+            for (i in textLines.indices.reversed()) {
+                val lineStr = textLines[i]?.toString()?.trim()
+                if (!lineStr.isNullOrEmpty()) {
+                    lines.add(lineStr)
+                }
+            }
+        }
+        return lines.toList()
     }
 
     private fun showLocalPaymentNotification(

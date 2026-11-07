@@ -20,6 +20,17 @@ class MercantilParser : BankParser {
         if (!isMercantilApp && !isSms && !isEmail) return false
 
         val combined = "$title $text".lowercase(Locale.ROOT)
+        if (isMercantilApp) {
+            return ParserUtils.hasIncomingIndicators(combined) ||
+                    combined.contains("tpago") ||
+                    combined.contains("pago") ||
+                    combined.contains("recib") ||
+                    combined.contains("bs") ||
+                    combined.contains("mercantil") ||
+                    combined.contains("operaci") ||
+                    ParserUtils.isOutgoingTransaction(combined)
+        }
+
         return combined.contains("tpago") || combined.contains("mercantil") || combined.contains("24024")
     }
 
@@ -34,7 +45,8 @@ class MercantilParser : BankParser {
         if (ParserUtils.isEmailPackage(packageName) && !ParserUtils.hasIncomingIndicators(combined) && !isOutgoing) return null
 
         val (amount, amountRaw) = ParserUtils.extractAmount(combined) ?: return null
-        val reference = ParserUtils.extractReference(combined) ?: return null
+        val reference = ParserUtils.extractReference(combined)
+            ?: (postTimeMillis % 10000).toString().padStart(4, '0')
         val phone = ParserUtils.extractPhone(combined)
         val bankDetected = ParserUtils.extractBankName(combined) ?: "Banco Mercantil"
 

@@ -56,6 +56,28 @@ class UbiiParserTest {
     }
 
     @Test
+    fun testUbiiPaymentFromUserScreenshot_UbApp() {
+        val packagesToTest = listOf(
+            "ubii.ubiipagos.com.ubiiapp",
+            "com.ubiipagos.ubii",
+            "com.ubapp"
+        )
+        val title = "Transacción recibida"
+        val text = "Has recibido Bs. 1180.00 por pago móvil del número 0424-260.31.12 con referencia 231038151407"
+
+        for (pkg in packagesToTest) {
+            assertTrue("UbiiParser debe aceptar paquete $pkg", parser.canHandle(pkg, title, text))
+            val payment = parser.parse(pkg, title, text, 1730900000000L)
+            assertNotNull("El cobro de Ub App debe parsearse correctamente para $pkg", payment)
+            assertEquals(1180.0, payment!!.monto, 0.001)
+            assertEquals("231038151407", payment.referencia)
+            assertEquals("1407", payment.referenciaUltimos4)
+            assertEquals("04242603112", payment.telefonoOrigen)
+            assertEquals(BankCode.UBII, payment.bancoCodigo)
+        }
+    }
+
+    @Test
     fun testAmountParserUtilsVariousFormats() {
         val amounts = listOf(
             "Bs. 1.800,00" to 1800.0,

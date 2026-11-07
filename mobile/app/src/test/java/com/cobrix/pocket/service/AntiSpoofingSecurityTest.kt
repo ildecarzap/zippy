@@ -176,10 +176,12 @@ class AntiSpoofingSecurityTest {
         assertTrue(veWhitelist.contains("com.bancodevenezuela.bdvdigital"))
         assertTrue(veWhitelist.contains("com.banesco.banescomovil"))
         assertTrue(veWhitelist.contains("com.mercantilbanco.android.movil"))
+        assertTrue(veWhitelist.contains("com.mercantilbanco.empresas"))
         assertTrue(veWhitelist.contains("bnc.bncnet.mobile2"))
         assertTrue(veWhitelist.contains("com.bnc.ve"))
         assertTrue(veWhitelist.contains("com.bancamiga.movil"))
         assertTrue(veWhitelist.contains("com.ubiipagos.app"))
+        assertTrue(veWhitelist.contains("ubii.ubiipagos.com.ubiiapp"))
 
         // Colombia debe contener Nequi, DaviPlata, Bancolombia
         assertTrue(coWhitelist.contains("com.nequi.mobileapp"))
@@ -191,6 +193,61 @@ class AntiSpoofingSecurityTest {
         assertTrue(arWhitelist.contains("ar.com.bapro.cuentadni"))
         assertTrue(arWhitelist.contains("com.bna.bnamas"))
         assertTrue(arWhitelist.contains("com.uala"))
+    }
+
+    @Test
+    fun testBdvSms2661And2662AcceptedAsBdv() {
+        val smsPkg = "com.google.android.apps.messaging"
+        val text = "BDV: PagoClave recibido por Bs. 150,00 de 04141234567. Ref: 9876"
+
+        val res2661 = router.routeAndParse(smsPkg, "2661", text, System.currentTimeMillis())
+        assertNotNull(res2661)
+        assertEquals(BankCode.BDV, res2661!!.bancoCodigo)
+        assertEquals(150.0, res2661.monto, 0.001)
+
+        val res2662 = router.routeAndParse(smsPkg, "2662", text, System.currentTimeMillis())
+        assertNotNull(res2662)
+        assertEquals(BankCode.BDV, res2662!!.bancoCodigo)
+        assertEquals(150.0, res2662.monto, 0.001)
+    }
+
+    @Test
+    fun testMercadoPagoSingularTransferAccepted() {
+        val mpPkg = "com.mercadopago.wallet"
+        val title = "Martín te transfirió $ 1.500"
+        val text = "De Martín Gomez a tu cuenta de Mercado Pago"
+
+        assertTrue(mpParser.canHandle(mpPkg, title, text))
+        val result = mpParser.parse(mpPkg, title, text, System.currentTimeMillis())
+        assertNotNull(result)
+        assertEquals(1500.0, result!!.monto, 0.001)
+        assertEquals(BankCode.AR_MERCADOPAGO, result.bancoCodigo)
+    }
+
+    @Test
+    fun testUbiiAppOfficialPackageAccepted() {
+        val ubiiPkg = "ubii.ubiipagos.com.ubiiapp"
+        val title = "Pago Móvil Recibido"
+        val text = "Has recibido Bs. 80,00 de Juan Pérez por Pago Móvil Ubii"
+
+        assertTrue(ubiiParser.canHandle(ubiiPkg, title, text))
+        val result = ubiiParser.parse(ubiiPkg, title, text, System.currentTimeMillis())
+        assertNotNull(result)
+        assertEquals(80.0, result!!.monto, 0.001)
+        assertEquals(BankCode.UBII, result.bancoCodigo)
+    }
+
+    @Test
+    fun testMercantilEmpresasPackageAccepted() {
+        val mercantilPkg = "com.mercantilbanco.empresas"
+        val title = "Operación Exitosa"
+        val text = "Tpago recibido por Bs. 250,00 de 04241234567. Ref: 1122"
+
+        assertTrue(mercantilParser.canHandle(mercantilPkg, title, text))
+        val result = mercantilParser.parse(mercantilPkg, title, text, System.currentTimeMillis())
+        assertNotNull(result)
+        assertEquals(250.0, result!!.monto, 0.001)
+        assertEquals(BankCode.MERCANTIL, result.bancoCodigo)
     }
 }
 

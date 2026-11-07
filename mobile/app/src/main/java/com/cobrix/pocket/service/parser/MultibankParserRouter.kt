@@ -31,6 +31,7 @@ class MultibankParserRouter {
         MercadoPagoParser(),
         CuentaDniParser(),
         BnaMasParser(),
+        UalaParser(),
         // Transversales
         BinancePayParser(),
         GenericSmsParser()

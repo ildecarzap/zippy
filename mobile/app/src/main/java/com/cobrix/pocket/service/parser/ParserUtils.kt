@@ -28,9 +28,9 @@ object ParserUtils {
         Pattern.compile("""\b([0-9]{6,16})\b""") // Números de 6+ dígitos si no tienen palabra ref explícita
     )
 
-    // Extrae números venezolanos (0414, 0424, 0412, 0416, 0426)
+    // Extrae números venezolanos (0414, 0424, 0412, 0416, 0426), incluyendo formatos separados por puntos o guiones como 0424-260.31.12
     private val PHONE_PATTERN = Pattern.compile(
-        """(?:\+?58|0)?\s*(414|424|412|416|426)[-.\s]*([0-9]{3})[-.\s]*([0-9]{4})"""
+        """(?:\+?58|0)?\s*(414|424|412|416|426)[-.\s]*([0-9]{3})[-.\s]*([0-9]{2})[-.\s]*([0-9]{2})"""
     )
 
     // Catálogo de bancos para identificación del emisor en el texto (incluyendo números cortos SMS oficiales)
@@ -39,10 +39,10 @@ object ParserUtils {
         "24024" to "Banco Mercantil",
         "banesco" to "Banesco",
         "2846" to "Banesco",
-        "2661" to "Banesco",
-        "2662" to "Banesco",
         "venezuela" to "Banco de Venezuela",
         "bdv" to "Banco de Venezuela",
+        "2661" to "Banco de Venezuela",
+        "2662" to "Banco de Venezuela",
         "26371" to "Banco de Venezuela",
         "772" to "Banco de Venezuela",
         "provincial" to "BBVA Provincial",
@@ -81,11 +81,16 @@ object ParserUtils {
 
     fun extractReference(text: String): String? {
         val detectedPhone = extractPhone(text)
-        for (pattern in REFERENCE_PATTERNS) {
+        val detectedAmountDigits = extractAmount(text)?.second?.replace(".", "")?.replace(",", "")
+        for ((index, pattern) in REFERENCE_PATTERNS.withIndex()) {
             val matcher = pattern.matcher(text)
             while (matcher.find()) {
                 val ref = matcher.group(1)?.trim()
                 if (!ref.isNullOrBlank() && ref.length >= 4) {
+                    // En el patrón fallback sin palabra "Ref" (index == 2), evitar confundir el propio monto con una referencia
+                    if (index == 2 && detectedAmountDigits != null && ref == detectedAmountDigits) {
+                        continue
+                    }
                     // Evitar que un número de teléfono sea catalogado como referencia bancaria
                     if (detectedPhone != null && (ref == detectedPhone || (ref.length >= 7 && detectedPhone.contains(ref)))) {
                         continue
@@ -116,7 +121,8 @@ object ParserUtils {
             val operator = matcher.group(1)
             val part1 = matcher.group(2)
             val part2 = matcher.group(3)
-            return "0$operator$part1$part2"
+            val part3 = matcher.group(4)
+            return "0$operator$part1$part2$part3"
         }
         return null
     }
@@ -144,8 +150,8 @@ object ParserUtils {
         val combined = "$s $lower"
 
         // 1. Por remitente directo (código corto oficial de SMS o nombre del banco)
-        if (s.contains("26371") || s.contains("772") || s.contains("bdv") || s.contains("venezuela")) return "0102"
-        if (s.contains("2661") || s.contains("2662") || s.contains("2846") || s.contains("banesco")) return "0134"
+        if (s.contains("2661") || s.contains("2662") || s.contains("26371") || s.contains("772") || s.contains("bdv") || s.contains("venezuela")) return "0102"
+        if (s.contains("2846") || s.contains("banesco")) return "0134"
         if (s.contains("24024") || s.contains("mercantil")) return "0105"
         if (s.contains("2282") || s.contains("provincial") || s.contains("bbva")) return "0108"
         if (s.contains("8234") || s.contains("bancamiga")) return "0172"
@@ -413,6 +419,40 @@ object ParserUtils {
      */
     fun isPromotionalOrNonPaymentNotification(text: String): Boolean {
         val lower = text.lowercase(Locale.ROOT)
+
+        // Bloqueo incondicional para rechazos, fallos o claves de seguridad (OTP)
+        val hardBlockKeywords = listOf(
+            "clave dinamica", "clave dinámica",
+            "codigo de seguridad", "código de seguridad",
+            "rechazad", "fallid",
+            "pendiente de pago", "vence hoy", "vencimiento",
+            "resumen de cuenta", "estado de cuenta",
+            "credito preaprobado", "crédito preaprobado",
+            "cupo disponible", "limite disponible", "límite disponible",
+            "gana hasta", "participa", "sorteo"
+        )
+        if (hardBlockKeywords.any { lower.contains(it) }) return true
+
+        // Si la notificación contiene explícitamente un verbo de cobro/transferencia recibida
+        // (ej. Mercado Pago: "Recibiste $ 5.000. Tu dinero ya genera rendimientos"), NO descartarla por palabras secundarias
+        val hasExplicitTransferVerb = lower.contains("te transfirieron") ||
+                lower.contains("te transfirió") ||
+                lower.contains("te transfirio") ||
+                lower.contains("transferencia recibida") ||
+                lower.contains("pago movil recibido") ||
+                lower.contains("pago móvil recibido") ||
+                lower.contains("por pago movil") ||
+                lower.contains("por pago móvil") ||
+                lower.contains("pagoclave recibido") ||
+                lower.contains("tpago recibido") ||
+                lower.contains("cobro aprobado") ||
+                lower.contains("cobraste") ||
+                lower.contains("has recibido bs") ||
+                lower.contains("recibiste $") ||
+                lower.contains("recibiste bs")
+
+        if (hasExplicitTransferVerb) return false
+
         return PROMO_OR_NON_PAYMENT_KEYWORDS.any { lower.contains(it) }
     }
 

@@ -35,7 +35,8 @@ class BancamigaParser : BankParser {
         if (ParserUtils.isEmailPackage(packageName) && !ParserUtils.hasIncomingIndicators(combined) && !isOutgoing) return null
 
         val (amount, amountRaw) = ParserUtils.extractAmount(combined) ?: return null
-        val reference = ParserUtils.extractReference(combined) ?: return null
+        val reference = ParserUtils.extractReference(combined)
+            ?: (postTimeMillis % 10000).toString().padStart(4, '0')
         val phone = ParserUtils.extractPhone(combined)
         val bankDetected = ParserUtils.extractBankName(combined) ?: "Bancamiga"
 

@@ -11,17 +11,32 @@ class UbiiParser : BankParser {
         val pkg = packageName.lowercase(Locale.ROOT)
         if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
 
-        val isUbiiApp = pkg.contains("ubii") ||
-                BankCode.UBII.knownPackageNames.any { pkg.equals(it, ignoreCase = true) }
-        if (isUbiiApp) return true
+        val combined = "$title $text".lowercase(Locale.ROOT)
+
+        val isUbiiApp = BankCode.UBII.matchesPackage(pkg)
+        val isOtherKnownBank = pkg.contains("mercantil") || pkg.contains("banesco") ||
+                pkg.contains("provincial") || pkg.contains("bbva") || pkg.contains("bnc") ||
+                pkg.contains("bdv") || pkg.contains("bancodevenezuela") || pkg.contains("bancamiga")
+        val hasExactUbiiPushSignature = !isOtherKnownBank && !ParserUtils.isSmsPackage(pkg) && !ParserUtils.isEmailPackage(pkg) &&
+                (combined.contains("transacción recibida") || combined.contains("transaccion recibida")) &&
+                (combined.contains("por pago móvil del número") || combined.contains("por pago movil del numero"))
 
         val isSms = ParserUtils.isSmsPackage(pkg) && ParserUtils.isLegitimateBankSmsSender(title) &&
                 (title?.contains("8244") == true || title?.lowercase(Locale.ROOT)?.contains("ubii") == true)
         val isEmail = ParserUtils.isEmailPackage(pkg) && title?.lowercase(Locale.ROOT)?.contains("ubii") == true
 
-        if (!isSms && !isEmail) return false
+        if (!isUbiiApp && !hasExactUbiiPushSignature && !isSms && !isEmail) return false
 
-        val combined = "$title $text".lowercase(Locale.ROOT)
+        if (isUbiiApp || hasExactUbiiPushSignature) {
+            return ParserUtils.hasIncomingIndicators(combined) ||
+                    combined.contains("pago") ||
+                    combined.contains("recib") ||
+                    combined.contains("bs") ||
+                    combined.contains("transf") ||
+                    combined.contains("ubii") ||
+                    ParserUtils.isOutgoingTransaction(combined)
+        }
+
         return combined.contains("ubii") || combined.contains("ubiipagos") ||
                 combined.contains("pago movil ubii") || combined.contains("8244")
     }
@@ -37,7 +52,8 @@ class UbiiParser : BankParser {
         if (ParserUtils.isEmailPackage(packageName) && !ParserUtils.hasIncomingIndicators(combined) && !isOutgoing) return null
 
         val (amount, amountRaw) = ParserUtils.extractAmount(combined) ?: return null
-        val reference = ParserUtils.extractReference(combined) ?: return null
+        val reference = ParserUtils.extractReference(combined)
+            ?: (postTimeMillis % 10000).toString().padStart(4, '0')
         val phone = ParserUtils.extractPhone(combined)
         val bankDetected = ParserUtils.extractBankName(combined) ?: "Ubii App"
 
