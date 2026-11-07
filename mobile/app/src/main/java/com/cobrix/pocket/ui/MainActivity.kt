@@ -608,11 +608,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Al salir de la app hacia el inicio u otra aplicación (y no estar girando pantalla ni abriendo el visor QR interno),
-        // reiniciar la sesión para que al volver a abrir Zeasy vuelva a pedir la huella o bloqueo del teléfono.
-        if (!isChangingConfigurations && !isLaunchingInternalActivity && !isShowingBiometricPrompt) {
-            isAuthenticatedThisSession = false
-        }
+        // Mantener la sesión autenticada mientras la app siga abierta en memoria.
+        // No se reinicia isAuthenticatedThisSession al apagar la pantalla, mostrar/cerrar un QR o cambiar de tema,
+        // solicitando huella únicamente al iniciar la app desde cero o en ajustes delicados (datos de cobro, QR, borrado general).
     }
 
     override fun onDestroy() {
@@ -1074,14 +1072,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         // --- SEGURIDAD FINANCIERA ANTIFRAUDE ---
-        // Si se cambia el teléfono, cédula/RIF, banco, Binance Pay ID o la seguridad biométrica:
+        // Solo pedir huella cuando se modifique un dato delicado: teléfono/alias, cédula/RIF/DNI, banco, Binance Pay ID o bloqueo biométrico
         val isSensitiveFinancialChange = (phone != current.phoneNumber) ||
             (idCard != current.idCard) ||
             (finalBankCode != current.bankCode) ||
             (PlanCapabilityManager.canUseWallets(this) && newBinancePayId != currentBinancePayId) ||
             (binding.switchBiometric.isChecked != current.biometricSecurityEnabled)
 
-        val requiresAuth = requireBiometricIfConfigured && (current.biometricSecurityEnabled || binding.switchBiometric.isChecked || isSensitiveFinancialChange)
+        val requiresAuth = requireBiometricIfConfigured && isSensitiveFinancialChange
 
         if (requiresAuth && BiometricHelper.isBiometricAvailable(this)) {
             BiometricHelper.showBiometricPrompt(
@@ -3213,26 +3211,21 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            requireSecurityAuth(
-                actionTitle = "🔒 Modificar Cliente",
-                description = "Coloca tu huella digital o ingresa el PIN para guardar los cambios de $newName"
-            ) {
-                val updatedDebtor = debtor.copy(
-                    name = newName,
-                    phone = newPhone,
-                    identification = newIdDoc
-                )
-                val success = dbHelper.updateDebtor(updatedDebtor)
-                if (success) {
-                    Toast.makeText(this, "✅ Datos del cliente actualizados con éxito", Toast.LENGTH_SHORT).show()
-                    dialog.dismiss()
-                    parentDetailDialog.dismiss()
-                    loadDebtors()
-                    // Mostrar detalle con la información actualizada
-                    showDebtorDetailDialog(updatedDebtor)
-                } else {
-                    Toast.makeText(this, "Error al actualizar los datos del cliente", Toast.LENGTH_SHORT).show()
-                }
+            val updatedDebtor = debtor.copy(
+                name = newName,
+                phone = newPhone,
+                identification = newIdDoc
+            )
+            val success = dbHelper.updateDebtor(updatedDebtor)
+            if (success) {
+                Toast.makeText(this, "✅ Datos del cliente actualizados con éxito", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+                parentDetailDialog.dismiss()
+                loadDebtors()
+                // Mostrar detalle con la información actualizada
+                showDebtorDetailDialog(updatedDebtor)
+            } else {
+                Toast.makeText(this, "Error al actualizar los datos del cliente", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -3240,8 +3233,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Muestra alerta de advertencia y exige confirmación de seguridad (Huella o PIN)
-     * antes de eliminar un cliente de la libreta, previniendo borrados accidentales o no autorizados.
+     * Muestra alerta de advertencia antes de eliminar un cliente de la libreta,
+     * previniendo borrados accidentales sin exigir huella en gestiones cotidianas de libreta.
      */
     private fun confirmAndDeleteDebtor(debtor: Debtor, parentDetailDialog: Dialog) {
         val profile = PreferencesHelper.getUserProfile(this)
@@ -3283,18 +3276,13 @@ class MainActivity : AppCompatActivity() {
             .setTitle("🗑️ ¿Eliminar Cliente?")
             .setMessage(alertMessage)
             .setPositiveButton("Sí, Eliminar") { _, _ ->
-                requireSecurityAuth(
-                    actionTitle = "🔒 Eliminar Cliente",
-                    description = "Coloca tu huella digital o ingresa el PIN para autorizar la eliminación de ${debtor.name}"
-                ) {
-                    val success = dbHelper.deleteDebtor(debtor.id)
-                    if (success) {
-                        Toast.makeText(this, "🗑️ ${debtor.name} eliminado de la libreta", Toast.LENGTH_SHORT).show()
-                        parentDetailDialog.dismiss()
-                        loadDebtors()
-                    } else {
-                        Toast.makeText(this, "Error al eliminar el cliente de la libreta", Toast.LENGTH_SHORT).show()
-                    }
+                val success = dbHelper.deleteDebtor(debtor.id)
+                if (success) {
+                    Toast.makeText(this, "🗑️ ${debtor.name} eliminado de la libreta", Toast.LENGTH_SHORT).show()
+                    parentDetailDialog.dismiss()
+                    loadDebtors()
+                } else {
+                    Toast.makeText(this, "Error al eliminar el cliente de la libreta", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Cancelar", null)
@@ -4699,12 +4687,21 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Guardar") { _, _ ->
                 val entered = input.text.toString().trim()
                 if (entered.isNotEmpty()) {
-                    PreferencesHelper.setBankAccountIdentifier(this, bankCode, entered)
-                    loadSettings(forceReload = true)
-                    renderConfiguredBanksList()
-                    renderCashierBankCards()
-                    updateCashierHeaderSummary()
-                    Toast.makeText(this, "✅ Datos de $bankName guardados: $entered", Toast.LENGTH_SHORT).show()
+                    val saveAccountId = {
+                        PreferencesHelper.setBankAccountIdentifier(this, bankCode, entered)
+                        loadSettings(forceReload = true)
+                        renderConfiguredBanksList()
+                        renderCashierBankCards()
+                        updateCashierHeaderSummary()
+                        Toast.makeText(this, "✅ Datos de $bankName guardados: $entered", Toast.LENGTH_SHORT).show()
+                    }
+                    if (!isNewlyAdded && currentVal.isNotEmpty() && entered != currentVal) {
+                        requireSecurityAuth("🔒 Proteger Datos de Cobro de $bankName") {
+                            saveAccountId()
+                        }
+                    } else {
+                        saveAccountId()
+                    }
                 } else {
                     Toast.makeText(this, "⚠️ Puedes configurar el Alias o Cuenta cuando quieras desde Ajustes", Toast.LENGTH_SHORT).show()
                 }
@@ -4876,11 +4873,13 @@ class MainActivity : AppCompatActivity() {
     // --- TAB AJUSTES ---
     private fun setupSettings() {
         binding.toggleGroupTheme.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isBindingSettingsData) return@addOnButtonCheckedListener
             if (isChecked) {
-                if (checkedId == R.id.btnThemeLight) {
+                val currentMode = PreferencesHelper.getThemeMode(this)
+                if (checkedId == R.id.btnThemeLight && currentMode != "LIGHT") {
                     PreferencesHelper.setThemeMode(this, "LIGHT")
                     androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO)
-                } else if (checkedId == R.id.btnThemeDark) {
+                } else if (checkedId == R.id.btnThemeDark && currentMode != "DARK") {
                     PreferencesHelper.setThemeMode(this, "DARK")
                     androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES)
                 }

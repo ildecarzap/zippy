@@ -660,12 +660,18 @@
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnAddIncome"
                             android:layout_width="0dp"
-                            android:layout_height="52dp"
+                            android:layout_height="48dp"
                             android:layout_weight="1"
                             android:layout_marginEnd="4dp"
                             android:text="+ Ingreso"
                             android:textSize="13sp"
                             android:textStyle="bold"
+                            android:singleLine="true"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingHorizontal="6dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
                             app:cornerRadius="12dp"
                             android:backgroundTint="@color/accent_green_bg"
                             android:textColor="@color/accent_green" />
@@ -673,12 +679,18 @@
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnAddExpense"
                             android:layout_width="0dp"
-                            android:layout_height="52dp"
+                            android:layout_height="48dp"
                             android:layout_weight="1"
                             android:layout_marginHorizontal="4dp"
                             android:text="+ Gasto"
                             android:textSize="13sp"
                             android:textStyle="bold"
+                            android:singleLine="true"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingHorizontal="6dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
                             app:cornerRadius="12dp"
                             android:backgroundTint="@color/expense_red_bg"
                             android:textColor="@color/expense_red" />
@@ -686,12 +698,18 @@
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnShareSummary"
                             android:layout_width="0dp"
-                            android:layout_height="52dp"
+                            android:layout_height="48dp"
                             android:layout_weight="1"
                             android:layout_marginStart="4dp"
                             android:text="📤 Reportes"
                             android:textSize="13sp"
                             android:textStyle="bold"
+                            android:singleLine="true"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:paddingHorizontal="6dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
                             app:cornerRadius="12dp"
                             android:backgroundTint="@color/accent_blue_bg"
                             android:textColor="@color/accent_blue" />
@@ -854,25 +872,25 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginEnd="6dp"
-                            app:cardCornerRadius="12dp"
+                            app:cardCornerRadius="14dp"
                             app:cardElevation="0dp"
-                            app:strokeWidth="1dp"
-                            app:strokeColor="@color/expense_red"
-                            app:cardBackgroundColor="@color/expense_red_bg">
+                            app:strokeWidth="1.5dp"
+                            app:strokeColor="@color/border"
+                            app:cardBackgroundColor="@color/surface_variant">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="vertical"
-                                android:padding="10dp">
+                                android:padding="12dp">
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="🔴 Por Cobrar (Fiados)"
-                                    android:textColor="@color/expense_red"
+                                    android:textColor="@color/text_secondary"
                                     android:textStyle="bold"
-                                    android:textSize="11sp" />
+                                    android:textSize="12sp" />
 
                                 <TextView
                                     android:id="@+id/tvDebtorsTotalStreetUsd"
@@ -881,8 +899,8 @@
                                     android:text="$ 0.00"
                                     android:textStyle="bold"
                                     android:textColor="@color/expense_red"
-                                    android:textSize="17sp"
-                                    android:layout_marginTop="2dp" />
+                                    android:textSize="18sp"
+                                    android:layout_marginTop="4dp" />
 
                                 <TextView
                                     android:id="@+id/tvDebtorsTotalStreetVes"
@@ -890,7 +908,8 @@
                                     android:layout_height="wrap_content"
                                     android:text="≈ Bs. 0,00"
                                     android:textColor="@color/text_secondary"
-                                    android:textSize="11sp" />
+                                    android:textSize="11.5sp"
+                                    android:layout_marginTop="2dp" />
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
 
@@ -900,25 +919,25 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginStart="6dp"
-                            app:cardCornerRadius="12dp"
+                            app:cardCornerRadius="14dp"
                             app:cardElevation="0dp"
-                            app:strokeWidth="1dp"
-                            app:strokeColor="@color/accent_green"
-                            app:cardBackgroundColor="@color/accent_green_bg">
+                            app:strokeWidth="1.5dp"
+                            app:strokeColor="@color/border"
+                            app:cardBackgroundColor="@color/surface_variant">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="vertical"
-                                android:padding="10dp">
+                                android:padding="12dp">
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="🟢 Saldos a Favor"
-                                    android:textColor="@color/accent_green"
+                                    android:textColor="@color/text_secondary"
                                     android:textStyle="bold"
-                                    android:textSize="11sp" />
+                                    android:textSize="12sp" />
 
                                 <TextView
                                     android:id="@+id/tvDebtorsTotalCreditUsd"
@@ -926,9 +945,9 @@
                                     android:layout_height="wrap_content"
                                     android:text="$ 0.00"
                                     android:textStyle="bold"
-                                    android:textColor="@color/accent_green"
-                                    android:textSize="17sp"
-                                    android:layout_marginTop="2dp" />
+                                    android:textColor="@color/income_green"
+                                    android:textSize="18sp"
+                                    android:layout_marginTop="4dp" />
 
                                 <TextView
                                     android:id="@+id/tvDebtorsTotalCreditVes"
@@ -936,7 +955,8 @@
                                     android:layout_height="wrap_content"
                                     android:text="≈ Bs. 0,00"
                                     android:textColor="@color/text_secondary"
-                                    android:textSize="11sp" />
+                                    android:textSize="11.5sp"
+                                    android:layout_marginTop="2dp" />
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
                     </LinearLayout>
@@ -1242,14 +1262,20 @@
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnOpenSetupWizard"
                                 android:layout_width="match_parent"
-                                android:layout_height="52dp"
+                                android:layout_height="48dp"
                                 android:layout_marginTop="12dp"
                                 android:backgroundTint="@color/accent_cyan"
-                                android:text="👵 Abrir Asistente Paso a Paso (Guía Fácil)"
+                                android:text="📘 Guía o Instructivo"
                                 android:textAllCaps="false"
                                 android:textColor="@color/white"
-                                android:textSize="15sp"
+                                android:textSize="14sp"
                                 android:textStyle="bold"
+                                android:singleLine="true"
+                                android:maxLines="1"
+                                android:ellipsize="end"
+                                android:paddingHorizontal="12dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
                                 app:cornerRadius="12dp" />
 
                             <LinearLayout
@@ -1268,6 +1294,12 @@
                                     android:text="📖 Ver Guía con Fotos"
                                     android:textSize="12sp"
                                     android:textStyle="bold"
+                                    android:singleLine="true"
+                                    android:maxLines="1"
+                                    android:ellipsize="end"
+                                    android:paddingHorizontal="8dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
                                     app:cornerRadius="8dp" />
 
                                 <com.google.android.material.button.MaterialButton
@@ -1279,6 +1311,12 @@
                                     android:text="💬 WhatsApp"
                                     android:textSize="12sp"
                                     android:textStyle="bold"
+                                    android:singleLine="true"
+                                    android:maxLines="1"
+                                    android:ellipsize="end"
+                                    android:paddingHorizontal="12dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
                                     app:cornerRadius="8dp" />
                             </LinearLayout>
 
