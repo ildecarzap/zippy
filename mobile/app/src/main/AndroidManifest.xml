@@ -9,10 +9,43 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
-    <!-- Declaración de paquetes para apertura directa de WhatsApp y WhatsApp Business -->
+    <!-- Declaración de paquetes para WhatsApp y detección de apps bancarias oficiales instaladas -->
     <queries>
         <package android:name="com.whatsapp" />
         <package android:name="com.whatsapp.w4b" />
+        <!-- Venezuela -->
+        <package android:name="com.bancodevenezuela.bdvdigital" />
+        <package android:name="com.bancodevenezuela.app" />
+        <package android:name="com.bancodevenezuela.bdvenlinea" />
+        <package android:name="com.banesco.samfbancamovilunificada" />
+        <package android:name="com.banesco.banescomovil" />
+        <package android:name="com.mercantilbanco.mercantilmovil" />
+        <package android:name="com.mercantilbanco.empresas" />
+        <package android:name="bnc.bncnet.mobile2" />
+        <package android:name="bnc.bncnet.mobile" />
+        <package android:name="com.bnc.movil" />
+        <package android:name="com.bancamiga" />
+        <package android:name="com.bancamiga.movil" />
+        <package android:name="com.bancamiga.bancamigamovil" />
+        <package android:name="ubii.ubiipagos.com.ubiiapp" />
+        <package android:name="com.ubiipagos.ubii" />
+        <package android:name="com.ubiiapp.ubii" />
+        <package android:name="com.ubapp" />
+        <!-- Colombia -->
+        <package android:name="com.nequi.MobileApp" />
+        <package android:name="com.davivienda.daviplataapp" />
+        <package android:name="com.todo1.mobile" />
+        <package android:name="com.bancolombia.alamanov2" />
+        <!-- Argentina -->
+        <package android:name="com.mercadopago.wallet" />
+        <package android:name="com.mercadolibre" />
+        <package android:name="ar.com.bapro.cuentadni" />
+        <package android:name="com.bna.bnamas" />
+        <package android:name="ar.com.bna.bnamas" />
+        <package android:name="ar.com.uala" />
+        <package android:name="com.uala" />
+        <!-- Cripto -->
+        <package android:name="com.binance.dev" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />

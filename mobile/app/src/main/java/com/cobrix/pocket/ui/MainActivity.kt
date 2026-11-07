@@ -42,6 +42,7 @@ import com.cobrix.pocket.BuildConfig
 import com.cobrix.pocket.R
 import com.cobrix.pocket.data.db.PocketDatabaseHelper
 import com.cobrix.pocket.data.model.BankCatalog
+import com.cobrix.pocket.data.model.BankCode
 import com.cobrix.pocket.data.model.CountryCode
 import com.cobrix.pocket.data.model.CountryProfileCatalog
 import com.cobrix.pocket.data.model.LicenseState
@@ -139,6 +140,7 @@ class MainActivity : AppCompatActivity() {
     private var isShowingBiometricPrompt = false
     private var lastBackgroundTimestampMs = 0L
     private var pendingScrollToSettingsBankSection = false
+    private var pendingAutoOpenBankSelector = false
 
     companion object {
         private var isAuthenticatedThisSession = false
@@ -1202,18 +1204,49 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun navigateToSettingsBankSection() {
+    private fun navigateToSettingsBankSection(autoOpenSelector: Boolean = false) {
         pendingScrollToSettingsBankSection = true
+        pendingAutoOpenBankSelector = autoOpenSelector
         binding.bottomNavigation.selectedItemId = R.id.nav_settings
     }
 
-    private fun scrollSettingsToBankButton() {
+    private fun scrollSettingsToBankButton(autoOpenSelector: Boolean = false) {
         binding.scrollSettingsContent.post {
-            val rect = android.graphics.Rect()
-            binding.btnAddAnotherBank.getDrawingRect(rect)
-            binding.scrollSettingsContent.offsetDescendantRectToMyCoords(binding.btnAddAnotherBank, rect)
-            val targetY = (rect.top - (binding.scrollSettingsContent.height / 2)).coerceAtLeast(0)
-            binding.scrollSettingsContent.smoothScrollTo(0, targetY)
+            val profile = PreferencesHelper.getUserProfile(this)
+            val phoneClean = profile.phoneNumber.trim()
+            val idClean = profile.idCard.trim()
+            val hasPhone = phoneClean.isNotEmpty() && !DUMMY_DEFAULT_VALUES.contains(phoneClean)
+            val hasId = idClean.isNotEmpty() && !DUMMY_DEFAULT_VALUES.contains(idClean)
+
+            if (autoOpenSelector && (!hasPhone || !hasId)) {
+                val rect = android.graphics.Rect()
+                val targetView = if (!hasPhone) binding.tilSettingsPhone else binding.tilSettingsId
+                targetView.getDrawingRect(rect)
+                binding.scrollSettingsContent.offsetDescendantRectToMyCoords(targetView, rect)
+                val targetY = (rect.top - (binding.scrollSettingsContent.height / 4)).coerceAtLeast(0)
+                binding.scrollSettingsContent.smoothScrollTo(0, targetY)
+                if (!hasPhone) {
+                    binding.etSettingsPhone.requestFocus()
+                } else {
+                    binding.etSettingsId.requestFocus()
+                }
+                Toast.makeText(
+                    this,
+                    "✍️ Ingresa tus datos de cobro (teléfono/alias y documento) y luego selecciona tu banco",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else {
+                val rect = android.graphics.Rect()
+                binding.btnAddAnotherBank.getDrawingRect(rect)
+                binding.scrollSettingsContent.offsetDescendantRectToMyCoords(binding.btnAddAnotherBank, rect)
+                val targetY = (rect.top - (binding.scrollSettingsContent.height / 2)).coerceAtLeast(0)
+                binding.scrollSettingsContent.smoothScrollTo(0, targetY)
+                if (autoOpenSelector) {
+                    binding.btnAddAnotherBank.postDelayed({
+                        binding.btnAddAnotherBank.performClick()
+                    }, 220)
+                }
+            }
         }
     }
 
@@ -1264,8 +1297,10 @@ class MainActivity : AppCompatActivity() {
                     binding.viewSettings.visibility = View.VISIBLE
                     loadSettings(forceReload = false)
                     if (pendingScrollToSettingsBankSection) {
+                        val shouldAutoOpen = pendingAutoOpenBankSelector
                         pendingScrollToSettingsBankSection = false
-                        scrollSettingsToBankButton()
+                        pendingAutoOpenBankSelector = false
+                        scrollSettingsToBankButton(autoOpenSelector = shouldAutoOpen)
                     } else {
                         binding.scrollSettingsContent.post {
                             binding.scrollSettingsContent.scrollTo(0, 0)
@@ -1369,9 +1404,9 @@ class MainActivity : AppCompatActivity() {
 
     // --- ACCIONES DE COBRO Y CAJERO FINTECH ---
     private fun setupCashierActions() {
-        // Tarjeta para agregar nuevo método de cobro: navega a Ajustes a la altura del botón de agregar banco
+        // Tarjeta para agregar nuevo método de cobro: navega a Ajustes a la altura del botón de agregar banco y abre el selector
         binding.cardCashierAddBank.setOnClickListener {
-            navigateToSettingsBankSection()
+            navigateToSettingsBankSection(autoOpenSelector = true)
         }
 
         // Tarjeta destacada de WhatsApp: Toca para abrir teclado numérico y enviar datos con QR
@@ -1535,6 +1570,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 cardBinding.btnCardShowQr.text = "📸 Mostrar Código QR en Pantalla"
                 cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
+                cardBinding.btnCardUploadQrInline.visibility = View.GONE
 
                 // Abrir pantalla completa de QR al tocar la tarjeta o el botón principal
                 val openQrAction = View.OnClickListener {
@@ -1551,18 +1587,32 @@ class MainActivity : AppCompatActivity() {
                 cardBinding.cardCashierBank.setOnClickListener(openQrAction)
                 cardBinding.btnCardShowQr.setOnClickListener(openQrAction)
 
-                // Botón Quitar: elimina el QR y remueve la tarjeta de la pantalla principal
+                // Botón Quitar: permite quitar el método de cobro completo o solo su QR
                 cardBinding.btnCardDeleteQr.text = "🗑️ Quitar"
+                cardBinding.btnCardDeleteQr.setTextColor(ContextCompat.getColor(this, R.color.expense_red))
                 cardBinding.btnCardDeleteQr.setOnClickListener {
                     AlertDialog.Builder(this)
-                        .setTitle("Quitar Tarjeta de Banco")
-                        .setMessage("¿Deseas quitar la tarjeta y el código QR de $bankName de la pantalla principal?")
-                        .setPositiveButton("Quitar") { _, _ ->
+                        .setTitle("Quitar Método de Cobro")
+                        .setMessage("¿Deseas quitar $bankName por completo de tus métodos de cobro o solo borrar su imagen QR?")
+                        .setPositiveButton("Quitar Banco") { _, _ ->
+                            PreferencesHelper.removeConfiguredBank(this, code)
+                            if (activeCashierBankCode == code) {
+                                val nextProfile = PreferencesHelper.getUserProfile(this)
+                                activeCashierBankCode = nextProfile.bankCode
+                                activeCashierBankName = nextProfile.bankName
+                            }
+                            renderCashierBankCards()
+                            setupCashierBankSelector()
+                            updateSelectedBankConfigCard()
+                            updateCashierHeaderSummary()
+                            Toast.makeText(this, "Banco $bankName removido", Toast.LENGTH_SHORT).show()
+                        }
+                        .setNeutralButton("Solo borrar QR") { _, _ ->
                             PreferencesHelper.clearBankQr(this, code)
                             renderCashierBankCards()
                             setupCashierBankSelector()
                             updateSelectedBankConfigCard()
-                            Toast.makeText(this, "Tarjeta de $bankName eliminada", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Código QR de $bankName eliminado", Toast.LENGTH_SHORT).show()
                         }
                         .setNegativeButton("Cancelar", null)
                         .show()
@@ -1573,7 +1623,7 @@ class MainActivity : AppCompatActivity() {
                     val aliasOrCvu = profile.phoneNumber.ifBlank { profile.idCard }
                     if (aliasOrCvu.isNotBlank()) {
                         cardBinding.tvCashierBankSubtitle.text = "Cobro por Alias / CVU (0% comisión): $aliasOrCvu"
-                        cardBinding.btnCardShowQr.text = "📋 Copiar Alias / CVU para Cobro"
+                        cardBinding.btnCardShowQr.text = "📋 Copiar Alias / CVU"
                         cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
                         val copyAction = View.OnClickListener {
                             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -1583,12 +1633,20 @@ class MainActivity : AppCompatActivity() {
                         }
                         cardBinding.cardCashierBank.setOnClickListener(copyAction)
                         cardBinding.btnCardShowQr.setOnClickListener(copyAction)
+                        cardBinding.btnCardUploadQrInline.visibility = View.VISIBLE
+                        cardBinding.btnCardUploadQrInline.setOnClickListener {
+                            handleUploadQrClick(code, bankName)
+                        }
                     } else {
                         cardBinding.tvCashierBankSubtitle.text = "Configura tu Alias o CVU de Mercado Pago / Banco"
-                        cardBinding.btnCardShowQr.text = "⚙️ Configurar Datos de Cobro"
+                        cardBinding.btnCardShowQr.text = "⚙️ Configurar Datos"
                         cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
                         cardBinding.btnCardShowQr.setOnClickListener {
-                            navigateToSettingsBankSection()
+                            navigateToSettingsBankSection(autoOpenSelector = false)
+                        }
+                        cardBinding.btnCardUploadQrInline.visibility = View.VISIBLE
+                        cardBinding.btnCardUploadQrInline.setOnClickListener {
+                            handleUploadQrClick(code, bankName)
                         }
                     }
                 } else {
@@ -1596,7 +1654,7 @@ class MainActivity : AppCompatActivity() {
                     if (phoneOrDoc.isNotBlank()) {
                         val label = if (currentCountry == CountryCode.VE) "Pago Móvil" else "Transferencia"
                         cardBinding.tvCashierBankSubtitle.text = "$label: $phoneOrDoc"
-                        cardBinding.btnCardShowQr.text = "📋 Copiar Datos de Cobro"
+                        cardBinding.btnCardShowQr.text = "📋 Copiar Datos"
                         cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
                         val copyAction = View.OnClickListener {
                             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -1606,20 +1664,43 @@ class MainActivity : AppCompatActivity() {
                         }
                         cardBinding.cardCashierBank.setOnClickListener(copyAction)
                         cardBinding.btnCardShowQr.setOnClickListener(copyAction)
+                        cardBinding.btnCardUploadQrInline.visibility = View.VISIBLE
+                        cardBinding.btnCardUploadQrInline.setOnClickListener {
+                            handleUploadQrClick(code, bankName)
+                        }
                     } else {
                         cardBinding.tvCashierBankSubtitle.text = "Configura tus datos de cobro o sube un QR"
                         cardBinding.btnCardShowQr.text = "📸 Subir Código QR"
                         cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
                         cardBinding.btnCardShowQr.setOnClickListener {
-                            launchCropForBank(code)
+                            handleUploadQrClick(code, bankName)
                         }
+                        cardBinding.btnCardUploadQrInline.visibility = View.GONE
                     }
                 }
 
-                cardBinding.btnCardDeleteQr.text = "📸 Subir QR"
-                cardBinding.btnCardDeleteQr.setTextColor(ContextCompat.getColor(this, R.color.accent_blue))
+                // El botón superior derecho se mantiene siempre como "🗑️ Quitar" para remover el banco desde Inicio
+                cardBinding.btnCardDeleteQr.text = "🗑️ Quitar"
+                cardBinding.btnCardDeleteQr.setTextColor(ContextCompat.getColor(this, R.color.expense_red))
                 cardBinding.btnCardDeleteQr.setOnClickListener {
-                    launchCropForBank(code)
+                    AlertDialog.Builder(this)
+                        .setTitle("Quitar Método de Cobro")
+                        .setMessage("¿Deseas quitar $bankName de tus métodos de cobro?")
+                        .setPositiveButton("Quitar") { _, _ ->
+                            PreferencesHelper.removeConfiguredBank(this, code)
+                            if (activeCashierBankCode == code) {
+                                val nextProfile = PreferencesHelper.getUserProfile(this)
+                                activeCashierBankCode = nextProfile.bankCode
+                                activeCashierBankName = nextProfile.bankName
+                            }
+                            renderCashierBankCards()
+                            setupCashierBankSelector()
+                            updateSelectedBankConfigCard()
+                            updateCashierHeaderSummary()
+                            Toast.makeText(this, "Banco $bankName removido", Toast.LENGTH_SHORT).show()
+                        }
+                        .setNegativeButton("Cancelar", null)
+                        .show()
                 }
             }
 
@@ -4228,34 +4309,49 @@ class MainActivity : AppCompatActivity() {
                         return@showSelectBankDialog
                     }
 
+                    val bankEnum = BankCode.fromSudeban(selectedBank.code)
+                    val hasOfficialPackages = bankEnum != null && bankEnum.knownPackageNames.isNotEmpty()
+                    val isAppInstalled = bankEnum?.isAppInstalled(this) == true
+                    val appDetectionNote = when {
+                        isAppInstalled -> "\n\n✅ App oficial detectada en este teléfono: Zeasy cantará tus cobros automáticamente."
+                        hasOfficialPackages -> "\n\n💡 Nota: No detectamos la app oficial de ${selectedBank.name} instalada en este teléfono. Recuerda que para escuchar los cobros automáticamente, las notificaciones o SMS del banco deben llegar a este equipo."
+                        else -> "\n\n🔔 Recuerda mantener activas las notificaciones o SMS de ${selectedBank.name} en este teléfono."
+                    }
+
                     if (!isMultibank) {
                         if (profile.bankCode.isEmpty()) {
-                            // Primer banco en plan básico: pedir huella o PIN al cargar QR
-                            requireSecurityAuth("Cargar Código QR de ${selectedBank.name}") {
-                                PreferencesHelper.setPrimaryBank(this, selectedBank.code, selectedBank.name)
-                                activeCashierBankCode = selectedBank.code
-                                activeCashierBankName = selectedBank.name
-                                syncSelectedBank(selectedBank.code, selectedBank.name)
-                                renderCashierBankCards()
-                                setupCashierBankSelector()
-                                updateCashierHeaderSummary()
-                                launchCropForBank(selectedBank.code)
-                            }
+                            // Primer banco en plan básico: configurar banco y ofrecer cargar QR opcionalmente
+                            PreferencesHelper.setPrimaryBank(this, selectedBank.code, selectedBank.name)
+                            activeCashierBankCode = selectedBank.code
+                            activeCashierBankName = selectedBank.name
+                            syncSelectedBank(selectedBank.code, selectedBank.name)
+                            renderCashierBankCards()
+                            setupCashierBankSelector()
+                            updateCashierHeaderSummary()
+
+                            AlertDialog.Builder(this)
+                                .setTitle("✅ Banco Configurado")
+                                .setMessage("Has configurado ${selectedBank.name} como tu método de cobro.$appDetectionNote\n\n¿Deseas cargar el código QR de este banco ahora? (Opcional)")
+                                .setPositiveButton("Sí, Cargar QR") { _, _ ->
+                                    requireSecurityAuth("Cargar Código QR de ${selectedBank.name}") {
+                                        launchCropForBank(selectedBank.code)
+                                    }
+                                }
+                                .setNegativeButton("Más tarde", null)
+                                .show()
                         } else {
                             AlertDialog.Builder(this)
                                 .setTitle("Reemplazar Banco")
-                                .setMessage("Actualmente tienes configurado ${profile.bankName}.\n\nEn el Plan Básico puedes tener 1 banco activo a la vez.\n\n¿Deseas reemplazarlo por ${selectedBank.name} y cargar su código QR, o activar Zeasy PRO?")
-                                .setPositiveButton("Reemplazar y Cargar QR") { _, _ ->
-                                    requireSecurityAuth("Cargar Código QR de ${selectedBank.name}") {
-                                        PreferencesHelper.replaceBasicPlanBank(this, selectedBank.code, selectedBank.name)
-                                        activeCashierBankCode = selectedBank.code
-                                        activeCashierBankName = selectedBank.name
-                                        syncSelectedBank(selectedBank.code, selectedBank.name)
-                                        renderCashierBankCards()
-                                        setupCashierBankSelector()
-                                        updateCashierHeaderSummary()
-                                        launchCropForBank(selectedBank.code)
-                                    }
+                                .setMessage("Actualmente tienes configurado ${profile.bankName}.\n\nEn el Plan Básico puedes tener 1 banco activo a la vez.$appDetectionNote\n\n¿Deseas reemplazarlo por ${selectedBank.name} o activar Zeasy PRO?")
+                                .setPositiveButton("Reemplazar Banco") { _, _ ->
+                                    PreferencesHelper.replaceBasicPlanBank(this, selectedBank.code, selectedBank.name)
+                                    activeCashierBankCode = selectedBank.code
+                                    activeCashierBankName = selectedBank.name
+                                    syncSelectedBank(selectedBank.code, selectedBank.name)
+                                    renderCashierBankCards()
+                                    setupCashierBankSelector()
+                                    updateCashierHeaderSummary()
+                                    Toast.makeText(this, "✅ ${selectedBank.name} configurado como método principal", Toast.LENGTH_SHORT).show()
                                 }
                                 .setNegativeButton("Cancelar", null)
                                 .setNeutralButton("Ver Zeasy PRO") { _, _ ->
@@ -4271,8 +4367,8 @@ class MainActivity : AppCompatActivity() {
                         updateCashierHeaderSummary()
 
                         AlertDialog.Builder(this)
-                            .setTitle("✅ Banco Agregado")
-                            .setMessage("Has agregado ${selectedBank.name} a tu lista.\n\n¿Deseas cargar el código QR de este banco ahora?")
+                            .setTitle("✅ Método de Cobro Agregado")
+                            .setMessage("Has agregado ${selectedBank.name} a tu lista.$appDetectionNote\n\n¿Deseas cargar el código QR de este banco ahora? (Opcional)")
                             .setPositiveButton("Sí, Cargar QR") { _, _ ->
                                 requireSecurityAuth("Cargar Código QR de ${selectedBank.name}") {
                                     launchCropForBank(selectedBank.code)
@@ -4355,15 +4451,29 @@ class MainActivity : AppCompatActivity() {
             }
 
             val qrUri = PreferencesHelper.getBankQrUri(this, code)
+            val bankEnum = BankCode.fromSudeban(code)
+            val hasOfficialPackages = bankEnum != null && bankEnum.knownPackageNames.isNotEmpty()
+            val isAppInstalled = bankEnum?.isAppInstalled(this) == true
+
             if (!qrUri.isNullOrEmpty()) {
-                itemBinding.tvBankItemQrStatus.text = "✅ Código QR Listo y Escucha Activa"
+                itemBinding.tvBankItemQrStatus.text = when {
+                    isAppInstalled -> "✅ QR Listo • App oficial detectada 🔔"
+                    hasOfficialPackages -> "✅ QR Listo • Escucha por SMS / Notificación"
+                    else -> "✅ Código QR Listo y Escucha Activa"
+                }
                 itemBinding.tvBankItemQrStatus.setTextColor(ContextCompat.getColor(this, R.color.income_green))
                 itemBinding.btnBankItemUploadQr.text = "✂️ Cambiar QR"
                 itemBinding.btnBankItemViewQr.visibility = View.VISIBLE
                 itemBinding.btnBankItemDeleteQr.visibility = View.VISIBLE
             } else {
-                itemBinding.tvBankItemQrStatus.text = "🔔 Escucha activa de notificaciones (QR opcional)"
-                itemBinding.tvBankItemQrStatus.setTextColor(ContextCompat.getColor(this, R.color.accent_cyan))
+                itemBinding.tvBankItemQrStatus.text = when {
+                    isAppInstalled -> "🔔 App oficial detectada • Escucha activa (QR opcional)"
+                    hasOfficialPackages -> "📲 Sin app del banco en este equipo • Escucha SMS (QR opcional)"
+                    else -> "🔔 Escucha activa de notificaciones (QR opcional)"
+                }
+                itemBinding.tvBankItemQrStatus.setTextColor(
+                    ContextCompat.getColor(this, if (isAppInstalled) R.color.income_green else R.color.accent_cyan)
+                )
                 itemBinding.btnBankItemUploadQr.text = "✂️ Cargar Código QR"
                 itemBinding.btnBankItemViewQr.visibility = View.GONE
                 itemBinding.btnBankItemDeleteQr.visibility = View.GONE

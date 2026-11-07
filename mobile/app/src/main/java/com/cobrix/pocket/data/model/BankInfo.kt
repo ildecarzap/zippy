@@ -211,6 +211,22 @@ enum class BankCode(
         }
     }
 
+    /**
+     * Verifica si alguna de las aplicaciones oficiales conocidas para este banco o billetera
+     * se encuentra instalada en el dispositivo actual.
+     */
+    fun isAppInstalled(context: android.content.Context): Boolean {
+        val pm = context.packageManager
+        return knownPackageNames.any { pkg ->
+            try {
+                pm.getPackageInfo(pkg, 0)
+                true
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
+
     companion object {
         fun fromCode(code: String?): BankCode? {
             return values().firstOrNull { it.name.equals(code, ignoreCase = true) }
