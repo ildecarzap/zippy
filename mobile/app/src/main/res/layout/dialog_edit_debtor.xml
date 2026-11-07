@@ -34,7 +34,7 @@
         android:layout_marginTop="12dp"
         android:padding="10dp"
         android:background="@drawable/bg_badge_rounded"
-        android:backgroundTint="#EFF6FF">
+        android:backgroundTint="@color/accent_blue_bg">
 
         <TextView
             android:layout_width="wrap_content"
@@ -47,8 +47,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Protegido: Se solicitará tu huella digital o PIN antes de aplicar cualquier cambio"
-            android:textColor="#1D4ED8"
+            android:text="Protegido: Se solicitará la huella o PIN de tu teléfono antes de aplicar cambios"
+            android:textColor="@color/accent_blue"
             android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -129,8 +129,8 @@
             android:text="Cancelar"
             android:textSize="13sp"
             app:cornerRadius="12dp"
-            android:backgroundTint="#F1F5F9"
-            android:textColor="#475569" />
+            android:backgroundTint="@color/surface_variant"
+            android:textColor="@color/text_primary" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSaveEditDebtor"

@@ -248,7 +248,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="¿Prefieres verlo en grande en tu computadora?\nExporta tu archivo Excel (.csv) o tu Respaldo y ábrelo en zeasy.app desde tu PC para analizar tus ventas y gráficas con total comodidad."
+                    android:text="¿Prefieres verlo en grande en tu computadora?\nExporta tu archivo Excel (.csv) o tu Respaldo y ábrelo en la web de Zeasy desde tu PC para analizar tus ventas y gráficas con total comodidad."
                     android:textColor="@color/text_primary"
                     android:textSize="12.5sp"
                     android:lineSpacingExtra="2dp" />
@@ -260,7 +260,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
                 android:layout_marginTop="8dp"
-                android:text="🌐 Abrir Visor en zeasy.app →"
+                android:text="🌐 Abrir en la web de Zeasy →"
                 android:textColor="@color/accent_cyan"
                 android:textStyle="bold"
                 android:textSize="12.5sp"

@@ -135,6 +135,10 @@ class MainActivity : AppCompatActivity() {
     private var allDebtorsList: List<Debtor> = emptyList()
     private var activeDebtorFilter: String = "ALL"
 
+    private var isLaunchingInternalActivity = false
+    private var isShowingBiometricPrompt = false
+    private var lastBackgroundTimestampMs = 0L
+
     companion object {
         private var isAuthenticatedThisSession = false
     }
@@ -297,12 +301,14 @@ class MainActivity : AppCompatActivity() {
                 putExtra(QrCropActivity.EXTRA_SOURCE_URI, uri.toString())
                 putExtra(QrCropActivity.EXTRA_BANK_CODE, bankCode)
             }
+            isLaunchingInternalActivity = true
             cropLauncher.launch(intent)
         }
     }
 
     private fun launchCropForBank(bankCode: String) {
         targetCropBankCode = bankCode
+        isLaunchingInternalActivity = true
         pickImageForCropLauncher.launch("image/*")
     }
 
@@ -583,14 +589,27 @@ class MainActivity : AppCompatActivity() {
         } else {
             registerReceiver(paymentReceiver, filter)
         }
+
+        isLaunchingInternalActivity = false
+        checkBiometricAuthOnStart()
     }
 
     override fun onPause() {
         super.onPause()
+        lastBackgroundTimestampMs = System.currentTimeMillis()
         saveCurrentSettingsDraft()
         try {
             unregisterReceiver(paymentReceiver)
         } catch (_: Exception) { }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Al salir de la app hacia el inicio u otra aplicación (y no estar girando pantalla ni abriendo el visor QR interno),
+        // reiniciar la sesión para que al volver a abrir Zeasy vuelva a pedir la huella o bloqueo del teléfono.
+        if (!isChangingConfigurations && !isLaunchingInternalActivity && !isShowingBiometricPrompt) {
+            isAuthenticatedThisSession = false
+        }
     }
 
     override fun onDestroy() {
@@ -650,49 +669,56 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // --- SEGURIDAD BIOMÉTRICA (HUELLA / PIN) ---
+    // --- SEGURIDAD BIOMÉTRICA / BLOQUEO DEL TELÉFONO ---
     private fun checkBiometricAuthOnStart() {
         val profile = PreferencesHelper.getUserProfile(this)
-        if (profile.biometricSecurityEnabled && !isAuthenticatedThisSession) {
+        if (profile.biometricSecurityEnabled && !isAuthenticatedThisSession && !isShowingBiometricPrompt) {
             if (BiometricHelper.isBiometricAvailable(this)) {
+                isShowingBiometricPrompt = true
                 BiometricHelper.showBiometricPrompt(
                     activity = this,
                     onSuccess = {
+                        isShowingBiometricPrompt = false
                         isAuthenticatedThisSession = true
                     },
                     onError = {
+                        isShowingBiometricPrompt = false
                         finish() // Cierra la app si falla o cancela la autenticación
                     }
                 )
+            } else {
+                isAuthenticatedThisSession = true
             }
         }
     }
 
     /**
-     * Exige confirmación biométrica (huella) o PIN del teléfono antes de modificar
-     * datos bancarios sensibles, cargar/cambiar códigos QR, o modificar/eliminar clientes de la libreta.
-     * Si el dispositivo o emulador no cuenta con biometría o credencial de sistema activa,
-     * solicita el PIN de seguridad de Zeasy (por defecto: 1234).
+     * Exige confirmación con la seguridad nativa del teléfono (Huella, Rostro, PIN o Patrón del dispositivo)
+     * antes de modificar datos bancarios sensibles, cargar/cambiar códigos QR, o modificar/eliminar clientes.
      */
     private fun requireSecurityAuth(
         actionTitle: String,
-        description: String = "Coloca tu huella digital o ingresa el PIN para confirmar esta acción",
+        description: String = "Confirma con la huella o el bloqueo de tu teléfono para realizar esta acción",
         onSuccess: () -> Unit
     ) {
         if (BiometricHelper.isBiometricAvailable(this)) {
+            isShowingBiometricPrompt = true
             BiometricHelper.showBiometricPrompt(
                 activity = this,
                 title = actionTitle,
-                subtitle = "Confirmación de Seguridad",
+                subtitle = "Confirmación de Seguridad del Teléfono",
                 description = description,
-                onSuccess = onSuccess,
+                onSuccess = {
+                    isShowingBiometricPrompt = false
+                    onSuccess()
+                },
                 onError = { _ ->
-                    // Si se cancela o falla la biometría, permitir validar con el PIN de la app
-                    showSecurityPinDialog(actionTitle, description, onSuccess)
+                    isShowingBiometricPrompt = false
+                    Toast.makeText(this, "🔒 Acción cancelada: Se requiere confirmar con la seguridad de tu teléfono", Toast.LENGTH_SHORT).show()
                 }
             )
         } else {
-            showSecurityPinDialog(actionTitle, description, onSuccess)
+            onSuccess()
         }
     }
 
@@ -2838,8 +2864,8 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     String.format(Locale.US, "🔴 Debe %s %.2f", countryProfile.localCurrencySymbol, debtor.debtAmountUsd)
                 }
-                dBinding.tvDetailBalanceBadge.setTextColor(Color.parseColor("#C62828"))
-                dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFEBEE"))
+                dBinding.tvDetailBalanceBadge.setTextColor(ContextCompat.getColor(this, R.color.expense_red))
+                dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.expense_red_bg))
                 dBinding.btnDetailShareWhatsApp.text = if (countryProfile.supportsExchangeRate) {
                     val hasQr = !PreferencesHelper.getBankQrUri(this, profile.bankCode).isNullOrEmpty()
                     if (hasQr) "💬 Cobrar con QR" else "💬 Cobrar por WhatsApp"
@@ -2853,14 +2879,14 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     String.format(Locale.US, "🟢 A favor %s %.2f", countryProfile.localCurrencySymbol, debtor.creditAmountUsd)
                 }
-                dBinding.tvDetailBalanceBadge.setTextColor(Color.parseColor("#2E7D32"))
-                dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E8F5E9"))
+                dBinding.tvDetailBalanceBadge.setTextColor(ContextCompat.getColor(this, R.color.income_green))
+                dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent_green_bg))
                 dBinding.btnDetailShareWhatsApp.text = "💬 Avisar por WhatsApp"
             }
             else -> {
                 dBinding.tvDetailBalanceBadge.text = "⚪ Al Día (${countryProfile.localCurrencySymbol} 0.00)"
-                dBinding.tvDetailBalanceBadge.setTextColor(Color.parseColor("#5E6C84"))
-                dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F4F5F7"))
+                dBinding.tvDetailBalanceBadge.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                dBinding.tvDetailBalanceBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.surface_variant))
                 dBinding.btnDetailShareWhatsApp.visibility = View.GONE
             }
         }
@@ -4672,16 +4698,52 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Listener de switch biométrico para actualizar estado de botón
-        binding.switchBiometric.setOnCheckedChangeListener { _, _ ->
-            if (!isBindingSettingsData) {
-                updateSaveButtonState()
+        // Listener de switch biométrico con guardado inmediato usando la seguridad del teléfono
+        binding.switchBiometric.setOnCheckedChangeListener { _, isChecked ->
+            if (isBindingSettingsData) return@setOnCheckedChangeListener
+
+            if (!BiometricHelper.isBiometricAvailable(this)) {
+                isBindingSettingsData = true
+                binding.switchBiometric.isChecked = false
+                isBindingSettingsData = false
+                AlertDialog.Builder(this)
+                    .setTitle("🔒 Bloqueo de Teléfono Requerido")
+                    .setMessage("Para usar esta función, tu teléfono debe tener configurada una Huella Digital, Reconocimiento Facial, Patrón o PIN de desbloqueo en los Ajustes de Android.")
+                    .setPositiveButton("Entendido", null)
+                    .show()
+                return@setOnCheckedChangeListener
             }
+
+            isShowingBiometricPrompt = true
+            BiometricHelper.showBiometricPrompt(
+                activity = this,
+                title = if (isChecked) "🔒 Activar Bloqueo al Abrir Zeasy" else "🔓 Desactivar Bloqueo de Apertura",
+                subtitle = "Seguridad de tu teléfono",
+                description = "Confirma con tu huella digital o el PIN/patrón de tu teléfono",
+                onSuccess = {
+                    isShowingBiometricPrompt = false
+                    isAuthenticatedThisSession = true
+                    val current = PreferencesHelper.getUserProfile(this)
+                    PreferencesHelper.saveUserProfile(this, current.copy(biometricSecurityEnabled = isChecked))
+                    updateSaveButtonState()
+                    val msg = if (isChecked) {
+                        "🔒 Bloqueo activado: Zeasy pedirá la huella o PIN de tu teléfono al abrir"
+                    } else {
+                        "🔓 Bloqueo al abrir Zeasy desactivado"
+                    }
+                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                },
+                onError = { _ ->
+                    isShowingBiometricPrompt = false
+                    isBindingSettingsData = true
+                    binding.switchBiometric.isChecked = !isChecked
+                    isBindingSettingsData = false
+                    updateSaveButtonState()
+                }
+            )
         }
 
-        binding.btnChangeSecurityPin.setOnClickListener {
-            showChangeSecurityPinDialog()
-        }
+        binding.btnChangeSecurityPin.visibility = View.GONE
 
         // Probar Soundbox (dejar sonar la voz para que el usuario conozca la función)
         binding.btnTestSound.setOnClickListener {
@@ -4716,6 +4778,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnRestoreBackup.setOnClickListener {
+            isLaunchingInternalActivity = true
             restoreBackupLauncher.launch("*/*")
         }
 
@@ -4723,7 +4786,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PlanCapabilityManager.OFFICIAL_WEBSITE)))
             } catch (_: Exception) {
-                Toast.makeText(this, "Ingresa a ${PlanCapabilityManager.OFFICIAL_WEBSITE} desde tu computadora", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Ingresa a la web de Zeasy (${PlanCapabilityManager.OFFICIAL_WEBSITE}) desde tu computadora", Toast.LENGTH_LONG).show()
             }
         }
 
@@ -4752,7 +4815,7 @@ class MainActivity : AppCompatActivity() {
 
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle("💻 Tu Código de Acceso PC")
-                        .setMessage("Ingresa a zeasy.app (o a ${PlanCapabilityManager.OFFICIAL_WEBSITE}/dashboard) desde tu computadora e introduce tu teléfono y este código:\n\n" +
+                        .setMessage("Ingresa a la web de Zeasy (${PlanCapabilityManager.OFFICIAL_WEBSITE}/dashboard) desde tu computadora e introduce tu teléfono y este código:\n\n" +
                             "👉  $formattedPin  👈\n\n" +
                             "• Teléfono: $phone\n" +
                             "• Válido por: 10 minutos\n\n" +

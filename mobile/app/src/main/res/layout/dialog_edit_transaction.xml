@@ -34,7 +34,7 @@
         android:orientation="vertical"
         android:padding="12dp"
         android:background="@drawable/bg_badge_rounded"
-        android:backgroundTint="#F0FDF4"
+        android:backgroundTint="@color/accent_green_bg"
         android:visibility="gone">
 
         <TextView
@@ -42,7 +42,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="📒 ¿Este pago corresponde a un Fiado de la Libreta?"
-            android:textColor="#166534"
+            android:textColor="@color/accent_green"
             android:textStyle="bold"
             android:textSize="12.5sp" />
 

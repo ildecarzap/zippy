@@ -51,7 +51,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Ubii App"
-                    android:textColor="@color/slate_900"
+                    android:textColor="@color/text_primary"
                     android:textStyle="bold"
                     android:textSize="17sp" />
 
@@ -61,7 +61,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Toca para mostrar QR a brillo 100%"
-                    android:textColor="@color/slate_500"
+                    android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
             </LinearLayout>
 

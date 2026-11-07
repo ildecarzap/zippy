@@ -8,19 +8,25 @@ import androidx.fragment.app.FragmentActivity
 
 object BiometricHelper {
 
+    private const val ALLOWED_AUTHENTICATORS =
+        BiometricManager.Authenticators.BIOMETRIC_STRONG or
+        BiometricManager.Authenticators.BIOMETRIC_WEAK or
+        BiometricManager.Authenticators.DEVICE_CREDENTIAL
+
     fun isBiometricAvailable(context: Context): Boolean {
         val biometricManager = BiometricManager.from(context)
-        val canAuthenticate = biometricManager.canAuthenticate(
-            BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-        )
-        return canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS
+        val canAuthenticate = biometricManager.canAuthenticate(ALLOWED_AUTHENTICATORS)
+        if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) return true
+
+        val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+        return keyguardManager?.isDeviceSecure == true
     }
 
     fun showBiometricPrompt(
         activity: FragmentActivity,
         title: String = "Zeasy",
         subtitle: String = "Confirma tu identidad para acceder a la caja",
-        description: String = "Coloca tu huella digital o ingresa el PIN del teléfono",
+        description: String = "Coloca tu huella digital o ingresa el bloqueo de tu teléfono",
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -30,9 +36,7 @@ object BiometricHelper {
             .setTitle(title)
             .setSubtitle(subtitle)
             .setDescription(description)
-            .setAllowedAuthenticators(
-                BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-            )
+            .setAllowedAuthenticators(ALLOWED_AUTHENTICATORS)
             .build()
 
         val biometricPrompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
