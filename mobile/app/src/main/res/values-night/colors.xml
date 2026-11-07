@@ -14,6 +14,7 @@
     <color name="accent_green_dark">#00A86B</color>
     <color name="accent_green_bg">#053322</color>
     <color name="income_green">#00D084</color>
+    <color name="income_green_bg">#053322</color>
 
     <!-- Gastos & Alertas -->
     <color name="expense_red">#FF6B6B</color>

@@ -1,6 +1,7 @@
 package com.cobrix.pocket.utils
 
 import android.content.Context
+import android.os.Build
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -8,14 +9,20 @@ import androidx.fragment.app.FragmentActivity
 
 object BiometricHelper {
 
-    private const val ALLOWED_AUTHENTICATORS =
-        BiometricManager.Authenticators.BIOMETRIC_STRONG or
-        BiometricManager.Authenticators.BIOMETRIC_WEAK or
-        BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    private fun getAllowedAuthenticators(): Int {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        } else {
+            BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        }
+    }
 
     fun isBiometricAvailable(context: Context): Boolean {
         val biometricManager = BiometricManager.from(context)
-        val canAuthenticate = biometricManager.canAuthenticate(ALLOWED_AUTHENTICATORS)
+        val canAuthenticate = biometricManager.canAuthenticate(getAllowedAuthenticators())
         if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) return true
 
         val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
@@ -36,7 +43,7 @@ object BiometricHelper {
             .setTitle(title)
             .setSubtitle(subtitle)
             .setDescription(description)
-            .setAllowedAuthenticators(ALLOWED_AUTHENTICATORS)
+            .setAllowedAuthenticators(getAllowedAuthenticators())
             .build()
 
         val biometricPrompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {

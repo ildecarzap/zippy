@@ -498,7 +498,7 @@
                                 android:textSize="15sp"
                                 android:textStyle="bold"
                                 app:cornerRadius="14dp"
-                                android:backgroundTint="@color/primary"
+                                android:backgroundTint="@color/whatsapp_green"
                                 android:textColor="@color/white" />
                         </LinearLayout>
 
@@ -833,7 +833,7 @@
                             android:textSize="12sp"
                             android:textStyle="bold"
                             app:cornerRadius="19dp"
-                            android:backgroundTint="@color/primary"
+                            android:backgroundTint="@color/accent_cyan"
                             android:textColor="@color/white"
                             android:insetTop="0dp"
                             android:insetBottom="0dp" />
