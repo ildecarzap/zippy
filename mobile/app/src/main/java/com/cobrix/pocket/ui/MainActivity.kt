@@ -885,22 +885,22 @@ class MainActivity : AppCompatActivity() {
         when (countryProfile.code) {
             CountryCode.VE -> {
                 binding.tvSettingsBankSectionTitle.text = "🏦 Pago Móvil y Bancos"
-                binding.tvSettingsBankSectionSubtitle.text = "Número receptor de Pago Móvil, Cédula o RIF y códigos QR"
+                binding.tvSettingsBankSectionSubtitle.text = "Mismo Teléfono y Cédula/RIF para todos tus bancos de Pago Móvil"
                 binding.tilSettingsPhone.hint = "Teléfono Pago Móvil (ej. ${countryProfile.phonePlaceholder})"
                 binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_PHONE
                 binding.tilSettingsId.hint = "${countryProfile.nationalIdLabel} (ej. ${countryProfile.nationalIdPlaceholder})"
             }
             CountryCode.CO -> {
-                binding.tvSettingsBankSectionTitle.text = "🏦 Cobro por Transferencia y Bancos"
-                binding.tvSettingsBankSectionSubtitle.text = "Celular receptor Nequi/DaviPlata, Cédula/NIT y códigos QR"
-                binding.tilSettingsPhone.hint = "Celular Nequi / DaviPlata o Cuenta (ej. ${countryProfile.phonePlaceholder})"
-                binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_PHONE
+                binding.tvSettingsBankSectionTitle.text = "🏦 Transferencias, Llaves Bre-B y Bancos"
+                binding.tvSettingsBankSectionSubtitle.text = "Celular principal (puedes personalizar Cuenta o Llave Bre-B en cada banco abajo)"
+                binding.tilSettingsPhone.hint = "Celular Nequi / DaviPlata o Llave (ej. ${countryProfile.phonePlaceholder})"
+                binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
                 binding.tilSettingsId.hint = "${countryProfile.nationalIdLabel} (ej. ${countryProfile.nationalIdPlaceholder})"
             }
             CountryCode.AR -> {
                 binding.tvSettingsBankSectionTitle.text = "🏦 Cobro por Alias / CVU y Bancos"
-                binding.tvSettingsBankSectionSubtitle.text = "Tu Alias o CVU de Mercado Pago / Banco (0% de comisión)"
-                binding.tilSettingsPhone.hint = "Tu Alias o CVU de cobro (ej. ${countryProfile.phonePlaceholder})"
+                binding.tvSettingsBankSectionSubtitle.text = "Alias / CVU principal (cada banco o billetera abajo tiene su propio Alias único)"
+                binding.tilSettingsPhone.hint = "Alias / CVU principal o Teléfono (ej. ${countryProfile.phonePlaceholder})"
                 binding.etSettingsPhone.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
                 binding.tilSettingsId.hint = "${countryProfile.nationalIdLabel} (ej. ${countryProfile.nationalIdPlaceholder})"
             }
@@ -1035,6 +1035,12 @@ class MainActivity : AppCompatActivity() {
                     PreferencesHelper.replaceBasicPlanBank(this, finalBankCode, finalBankName)
                 } else {
                     PreferencesHelper.setPrimaryBank(this, finalBankCode, finalBankName)
+                }
+                if ((countryProfile.code == CountryCode.AR || countryProfile.code == CountryCode.CO) &&
+                    PreferencesHelper.getRawBankAccountIdentifier(this, finalBankCode).isEmpty() &&
+                    phone.isNotBlank()
+                ) {
+                    PreferencesHelper.setBankAccountIdentifier(this, finalBankCode, phone)
                 }
             }
             PreferencesHelper.saveUserProfile(this, updated)
@@ -1492,7 +1498,8 @@ class MainActivity : AppCompatActivity() {
                 amountUsd = amountUsd,
                 bankName = activeCashierBankName,
                 bankCode = activeCashierBankCode,
-                countryProfile = countryProfile
+                countryProfile = countryProfile,
+                accountIdentifier = PreferencesHelper.getBankAccountIdentifier(this, activeCashierBankCode)
             )
             val qrUri = PreferencesHelper.getBankQrUri(this, activeCashierBankCode)?.let { Uri.parse(it) }
             WhatsAppHelper.sendViaWhatsApp(this, "", message, qrUri)
@@ -1562,11 +1569,19 @@ class MainActivity : AppCompatActivity() {
             cardBinding.tvCashierBankBadge.backgroundTintList = ColorStateList.valueOf(brandColor)
             cardBinding.tvCashierBankName.text = bankName
 
+            val bankAccount = PreferencesHelper.getBankAccountIdentifier(this, code)
+
             if (hasQr) {
-                if (currentCountry == CountryCode.AR && profile.phoneNumber.isNotBlank()) {
-                    cardBinding.tvCashierBankSubtitle.text = "Alias / CVU: ${profile.phoneNumber} • Toca para QR 100%"
-                } else {
-                    cardBinding.tvCashierBankSubtitle.text = "Toca para mostrar QR a brillo 100%"
+                when {
+                    currentCountry == CountryCode.AR && bankAccount.isNotBlank() -> {
+                        cardBinding.tvCashierBankSubtitle.text = "Alias / CVU: $bankAccount • Toca para QR 100%"
+                    }
+                    currentCountry == CountryCode.CO && bankAccount.isNotBlank() -> {
+                        cardBinding.tvCashierBankSubtitle.text = "Cuenta / Llave: $bankAccount • Toca para QR 100%"
+                    }
+                    else -> {
+                        cardBinding.tvCashierBankSubtitle.text = "Toca para mostrar QR a brillo 100%"
+                    }
                 }
                 cardBinding.btnCardShowQr.text = "📸 Mostrar Código QR en Pantalla"
                 cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
@@ -1618,18 +1633,17 @@ class MainActivity : AppCompatActivity() {
                         .show()
                 }
             } else {
-                // Tarjeta sin QR (Cobro directo por Alias / CVU o datos de transferencia con 0% comisión)
+                // Tarjeta sin QR (Cobro directo por Alias / CVU, Cuenta / Llave Bre-B o Pago Móvil)
                 if (currentCountry == CountryCode.AR) {
-                    val aliasOrCvu = profile.phoneNumber.ifBlank { profile.idCard }
-                    if (aliasOrCvu.isNotBlank()) {
-                        cardBinding.tvCashierBankSubtitle.text = "Cobro por Alias / CVU (0% comisión): $aliasOrCvu"
+                    if (bankAccount.isNotBlank()) {
+                        cardBinding.tvCashierBankSubtitle.text = "Cobro por Alias / CVU (0% comisión): $bankAccount"
                         cardBinding.btnCardShowQr.text = "📋 Copiar Alias / CVU"
                         cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
                         val copyAction = View.OnClickListener {
                             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Alias / CVU", aliasOrCvu))
-                            Toast.makeText(this, "📋 Alias / CVU copiado: $aliasOrCvu", Toast.LENGTH_SHORT).show()
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Alias / CVU", bankAccount))
+                            Toast.makeText(this, "📋 Alias / CVU de $bankName copiado: $bankAccount", Toast.LENGTH_SHORT).show()
                         }
                         cardBinding.cardCashierBank.setOnClickListener(copyAction)
                         cardBinding.btnCardShowQr.setOnClickListener(copyAction)
@@ -1638,11 +1652,46 @@ class MainActivity : AppCompatActivity() {
                             handleUploadQrClick(code, bankName)
                         }
                     } else {
-                        cardBinding.tvCashierBankSubtitle.text = "Configura tu Alias o CVU de Mercado Pago / Banco"
-                        cardBinding.btnCardShowQr.text = "⚙️ Configurar Datos"
+                        cardBinding.tvCashierBankSubtitle.text = "Configura el Alias o CVU exclusivo de $bankName"
+                        cardBinding.btnCardShowQr.text = "✏️ Configurar Alias / CVU"
                         cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
                         cardBinding.btnCardShowQr.setOnClickListener {
-                            navigateToSettingsBankSection(autoOpenSelector = false)
+                            showEditBankAccountDialog(code, bankName)
+                        }
+                        cardBinding.cardCashierBank.setOnClickListener {
+                            showEditBankAccountDialog(code, bankName)
+                        }
+                        cardBinding.btnCardUploadQrInline.visibility = View.VISIBLE
+                        cardBinding.btnCardUploadQrInline.setOnClickListener {
+                            handleUploadQrClick(code, bankName)
+                        }
+                    }
+                } else if (currentCountry == CountryCode.CO) {
+                    if (bankAccount.isNotBlank()) {
+                        cardBinding.tvCashierBankSubtitle.text = "Cuenta / Llave ($bankName): $bankAccount"
+                        cardBinding.btnCardShowQr.text = "📋 Copiar Cuenta / Llave"
+                        cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
+                        val copyAction = View.OnClickListener {
+                            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Cuenta / Llave", bankAccount))
+                            Toast.makeText(this, "📋 Cuenta / Llave de $bankName copiada: $bankAccount", Toast.LENGTH_SHORT).show()
+                        }
+                        cardBinding.cardCashierBank.setOnClickListener(copyAction)
+                        cardBinding.btnCardShowQr.setOnClickListener(copyAction)
+                        cardBinding.btnCardUploadQrInline.visibility = View.VISIBLE
+                        cardBinding.btnCardUploadQrInline.setOnClickListener {
+                            handleUploadQrClick(code, bankName)
+                        }
+                    } else {
+                        cardBinding.tvCashierBankSubtitle.text = "Configura tu Celular, Cuenta o Llave Bre-B de $bankName"
+                        cardBinding.btnCardShowQr.text = "✏️ Configurar Cuenta / Llave"
+                        cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
+                        cardBinding.btnCardShowQr.setOnClickListener {
+                            showEditBankAccountDialog(code, bankName)
+                        }
+                        cardBinding.cardCashierBank.setOnClickListener {
+                            showEditBankAccountDialog(code, bankName)
                         }
                         cardBinding.btnCardUploadQrInline.visibility = View.VISIBLE
                         cardBinding.btnCardUploadQrInline.setOnClickListener {
@@ -1650,17 +1699,18 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 } else {
-                    val phoneOrDoc = profile.phoneNumber.ifBlank { profile.idCard }
+                    val pagoMovilParts = listOf(profile.phoneNumber, profile.idCard).filter { it.isNotBlank() }
+                    val phoneOrDoc = pagoMovilParts.joinToString(" • ")
                     if (phoneOrDoc.isNotBlank()) {
-                        val label = if (currentCountry == CountryCode.VE) "Pago Móvil" else "Transferencia"
-                        cardBinding.tvCashierBankSubtitle.text = "$label: $phoneOrDoc"
+                        cardBinding.tvCashierBankSubtitle.text = "Pago Móvil: $phoneOrDoc"
                         cardBinding.btnCardShowQr.text = "📋 Copiar Datos"
                         cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
+                        val copyText = "$bankName ($code) | Tel: ${profile.phoneNumber} | Doc: ${profile.idCard}"
                         val copyAction = View.OnClickListener {
                             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Datos de Cobro", phoneOrDoc))
-                            Toast.makeText(this, "📋 Datos copiados: $phoneOrDoc", Toast.LENGTH_SHORT).show()
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Datos Pago Móvil", copyText))
+                            Toast.makeText(this, "📋 Datos de $bankName copiados", Toast.LENGTH_SHORT).show()
                         }
                         cardBinding.cardCashierBank.setOnClickListener(copyAction)
                         cardBinding.btnCardShowQr.setOnClickListener(copyAction)
@@ -1669,7 +1719,7 @@ class MainActivity : AppCompatActivity() {
                             handleUploadQrClick(code, bankName)
                         }
                     } else {
-                        cardBinding.tvCashierBankSubtitle.text = "Configura tus datos de cobro o sube un QR"
+                        cardBinding.tvCashierBankSubtitle.text = "Configura tu Teléfono y Cédula/RIF o sube un QR"
                         cardBinding.btnCardShowQr.text = "📸 Subir Código QR"
                         cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
                         cardBinding.btnCardShowQr.setOnClickListener {
@@ -1827,7 +1877,9 @@ class MainActivity : AppCompatActivity() {
                 val displayId = if (payId.isNotBlank()) "Pay ID: $payId" else "Billetera Binance"
                 dialogBinding.tvWsSelectedBankSubtitle.text = "🟡 $displayId (Cobro en USDT)"
             } else if (!countryProfile.supportsExchangeRate) {
-                dialogBinding.tvWsSelectedBankSubtitle.text = "Datos de: $wsBankName (${countryProfile.flagEmoji} ${countryProfile.localCurrencyCode})"
+                val bankAcc = PreferencesHelper.getBankAccountIdentifier(this, wsBankCode)
+                val accSuffix = if (bankAcc.isNotBlank()) " • $bankAcc" else ""
+                dialogBinding.tvWsSelectedBankSubtitle.text = "Datos de: $wsBankName$accSuffix"
             } else {
                 dialogBinding.tvWsSelectedBankSubtitle.text = "Datos de: $wsBankName ($wsBankCode)"
             }
@@ -1978,7 +2030,8 @@ class MainActivity : AppCompatActivity() {
                 amountUsd = amountUsd,
                 bankName = wsBankName,
                 bankCode = wsBankCode,
-                countryProfile = countryProfile
+                countryProfile = countryProfile,
+                accountIdentifier = PreferencesHelper.getBankAccountIdentifier(this, wsBankCode)
             )
             val qrUri = PreferencesHelper.getBankQrUri(this, wsBankCode)?.let { Uri.parse(it) }
             WhatsAppHelper.sendViaWhatsApp(this, clientPhone, message, qrUri)
@@ -2227,7 +2280,8 @@ class MainActivity : AppCompatActivity() {
                     amountUsd = amountUsd,
                     bankName = activeCashierBankName,
                     bankCode = activeCashierBankCode,
-                    countryProfile = countryProfile
+                    countryProfile = countryProfile,
+                    accountIdentifier = PreferencesHelper.getBankAccountIdentifier(this, activeCashierBankCode)
                 )
                 val qrUri = PreferencesHelper.getBankQrUri(this, activeCashierBankCode)?.let { Uri.parse(it) }
                 WhatsAppHelper.sendViaWhatsApp(this, phone, message, qrUri)
@@ -2857,7 +2911,8 @@ class MainActivity : AppCompatActivity() {
                             requestedAmountUsd = null,
                             includeConciliationCents = autoConcilAllowed,
                             countryProfile = countryProfile,
-                            hasQr = (qrUri != null)
+                            hasQr = (qrUri != null),
+                            accountIdentifier = PreferencesHelper.getBankAccountIdentifier(this, targetBankCode)
                         )
                         WhatsAppHelper.sendViaWhatsApp(this, phone, msg, qrUri)
                     } else {
@@ -2939,7 +2994,8 @@ class MainActivity : AppCompatActivity() {
                     requestedAmountUsd = partialUsd,
                     includeConciliationCents = autoConcilAllowed,
                     countryProfile = countryProfile,
-                    hasQr = (qrUri != null)
+                    hasQr = (qrUri != null),
+                    accountIdentifier = PreferencesHelper.getBankAccountIdentifier(this, targetBankCode)
                 )
                 WhatsAppHelper.sendViaWhatsApp(this, phone, msg, qrUri)
             }
@@ -4318,9 +4374,11 @@ class MainActivity : AppCompatActivity() {
                         else -> "\n\n🔔 Recuerda mantener activas las notificaciones o SMS de ${selectedBank.name} en este teléfono."
                     }
 
+                    val currentCountry = PreferencesHelper.getCountryCode(this)
+
                     if (!isMultibank) {
                         if (profile.bankCode.isEmpty()) {
-                            // Primer banco en plan básico: configurar banco y ofrecer cargar QR opcionalmente
+                            // Primer banco en plan básico: configurar banco y ofrecer Alias/Cuenta o cargar QR opcionalmente
                             PreferencesHelper.setPrimaryBank(this, selectedBank.code, selectedBank.name)
                             activeCashierBankCode = selectedBank.code
                             activeCashierBankName = selectedBank.name
@@ -4329,16 +4387,25 @@ class MainActivity : AppCompatActivity() {
                             setupCashierBankSelector()
                             updateCashierHeaderSummary()
 
-                            AlertDialog.Builder(this)
-                                .setTitle("✅ Banco Configurado")
-                                .setMessage("Has configurado ${selectedBank.name} como tu método de cobro.$appDetectionNote\n\n¿Deseas cargar el código QR de este banco ahora? (Opcional)")
-                                .setPositiveButton("Sí, Cargar QR") { _, _ ->
-                                    requireSecurityAuth("Cargar Código QR de ${selectedBank.name}") {
-                                        launchCropForBank(selectedBank.code)
+                            if (currentCountry == CountryCode.AR || currentCountry == CountryCode.CO) {
+                                showEditBankAccountDialog(
+                                    bankCode = selectedBank.code,
+                                    bankName = selectedBank.name,
+                                    isNewlyAdded = true,
+                                    appDetectionNote = appDetectionNote
+                                )
+                            } else {
+                                AlertDialog.Builder(this)
+                                    .setTitle("✅ Banco Configurado")
+                                    .setMessage("Has configurado ${selectedBank.name} como tu método de cobro.$appDetectionNote\n\n¿Deseas cargar el código QR de este banco ahora? (Opcional)")
+                                    .setPositiveButton("Sí, Cargar QR") { _, _ ->
+                                        requireSecurityAuth("Cargar Código QR de ${selectedBank.name}") {
+                                            launchCropForBank(selectedBank.code)
+                                        }
                                     }
-                                }
-                                .setNegativeButton("Más tarde", null)
-                                .show()
+                                    .setNegativeButton("Más tarde", null)
+                                    .show()
+                            }
                         } else {
                             AlertDialog.Builder(this)
                                 .setTitle("Reemplazar Banco")
@@ -4351,7 +4418,16 @@ class MainActivity : AppCompatActivity() {
                                     renderCashierBankCards()
                                     setupCashierBankSelector()
                                     updateCashierHeaderSummary()
-                                    Toast.makeText(this, "✅ ${selectedBank.name} configurado como método principal", Toast.LENGTH_SHORT).show()
+                                    if (currentCountry == CountryCode.AR || currentCountry == CountryCode.CO) {
+                                        showEditBankAccountDialog(
+                                            bankCode = selectedBank.code,
+                                            bankName = selectedBank.name,
+                                            isNewlyAdded = true,
+                                            appDetectionNote = ""
+                                        )
+                                    } else {
+                                        Toast.makeText(this, "✅ ${selectedBank.name} configurado como método principal", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                                 .setNegativeButton("Cancelar", null)
                                 .setNeutralButton("Ver Zeasy PRO") { _, _ ->
@@ -4366,16 +4442,25 @@ class MainActivity : AppCompatActivity() {
                         renderCashierBankCards()
                         updateCashierHeaderSummary()
 
-                        AlertDialog.Builder(this)
-                            .setTitle("✅ Método de Cobro Agregado")
-                            .setMessage("Has agregado ${selectedBank.name} a tu lista.$appDetectionNote\n\n¿Deseas cargar el código QR de este banco ahora? (Opcional)")
-                            .setPositiveButton("Sí, Cargar QR") { _, _ ->
-                                requireSecurityAuth("Cargar Código QR de ${selectedBank.name}") {
-                                    launchCropForBank(selectedBank.code)
+                        if (currentCountry == CountryCode.AR || currentCountry == CountryCode.CO) {
+                            showEditBankAccountDialog(
+                                bankCode = selectedBank.code,
+                                bankName = selectedBank.name,
+                                isNewlyAdded = true,
+                                appDetectionNote = appDetectionNote
+                            )
+                        } else {
+                            AlertDialog.Builder(this)
+                                .setTitle("✅ Método de Cobro Agregado")
+                                .setMessage("Has agregado ${selectedBank.name} a tu lista.$appDetectionNote\n\n¿Deseas cargar el código QR de este banco ahora? (Opcional)")
+                                .setPositiveButton("Sí, Cargar QR") { _, _ ->
+                                    requireSecurityAuth("Cargar Código QR de ${selectedBank.name}") {
+                                        launchCropForBank(selectedBank.code)
+                                    }
                                 }
-                            }
-                            .setNegativeButton("Más tarde", null)
-                            .show()
+                                .setNegativeButton("Más tarde", null)
+                                .show()
+                        }
                     }
                 }
             }
@@ -4454,6 +4539,38 @@ class MainActivity : AppCompatActivity() {
             val bankEnum = BankCode.fromSudeban(code)
             val hasOfficialPackages = bankEnum != null && bankEnum.knownPackageNames.isNotEmpty()
             val isAppInstalled = bankEnum?.isAppInstalled(this) == true
+
+            // Mostrar fila de Alias / CVU (Argentina) o Cuenta / Llave Bre-B / Celular (Colombia) por banco
+            if (countryProfile.code == CountryCode.AR || countryProfile.code == CountryCode.CO) {
+                itemBinding.layoutBankItemAccountRow.visibility = View.VISIBLE
+                val accId = PreferencesHelper.getBankAccountIdentifier(this, code)
+                if (countryProfile.code == CountryCode.AR) {
+                    if (accId.isNotBlank()) {
+                        itemBinding.tvBankItemAccountValue.text = "🔑 Alias / CVU: $accId"
+                        itemBinding.tvBankItemAccountValue.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+                        itemBinding.btnBankItemEditAccount.text = "✏️ Cambiar Alias"
+                    } else {
+                        itemBinding.tvBankItemAccountValue.text = "⚠️ Falta configurar el Alias / CVU de $bankName"
+                        itemBinding.tvBankItemAccountValue.setTextColor(ContextCompat.getColor(this, R.color.warning_orange))
+                        itemBinding.btnBankItemEditAccount.text = "➕ Configurar Alias"
+                    }
+                } else {
+                    if (accId.isNotBlank()) {
+                        itemBinding.tvBankItemAccountValue.text = "🔑 Cuenta / Llave: $accId"
+                        itemBinding.tvBankItemAccountValue.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
+                        itemBinding.btnBankItemEditAccount.text = "✏️ Editar Cuenta"
+                    } else {
+                        itemBinding.tvBankItemAccountValue.text = "⚠️ Falta Cuenta / Llave Bre-B de $bankName"
+                        itemBinding.tvBankItemAccountValue.setTextColor(ContextCompat.getColor(this, R.color.warning_orange))
+                        itemBinding.btnBankItemEditAccount.text = "➕ Configurar Cuenta"
+                    }
+                }
+                itemBinding.btnBankItemEditAccount.setOnClickListener {
+                    showEditBankAccountDialog(code, bankName)
+                }
+            } else {
+                itemBinding.layoutBankItemAccountRow.visibility = View.GONE
+            }
 
             if (!qrUri.isNullOrEmpty()) {
                 itemBinding.tvBankItemQrStatus.text = when {
@@ -4539,6 +4656,80 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateSelectedBankConfigCard() {
         renderConfiguredBanksList()
+    }
+
+    /**
+     * Diálogo para configurar o editar el Alias / CBU / CVU exclusivo de cada banco (en Argentina)
+     * o el Celular / Número de Cuenta / Llave Bre-B de cada entidad (en Colombia).
+     */
+    private fun showEditBankAccountDialog(
+        bankCode: String,
+        bankName: String,
+        isNewlyAdded: Boolean = false,
+        appDetectionNote: String = ""
+    ) {
+        val country = PreferencesHelper.getCountryCode(this)
+        val fieldLabel = PreferencesHelper.getBankAccountFieldLabel(country, bankCode)
+        val fieldHint = PreferencesHelper.getBankAccountFieldHint(country, bankCode)
+        val currentVal = PreferencesHelper.getBankAccountIdentifier(this, bankCode)
+
+        val input = EditText(this).apply {
+            hint = fieldHint
+            setText(currentVal)
+            setSelection(text.length)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            setPadding(48, 36, 48, 36)
+        }
+
+        val description = when (country) {
+            CountryCode.AR ->
+                "En Argentina cada banco o billetera utiliza un Alias o CBU/CVU único.\n\nEscribe el $fieldLabel para $bankName:$appDetectionNote"
+            CountryCode.CO ->
+                "Ingresa el $fieldLabel asociado a $bankName (por ejemplo, tu celular en Nequi/DaviPlata, tu cuenta de ahorros en Bancolombia o tu Llave Bre-B):$appDetectionNote"
+            else ->
+                "Ingresa el dato de cobro para $bankName:$appDetectionNote"
+        }
+
+        val title = if (isNewlyAdded) "✅ Configurar $bankName" else "✏️ $fieldLabel ($bankName)"
+
+        val builder = AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(description)
+            .setView(input)
+            .setPositiveButton("Guardar") { _, _ ->
+                val entered = input.text.toString().trim()
+                if (entered.isNotEmpty()) {
+                    PreferencesHelper.setBankAccountIdentifier(this, bankCode, entered)
+                    loadSettings(forceReload = true)
+                    renderConfiguredBanksList()
+                    renderCashierBankCards()
+                    updateCashierHeaderSummary()
+                    Toast.makeText(this, "✅ Datos de $bankName guardados: $entered", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "⚠️ Puedes configurar el Alias o Cuenta cuando quieras desde Ajustes", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+        if (isNewlyAdded) {
+            builder.setNeutralButton("Guardar y Subir QR") { _, _ ->
+                val entered = input.text.toString().trim()
+                if (entered.isNotEmpty()) {
+                    PreferencesHelper.setBankAccountIdentifier(this, bankCode, entered)
+                }
+                loadSettings(forceReload = true)
+                renderConfiguredBanksList()
+                renderCashierBankCards()
+                updateCashierHeaderSummary()
+                requireSecurityAuth("Cargar Código QR de $bankName") {
+                    launchCropForBank(bankCode)
+                }
+            }
+            builder.setNegativeButton("Más tarde", null)
+        } else {
+            builder.setNegativeButton("Cancelar", null)
+        }
+
+        builder.show()
     }
 
     /**
@@ -6314,6 +6505,12 @@ class MainActivity : AppCompatActivity() {
                                 PreferencesHelper.replaceBasicPlanBank(this@MainActivity, bankEntry.code, bankEntry.name)
                             } else {
                                 PreferencesHelper.setPrimaryBank(this@MainActivity, bankEntry.code, bankEntry.name)
+                            }
+                            if ((cProf.code == CountryCode.AR || cProf.code == CountryCode.CO) &&
+                                PreferencesHelper.getRawBankAccountIdentifier(this@MainActivity, bankEntry.code).isEmpty() &&
+                                uProf.phoneNumber.isNotBlank()
+                            ) {
+                                PreferencesHelper.setBankAccountIdentifier(this@MainActivity, bankEntry.code, uProf.phoneNumber)
                             }
                             activeCashierBankCode = bankEntry.code
                             activeCashierBankName = bankEntry.name

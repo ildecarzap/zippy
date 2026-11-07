@@ -19,15 +19,17 @@ object WhatsAppHelper {
         amountUsd: Double = 0.0,
         bankName: String = profile.bankName,
         bankCode: String = profile.bankCode,
-        countryProfile: CountryProfile = CountryProfileCatalog.VENEZUELA
+        countryProfile: CountryProfile = CountryProfileCatalog.VENEZUELA,
+        accountIdentifier: String = profile.phoneNumber
     ): String {
         val vesFormatted = String.format(Locale.US, "%.2f", amountVes)
+        val effectiveAccount = accountIdentifier.ifBlank { profile.phoneNumber }
 
         if (!countryProfile.supportsExchangeRate) {
             val sym = countryProfile.localCurrencySymbol
             val (titleLabel, entityLabel, phoneLabel) = when (countryProfile.code) {
                 CountryCode.AR -> Triple("Transferir (0% comisión)", "Billetera / Banco:", "Alias / CVU:")
-                CountryCode.CO -> Triple("Transferir (Nequi / Bancos)", "Entidad:", "Celular / Cuenta:")
+                CountryCode.CO -> Triple("Transferir (Nequi / Bre-B / Bancos)", "Entidad:", "Cuenta / Llave / Celular:")
                 else -> Triple("Transferencia", "Banco:", "Teléfono / Cuenta:")
             }
             return """
@@ -37,7 +39,7 @@ object WhatsAppHelper {
                 👉 *$sym $vesFormatted*
                 
                 🏦 *$entityLabel* $bankName
-                📱 *$phoneLabel* ${profile.phoneNumber}
+                📱 *$phoneLabel* $effectiveAccount
                 🪪 *${countryProfile.nationalIdLabel}:* ${profile.idCard}
                 ---------------------------------
                 ⚡ *Cobro solicitado con Zeasy*
@@ -51,7 +53,7 @@ object WhatsAppHelper {
             👉 *Bs. $vesFormatted*
             
             🏦 *Banco:* $bankName ($bankCode)
-            📱 *Teléfono:* ${profile.phoneNumber}
+            📱 *Teléfono:* $effectiveAccount
             🪪 *Cédula/RIF:* ${profile.idCard}
             ---------------------------------
             ⚡ *Cobro solicitado con Zeasy*
@@ -96,8 +98,10 @@ object WhatsAppHelper {
         requestedAmountUsd: Double? = null,
         includeConciliationCents: Boolean = true,
         countryProfile: CountryProfile = CountryProfileCatalog.VENEZUELA,
-        hasQr: Boolean = false
+        hasQr: Boolean = false,
+        accountIdentifier: String = profile.phoneNumber
     ): String {
+        val effectiveAccount = accountIdentifier.ifBlank { profile.phoneNumber }
         val totalDebtUsd = Math.abs(balanceUsd)
         val targetUsd = (requestedAmountUsd ?: totalDebtUsd).coerceAtLeast(0.01)
         val isPartial = targetUsd < totalDebtUsd - 0.005
@@ -136,7 +140,7 @@ object WhatsAppHelper {
 
             val (entityTitle, phoneTitle) = when (countryProfile.code) {
                 CountryCode.AR -> Pair("Billetera / Banco:", "Alias / CVU:")
-                CountryCode.CO -> Pair("Entidad:", "Celular / Cuenta:")
+                CountryCode.CO -> Pair("Entidad:", "Cuenta / Llave / Celular:")
                 else -> Pair("Banco:", "Teléfono / Cuenta:")
             }
 
@@ -150,7 +154,7 @@ object WhatsAppHelper {
                 $noteSection
                 🏦 *Datos para ${countryProfile.instantPaymentSystemName}:*
                 • *$entityTitle* $bankName
-                • *$phoneTitle* ${profile.phoneNumber}
+                • *$phoneTitle* $effectiveAccount
                 $idLine$qrBlock🙏 ¡Muchas gracias por su preferencia!
                 ⚡ *Enviado vía Zeasy*
             """.trimIndent().trim()
@@ -179,7 +183,7 @@ object WhatsAppHelper {
             $noteSection
             🏦 *Datos para Pago Móvil:*
             • *Banco:* $bankName ($bankCode)
-            • *Teléfono:* ${profile.phoneNumber}
+            • *Teléfono:* $effectiveAccount
             $idLine$qrBlock🙏 ¡Muchas gracias por su preferencia!
             ⚡ *Enviado vía Zeasy*
         """.trimIndent().trim()

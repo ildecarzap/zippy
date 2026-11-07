@@ -94,6 +94,38 @@
             android:layout_marginVertical="10dp"
             android:background="@color/border" />
 
+        <!-- Identificador de Cuenta / Alias / Llave exclusivo de este banco (Argentina y Colombia) -->
+        <LinearLayout
+            android:id="@+id/layoutBankItemAccountRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvBankItemAccountValue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🔑 Alias / Cuenta: —"
+                android:textColor="@color/text_primary"
+                android:textSize="12.5sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBankItemEditAccount"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="✏️ Editar Alias"
+                android:textColor="@color/accent_blue"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="8dp" />
+        </LinearLayout>
+
         <!-- Estado del QR -->
         <TextView
             android:id="@+id/tvBankItemQrStatus"

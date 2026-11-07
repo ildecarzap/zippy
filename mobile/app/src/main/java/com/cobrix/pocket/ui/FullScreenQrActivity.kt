@@ -127,8 +127,13 @@ class FullScreenQrActivity : AppCompatActivity() {
             binding.tvFullScreenPhone.text = if (zinliEmail.isNotBlank()) "✉️ Correo: $zinliEmail" else "📱 Escanear con Zinli"
             binding.tvFullScreenId.visibility = View.GONE
         } else {
+            val bankAccount = PreferencesHelper.getBankAccountIdentifier(this, targetBankCode).ifBlank { profile.phoneNumber }
             binding.tvFullScreenBank.text = "🏦 Entidad: $targetBankName"
-            binding.tvFullScreenPhone.text = "📱 Teléfono / Cuenta: ${profile.phoneNumber}"
+            binding.tvFullScreenPhone.text = when (countryProfile.code) {
+                com.cobrix.pocket.data.model.CountryCode.AR -> "🔑 Alias / CVU: $bankAccount"
+                com.cobrix.pocket.data.model.CountryCode.CO -> "📱 Cuenta / Llave: $bankAccount"
+                else -> "📱 Teléfono Pago Móvil: $bankAccount"
+            }
             binding.tvFullScreenId.visibility = View.VISIBLE
             binding.tvFullScreenId.text = "🪪 ${countryProfile.nationalIdLabel}: ${profile.idCard}"
         }

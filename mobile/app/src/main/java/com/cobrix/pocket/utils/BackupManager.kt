@@ -84,8 +84,9 @@ object BackupManager {
         }
         root.put("profile", profileJson)
 
-        // 2. Imágenes de Códigos QR por Banco (codificadas en Base64 para migración real)
+        // 2. Imágenes de Códigos QR y Cuentas/Alias/Llaves por Banco
         val qrsJson = JSONObject()
+        val bankAccountsJson = JSONObject()
         val configuredBanks = PreferencesHelper.getConfiguredBankCodes(context)
         for (bCode in configuredBanks) {
             val qrUriStr = PreferencesHelper.getBankQrUri(context, bCode)
@@ -95,8 +96,13 @@ object BackupManager {
                     qrsJson.put(bCode, base64)
                 }
             }
+            val customAccount = PreferencesHelper.getRawBankAccountIdentifier(context, bCode)
+            if (customAccount.isNotEmpty()) {
+                bankAccountsJson.put(bCode, customAccount)
+            }
         }
         root.put("bankQrsBase64", qrsJson)
+        root.put("bankAccounts", bankAccountsJson)
 
         // 3. Transacciones Históricas
         val txArray = JSONArray()
@@ -315,7 +321,19 @@ object BackupManager {
                 PreferencesHelper.saveUserProfile(context, profile)
             }
 
-            // 2. Restaurar Códigos QR decodificando Base64 y guardándolos localmente
+            // 2. Restaurar Códigos QR y Cuentas/Alias por Banco
+            if (root.has("bankAccounts")) {
+                val accounts = root.getJSONObject("bankAccounts")
+                val accKeys = accounts.keys()
+                while (accKeys.hasNext()) {
+                    val bCode = accKeys.next()
+                    val accVal = accounts.optString(bCode, "").trim()
+                    if (accVal.isNotEmpty()) {
+                        PreferencesHelper.setBankAccountIdentifier(context, bCode, accVal)
+                    }
+                }
+            }
+
             if (root.has("bankQrsBase64")) {
                 val qrs = root.getJSONObject("bankQrsBase64")
                 val keys = qrs.keys()

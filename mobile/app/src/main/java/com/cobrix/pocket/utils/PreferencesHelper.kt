@@ -185,7 +185,9 @@ object PreferencesHelper {
         clearBankQr(context, bankCode)
         val current = getEnabledBankCodes(context).toMutableSet()
         current.remove(bankCode)
-        val editor = prefs.edit().putStringSet(KEY_ENABLED_BANKS, current)
+        val editor = prefs.edit()
+            .putStringSet(KEY_ENABLED_BANKS, current)
+            .remove("bank_account_id_$bankCode")
         // Si se removió el banco principal, asignar el siguiente banco disponible si existe
         val primary = prefs.getString(KEY_BANK_CODE, "")
         if (primary == bankCode) {
@@ -202,6 +204,97 @@ object PreferencesHelper {
             }
         }
         editor.apply()
+    }
+
+    /**
+     * Obtiene el identificador de cuenta/alias/llave personalizado guardado para un banco específico.
+     */
+    fun getRawBankAccountIdentifier(context: Context, bankCode: String): String {
+        if (bankCode.isBlank()) return ""
+        return getPrefs(context).getString("bank_account_id_$bankCode", "")?.trim() ?: ""
+    }
+
+    /**
+     * Obtiene el identificador de cobro efectivo para el banco indicado según las reglas del país:
+     * - Venezuela (VE): Usa siempre el teléfono global afiliado a Pago Móvil (mismo teléfono y cédula para todos los bancos).
+     * - Argentina (AR): Cada banco/billetera tiene su propio Alias o CBU/CVU único. Si aún no se le asignó uno propio
+     *   y es el banco principal (o el único configurado), usa el Alias/CVU global del perfil como respaldo.
+     * - Colombia (CO): Usa la Cuenta / Llave Bre-B / Celular específico asignado a ese banco; si no tiene uno personalizado,
+     *   usa el número de celular principal del perfil (estándar en Nequi y DaviPlata).
+     */
+    fun getBankAccountIdentifier(context: Context, bankCode: String): String {
+        val country = getCountryCode(context)
+        val profilePhone = getUserProfile(context).phoneNumber.trim()
+        if (country == CountryCode.VE || bankCode.isBlank()) {
+            return profilePhone
+        }
+        val specific = getRawBankAccountIdentifier(context, bankCode)
+        if (specific.isNotBlank()) {
+            return specific
+        }
+        return when (country) {
+            CountryCode.CO -> profilePhone
+            CountryCode.AR -> {
+                val primary = getPrimaryBankCode(context)
+                val configuredCount = getConfiguredBankCodes(context).size
+                if (bankCode == primary || configuredCount <= 1) profilePhone else ""
+            }
+            else -> profilePhone
+        }
+    }
+
+    /**
+     * Guarda el Alias / CBU / CVU (Argentina) o Número de Cuenta / Llave Bre-B / Celular (Colombia)
+     * exclusivo de un banco o billetera.
+     */
+    fun setBankAccountIdentifier(context: Context, bankCode: String, identifier: String?) {
+        if (bankCode.isBlank()) return
+        val prefs = getPrefs(context)
+        val clean = identifier?.trim() ?: ""
+        val editor = prefs.edit()
+        if (clean.isNotEmpty()) {
+            editor.putString("bank_account_id_$bankCode", clean)
+            // Si el perfil global aún no tenía teléfono/alias o este es el banco principal en AR, sincronizar respaldo
+            val currentGlobal = prefs.getString(KEY_PHONE, "")?.trim() ?: ""
+            val primary = prefs.getString(KEY_BANK_CODE, "") ?: ""
+            if (currentGlobal.isEmpty() || (getCountryCode(context) == CountryCode.AR && bankCode == primary)) {
+                editor.putString(KEY_PHONE, clean)
+            }
+        } else {
+            editor.remove("bank_account_id_$bankCode")
+        }
+        editor.apply()
+    }
+
+    fun getBankAccountFieldLabel(country: CountryCode, bankCode: String): String {
+        return when (country) {
+            CountryCode.AR -> "Alias o CBU / CVU de esta entidad"
+            CountryCode.CO -> when (bankCode) {
+                "CO_NEQUI" -> "Celular Nequi o Llave Bre-B"
+                "CO_DAVI" -> "Celular DaviPlata o Llave Bre-B"
+                "CO_BCOL" -> "Nº Cuenta Bancolombia o Llave Bre-B"
+                else -> "Celular, Nº de Cuenta o Llave Bre-B"
+            }
+            CountryCode.VE -> "Teléfono Pago Móvil"
+        }
+    }
+
+    fun getBankAccountFieldHint(country: CountryCode, bankCode: String): String {
+        return when (country) {
+            CountryCode.AR -> when (bankCode) {
+                "AR_MP" -> "Ej: mi.negocio.mp o CVU"
+                "AR_CDNI" -> "Ej: mi.negocio.dni o CBU"
+                "AR_BNA" -> "Ej: mi.negocio.bna o CBU"
+                "AR_UALA" -> "Ej: mi.negocio.uala o CVU"
+                else -> "Ej: mi.alias.cobro o CBU/CVU"
+            }
+            CountryCode.CO -> when (bankCode) {
+                "CO_NEQUI", "CO_DAVI" -> "Ej: 3001234567 o Llave Bre-B"
+                "CO_BCOL" -> "Ej: Ahorros 12345678901 o Llave Bre-B"
+                else -> "Ej: 3001234567 o Nº de Cuenta"
+            }
+            CountryCode.VE -> "Ej: 04141234567"
+        }
     }
 
     /**
