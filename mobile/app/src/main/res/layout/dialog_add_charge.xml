@@ -42,7 +42,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:orientation="horizontal"
-        android:background="#E8F5E9"
+        android:background="@color/accent_green_bg"
         android:padding="12dp"
         android:gravity="center_vertical"
         android:visibility="gone">
@@ -52,7 +52,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="🟢 Este cliente tiene $5.00 a favor. Se descontará automáticamente de este crédito."
-            android:textColor="#065F46"
+            android:textColor="@color/accent_green"
             android:textStyle="bold"
             android:textSize="13.5sp" />
     </LinearLayout>

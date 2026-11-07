@@ -42,7 +42,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:text="Deuda actual: $18.50 USD"
-        android:textColor="#991B1B"
+        android:textColor="@color/expense_red"
         android:textStyle="bold"
         android:textSize="15sp" />
 
@@ -116,7 +116,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:text="🟢 Este abono se registrará como entrada de dinero en tu Jornada de hoy para el reporte final."
-        android:textColor="#065F46"
+        android:textColor="@color/income_green"
         android:textStyle="bold"
         android:textSize="12.5sp" />
 

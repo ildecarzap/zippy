@@ -4287,14 +4287,14 @@ class MainActivity : AppCompatActivity() {
 
             val qrUri = PreferencesHelper.getBankQrUri(this, code)
             if (!qrUri.isNullOrEmpty()) {
-                itemBinding.tvBankItemQrStatus.text = "✅ Código QR Listo para Cobros"
+                itemBinding.tvBankItemQrStatus.text = "✅ Código QR Listo y Escucha Activa"
                 itemBinding.tvBankItemQrStatus.setTextColor(ContextCompat.getColor(this, R.color.income_green))
                 itemBinding.btnBankItemUploadQr.text = "✂️ Cambiar QR"
                 itemBinding.btnBankItemViewQr.visibility = View.VISIBLE
                 itemBinding.btnBankItemDeleteQr.visibility = View.VISIBLE
             } else {
-                itemBinding.tvBankItemQrStatus.text = "⚠️ Sin código QR cargado aún"
-                itemBinding.tvBankItemQrStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                itemBinding.tvBankItemQrStatus.text = "🔔 Escucha activa de notificaciones (QR opcional)"
+                itemBinding.tvBankItemQrStatus.setTextColor(ContextCompat.getColor(this, R.color.accent_cyan))
                 itemBinding.btnBankItemUploadQr.text = "✂️ Cargar Código QR"
                 itemBinding.btnBankItemViewQr.visibility = View.GONE
                 itemBinding.btnBankItemDeleteQr.visibility = View.GONE
@@ -4717,6 +4717,14 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnRestoreBackup.setOnClickListener {
             restoreBackupLauncher.launch("*/*")
+        }
+
+        binding.btnOpenPcViewerHint.setOnClickListener {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PlanCapabilityManager.OFFICIAL_WEBSITE)))
+            } catch (_: Exception) {
+                Toast.makeText(this, "Ingresa a ${PlanCapabilityManager.OFFICIAL_WEBSITE} desde tu computadora", Toast.LENGTH_LONG).show()
+            }
         }
 
         // Botón Generar Código de Acceso para Zeasy Dashboard PC
@@ -5650,10 +5658,11 @@ class MainActivity : AppCompatActivity() {
 
         fun updateCountrySelectionButtons(country: CountryCode) {
             selectedCountry = country
-            val activeStroke = ColorStateList.valueOf(Color.parseColor("#0096C7"))
-            val inactiveStroke = ColorStateList.valueOf(Color.parseColor("#CBD5E1"))
-            val activeBg = ColorStateList.valueOf(Color.parseColor("#E0F7FE"))
-            val inactiveBg = ColorStateList.valueOf(Color.WHITE)
+            val activeStroke = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent_cyan))
+            val inactiveStroke = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.border))
+            val activeBg = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent_cyan_bg))
+            val inactiveBg = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.surface))
+            val textPrimaryColor = ContextCompat.getColor(this, R.color.text_primary)
 
             listOf(
                 Pair(wBinding.btnWizardCountryVe, CountryCode.VE),
@@ -5661,7 +5670,7 @@ class MainActivity : AppCompatActivity() {
                 Pair(wBinding.btnWizardCountryAr, CountryCode.AR)
             ).forEach { (btn, code) ->
                 val isSelected = (code == country)
-                btn.setTextColor(Color.parseColor("#0A192F"))
+                btn.setTextColor(textPrimaryColor)
                 btn.strokeColor = if (isSelected) activeStroke else inactiveStroke
                 btn.strokeWidth = if (isSelected) (3 * resources.displayMetrics.density).toInt() else (1.5f * resources.displayMetrics.density).toInt()
                 btn.backgroundTintList = if (isSelected) activeBg else inactiveBg
@@ -6051,10 +6060,10 @@ class MainActivity : AppCompatActivity() {
 
                 if (activeCode.isNotBlank()) {
                     wBinding.tvWizardSelectedBank.text = "✅ $activeName"
-                    wBinding.tvWizardSelectedBank.setTextColor(Color.parseColor("#00875A"))
+                    wBinding.tvWizardSelectedBank.setTextColor(ContextCompat.getColor(this, R.color.income_green))
                 } else {
-                    wBinding.tvWizardSelectedBank.text = "👆 Toca tu banco o billetera abajo (Opcional)"
-                    wBinding.tvWizardSelectedBank.setTextColor(Color.parseColor("#64748B"))
+                    wBinding.tvWizardSelectedBank.text = "👆 Toca tu banco o billetera abajo"
+                    wBinding.tvWizardSelectedBank.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
                 }
 
                 wBinding.layoutWizardBanksContainer.removeAllViews()
@@ -6078,9 +6087,9 @@ class MainActivity : AppCompatActivity() {
                             strokeWidth = (2 * resources.displayMetrics.density).toInt()
                         } else {
                             text = "🏦  ${bankEntry.name}"
-                            setTextColor(ColorStateList.valueOf(Color.parseColor("#0A192F")))
-                            backgroundTintList = ColorStateList.valueOf(Color.WHITE)
-                            strokeColor = ColorStateList.valueOf(Color.parseColor("#CBD5E1"))
+                            setTextColor(ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.text_primary)))
+                            backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.surface))
+                            strokeColor = ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.border))
                             strokeWidth = (1.5f * resources.displayMetrics.density).toInt()
                         }
                         setOnClickListener {
@@ -6104,8 +6113,8 @@ class MainActivity : AppCompatActivity() {
                 wBinding.btnWizardNext.text = if (activeCode.isNotBlank()) "Guardar Banco y Continuar ➔" else "Continuar ➔"
             }
             4 -> {
-                wBinding.tvWizardStepTitle.text = "📸 4. Código QR de Cobro"
-                wBinding.tvWizardStepSubtitle.text = "Sube el código QR de tu cuenta para que tus clientes paguen escaneando con su celular."
+                wBinding.tvWizardStepTitle.text = "📸 4. Código QR de Cobro (Opcional)"
+                wBinding.tvWizardStepSubtitle.text = "Si deseas mostrar tu QR en pantalla, súbelo aquí. Si tus clientes ya tienen tus datos y la app de tu banco está en este teléfono, Zeasy detectará tus cobros igual."
 
                 val activeCode = uProf.bankCode
                 val activeBankName = if (activeCode.isNotBlank()) BankCatalog.findByCode(activeCode)?.name ?: uProf.bankName else "tu cuenta"
@@ -6121,15 +6130,15 @@ class MainActivity : AppCompatActivity() {
                         wBinding.ivWizardQrPreview.setImageResource(R.drawable.ic_zeasy_icon)
                     }
                     wBinding.tvWizardQrStatus.text = "✅ Código QR configurado para $activeBankName"
-                    wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#00875A"))
+                    wBinding.tvWizardQrStatus.setTextColor(ContextCompat.getColor(this, R.color.income_green))
                     wBinding.btnWizardUploadQr.text = "🔄 Cambiar Imagen de QR"
                     wBinding.btnWizardDeleteQr.visibility = View.VISIBLE
                     wBinding.btnWizardNext.text = "Siguiente Paso ➔"
                 } else {
                     wBinding.ivWizardQrPreview.setImageResource(R.drawable.ic_zeasy_icon)
-                    wBinding.tvWizardQrStatus.text = "📸 Aún no has subido tu código QR"
-                    wBinding.tvWizardQrStatus.setTextColor(Color.parseColor("#64748B"))
-                    wBinding.btnWizardUploadQr.text = "📸 Subir Imagen de mi Código QR"
+                    wBinding.tvWizardQrStatus.text = "🔔 Escucha activa lista (QR opcional para mostrar en pantalla)"
+                    wBinding.tvWizardQrStatus.setTextColor(ContextCompat.getColor(this, R.color.accent_cyan))
+                    wBinding.btnWizardUploadQr.text = "📸 Subir Imagen de mi Código QR (Opcional)"
                     wBinding.btnWizardDeleteQr.visibility = View.GONE
                     wBinding.btnWizardNext.text = "Continuar sin QR (Opcional) ➔"
                 }

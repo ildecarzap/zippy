@@ -37,7 +37,30 @@
     <color name="keypad_bg">#182B47</color>
     <color name="keypad_text">#FFFFFF</color>
 
+    <!-- Colores Minimalistas Fintech (Adaptados a Modo Oscuro de Alto Contraste) -->
+    <color name="ubii_cyan">#00B4D8</color>
+    <color name="ubii_cyan_dark">#48CAE4</color>
+    <color name="ubii_cyan_bg">#0A2E46</color>
+    <color name="whatsapp_green">#25D366</color>
+    <color name="whatsapp_green_dark">#34E875</color>
+    <color name="whatsapp_bg">#08331E</color>
+    <color name="card_border_light">#22395C</color>
+    <color name="slate_50">#132238</color>
+    <color name="slate_100">#182B47</color>
+    <color name="slate_200">#22395C</color>
+    <color name="slate_500">#9FB3C8</color>
+    <color name="slate_700">#D0E2FF</color>
+    <color name="slate_900">#FFFFFF</color>
+
     <!-- Navegación -->
     <color name="nav_active">#00B4D8</color>
     <color name="nav_inactive">#829AB1</color>
+
+    <!-- Billeteras Digitales y Cripto (Adaptados a Modo Oscuro) -->
+    <color name="binance_yellow">#F0B90B</color>
+    <color name="binance_yellow_dark">#FCD535</color>
+    <color name="binance_black">#181A20</color>
+    <color name="binance_badge_bg">#332806</color>
+    <color name="zinli_magenta">#FF4D88</color>
+    <color name="zinli_magenta_bg">#380B1E</color>
 </resources>

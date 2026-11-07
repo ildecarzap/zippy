@@ -173,7 +173,7 @@ object ParserUtils {
     }
 
     // =========================================================================
-    // BLACKLIST INQUEBRANTABLE DE MENSAJERÍA Y REDES SOCIALES (ANTI-SPOOFING)
+    // BLACKLIST INQUEBRANTABLE DE MENSAJERÍA, CORREOS Y REDES SOCIALES (ANTI-SPOOFING)
     // =========================================================================
     val PROHIBITED_MESSAGING_PACKAGES = setOf(
         // WhatsApp y variantes
@@ -188,16 +188,30 @@ object ParserUtils {
         "org.telegram.plus",
         "org.thunderdog.chatterino",
         "nekox.messenger",
-        // Meta (Facebook, Messenger, Instagram)
+        "tw.nekomimi.nekogram",
+        // Clientes de Correo Electrónico (Gmail, Outlook, Yahoo, etc. - Bloqueados contra falsos positivos)
+        "com.google.android.gm",
+        "com.google.android.gm.lite",
+        "com.microsoft.office.outlook",
+        "com.yahoo.mobile.client.android.mail",
+        "com.samsung.android.email.provider",
+        "com.android.email",
+        "ch.protonmail.android",
+        "com.fsck.k9",
+        "com.readdle.spark",
+        // Meta (Facebook, Messenger, Instagram, Threads)
         "com.facebook.orca",
         "com.facebook.mlite",
         "com.facebook.katana",
+        "com.facebook.lite",
         "com.instagram.android",
+        "com.instagram.barcelona",
         // Signal
         "org.thoughtcrime.securesms",
         // Discord
         "com.discord",
         // Otras mensajerías y redes sociales
+        "com.google.android.apps.dynamite",
         "com.viber.voip",
         "com.skype.raider",
         "com.tencent.mm",
@@ -212,8 +226,8 @@ object ParserUtils {
     )
 
     /**
-     * Retorna true si el paquete pertenece a una aplicación de mensajería o red social prohibida.
-     * NUNCA se debe procesar ninguna notificación proveniente de estas aplicaciones.
+     * Retorna true si el paquete pertenece a una aplicación de mensajería, correo electrónico (Gmail, Outlook)
+     * o red social prohibida. NUNCA se debe procesar ninguna notificación proveniente de estas aplicaciones.
      */
     fun isProhibitedMessagingPackage(packageName: String?): Boolean {
         if (packageName.isNullOrBlank()) return true
@@ -226,7 +240,14 @@ object ParserUtils {
                 lower.contains("discord") ||
                 lower.contains("viber") ||
                 lower.contains("wechat") ||
-                lower.contains("signal")
+                lower.contains("signal") ||
+                lower.contains("outlook") ||
+                lower.contains("gmail") ||
+                lower == "com.google.android.gm" ||
+                lower.contains("yahoo.mobile.client.android.mail") ||
+                lower.contains("protonmail") ||
+                lower.endsWith(".email") ||
+                lower.endsWith(".mail")
     }
 
     // Paquetes oficiales de telefonía / SMS del sistema Android
@@ -248,77 +269,43 @@ object ParserUtils {
                 !lower.contains("telegram") && !lower.contains("whatsapp") && !lower.contains("facebook")
     }
 
-    // Códigos cortos SMS oficiales asignados a la banca en Venezuela
+    // Códigos cortos SMS oficiales asignados por operadoras a la banca autorizada en Venezuela
     val OFFICIAL_BANK_SMS_SHORTCODES = setOf(
-        "26371", "772",          // BDV (Banco de Venezuela)
-        "2661", "2662", "2846",  // Banesco
-        "24024",                 // Banco Mercantil
-        "2282",                  // BBVA Provincial
-        "8234",                  // Bancamiga
-        "2620", "2621",          // BNC (Banco Nacional de Crédito)
-        "2376",                  // Banco del Tesoro
-        "2274",                  // Bancaribe
-        "100100",                // 100% Banco
-        "8244"                   // Ubii
-    )
-
-    // Sender IDs alfanuméricos institucionales verificados de bancos oficiales
-    val OFFICIAL_BANK_SMS_ALPHA_SENDER_IDS = setOf(
-        "bdv", "bancodevenezuela", "banco de venezuela",
-        "banesco", "mercantil", "banco mercantil",
-        "bbva", "provincial", "bbva provincial",
-        "bnc", "bancamiga", "ubii", "ubiipagos", "bancaribe",
-        "banco del tesoro", "tesoro", "banplus", "100% banco", "100%banco",
-        "banco plaza", "banco activo", "sofitasa"
+        "26371", "772", "2661", "2662", // BDV (Banco de Venezuela)
+        "2846",                         // Banesco
+        "24024",                        // Banco Mercantil
+        "8234",                         // Bancamiga
+        "2620", "2621",                 // BNC (Banco Nacional de Crédito)
+        "8244"                          // Ubii
     )
 
     /**
-     * Valida si el remitente de una notificación SMS es un emisor bancario institucional legítimo.
-     * FILTRO ANTI-ESTAFAS: Bloquea inmediatamente mensajes de números celulares personales (0414, 0424, etc.)
-     * para evitar que un tercero envíe un SMS falso fingiendo ser el banco.
+     * Valida si el remitente de una notificación SMS es un código corto bancario oficial.
+     * FILTRO ANTI-ESTAFAS: Exige exclusivamente códigos cortos numéricos de operadora (3 a 5 dígitos)
+     * del catálogo oficial. Bloquea cualquier número celular personal (0414, 0424, +58, etc.) y
+     * cualquier nombre de contacto o perfil RCS alfabético para impedir suplantaciones en la agenda.
      */
     fun isLegitimateBankSmsSender(sender: String?): Boolean {
         if (sender.isNullOrBlank()) return false
-        val clean = sender.replace("+", "").replace("-", "").replace(" ", "")
-            .replace("(", "").replace(")", "").trim().lowercase(Locale.ROOT)
+        val raw = sender.trim()
+        // Si contiene el símbolo '+' (ej. +58414...) o letras (contacto agendas / RCS), rechazo inmediato
+        if (raw.contains("+")) return false
+        val clean = raw.replace("-", "").replace(" ", "")
+            .replace("(", "").replace(")", "").trim()
 
-        // 1. Bloqueo inmediato si el remitente es un número celular personal (VE, CO, AR o internacional)
-        val isMobileNumber = clean.startsWith("58414") || clean.startsWith("58424") || clean.startsWith("58412") ||
-                clean.startsWith("58416") || clean.startsWith("58426") ||
-                clean.startsWith("0414") || clean.startsWith("0424") || clean.startsWith("0412") ||
-                clean.startsWith("0416") || clean.startsWith("0426") ||
-                clean.startsWith("414") || clean.startsWith("424") || clean.startsWith("412") ||
-                clean.startsWith("416") || clean.startsWith("426") ||
-                clean.matches(Regex("^(?:57)?3[0-9]{9}$")) ||
-                clean.matches(Regex("^(?:549?|11|15)[0-9]{8,10}$"))
-
-        if (isMobileNumber) {
-            return false // Número celular personal de persona natural -> DESCARTE TOTAL
-        }
-
-        // Si es una cadena numérica de 7 o más dígitos y NO está en los shortcodes oficiales -> BLOQUEO
-        if (clean.all { it.isDigit() } && clean.length >= 7 && !OFFICIAL_BANK_SMS_SHORTCODES.contains(clean)) {
+        if (clean.isEmpty() || !clean.all { it.isDigit() }) {
             return false
         }
 
-        // 2. Si es uno de los códigos cortos bancarios oficiales (2661, 2846, 24024, etc.) -> VÁLIDO
-        if (OFFICIAL_BANK_SMS_SHORTCODES.contains(clean)) {
-            return true
-        }
-
-        // 3. Si el remitente coincide con un Sender ID alfanumérico verificado del catálogo -> VÁLIDO
-        return OFFICIAL_BANK_SMS_ALPHA_SENDER_IDS.contains(clean)
+        return OFFICIAL_BANK_SMS_SHORTCODES.contains(clean)
     }
 
     /**
-     * Determina si el paquete origen pertenece a un gestor de correo electrónico (Gmail, Outlook, etc.).
+     * Los clientes de correo (Gmail, Outlook, etc.) están bloqueados como canal de cobro
+     * para evitar falsos positivos por correos engañosos enviados por terceros.
      */
     fun isEmailPackage(packageName: String): Boolean {
-        val lower = packageName.lowercase(Locale.ROOT)
-        return lower.contains("gm") ||              // com.google.android.gm (Gmail)
-               lower.contains("mail") ||            // apps de email estándar
-               lower.contains("outlook") ||         // Microsoft Outlook
-               lower.contains("email")
+        return false
     }
 
     // Frases explícitas e inequívocas de que la transacción es un débito o pago saliente realizado por el usuario

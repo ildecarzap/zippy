@@ -48,11 +48,33 @@ class AntiSpoofingSecurityTest {
             "com.facebook.orca",
             "com.instagram.android",
             "org.thoughtcrime.securesms",
-            "com.discord"
+            "com.discord",
+            "com.google.android.gm",
+            "com.microsoft.office.outlook",
+            "com.yahoo.mobile.client.android.mail"
         )
 
         for (pkg in packages) {
             assertTrue("El paquete $pkg debe ser reconocido como app prohibida", ParserUtils.isProhibitedMessagingPackage(pkg))
+        }
+    }
+
+    @Test
+    fun testEmailAndContactNameSmsSpoofingAreBlocked() {
+        val fakeBdvText = "BDV: PagoClave recibido por Bs. 950,00 de 04141234567. Ref: 7788"
+
+        // 1. Correos falsos en Gmail / Outlook fingiendo ser el banco
+        assertNull(router.routeAndParse("com.google.android.gm", "Banco de Venezuela", fakeBdvText, System.currentTimeMillis()))
+        assertNull(router.routeAndParse("com.microsoft.office.outlook", "BDV", fakeBdvText, System.currentTimeMillis()))
+
+        // 2. Contacto agendado con el nombre del banco enviando un SMS falso
+        val smsPkg = "com.google.android.apps.messaging"
+        val spoofedContactNames = listOf("BDV", "Banco de Venezuela", "Banesco", "Mercantil", "BNC", "Ubii")
+        for (contactName in spoofedContactNames) {
+            assertFalse("Un contacto alfabético ($contactName) no debe pasar como shortcode oficial",
+                ParserUtils.isLegitimateBankSmsSender(contactName))
+            assertNull("SMS de contacto agendado como '$contactName' debe ser bloqueado",
+                router.routeAndParse(smsPkg, contactName, fakeBdvText, System.currentTimeMillis()))
         }
     }
 

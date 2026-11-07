@@ -79,9 +79,8 @@ class BinancePayParser : BankParser {
         if (ParserUtils.isProhibitedMessagingPackage(pkg)) return false
         val combined = "$title $text".lowercase(Locale.ROOT)
 
-        val isBinanceApp = pkg.contains("binance")
-        val isBinanceEmail = ParserUtils.isEmailPackage(pkg) && (combined.contains("binance") || combined.contains("do-not-reply@binance.com"))
-        if (!isBinanceApp && !isBinanceEmail) return false
+        val isBinanceApp = BankCode.BINANCE.matchesPackage(pkg)
+        if (!isBinanceApp) return false
 
         // Filtro anti noticias, cotizaciones y promociones
         if (isMarketingOrNews(combined)) return false
@@ -96,6 +95,8 @@ class BinancePayParser : BankParser {
         text: String,
         postTimeMillis: Long
     ): ParsedPayment? {
+        val pkg = packageName.lowercase(Locale.ROOT)
+        if (ParserUtils.isProhibitedMessagingPackage(pkg) || !BankCode.BINANCE.matchesPackage(pkg)) return null
         val combined = "$title $text"
         if (ParserUtils.isOutgoingTransaction(combined)) return null
 

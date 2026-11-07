@@ -854,8 +854,8 @@
                             app:cardCornerRadius="12dp"
                             app:cardElevation="0dp"
                             app:strokeWidth="1dp"
-                            app:strokeColor="#FFCDD2"
-                            app:cardBackgroundColor="#FFEBEE">
+                            app:strokeColor="@color/expense_red"
+                            app:cardBackgroundColor="@color/expense_red_bg">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -867,7 +867,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="🔴 Por Cobrar (Fiados)"
-                                    android:textColor="#C62828"
+                                    android:textColor="@color/expense_red"
                                     android:textStyle="bold"
                                     android:textSize="11sp" />
 
@@ -877,7 +877,7 @@
                                     android:layout_height="wrap_content"
                                     android:text="$ 0.00"
                                     android:textStyle="bold"
-                                    android:textColor="#C62828"
+                                    android:textColor="@color/expense_red"
                                     android:textSize="17sp"
                                     android:layout_marginTop="2dp" />
 
@@ -886,7 +886,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="≈ Bs. 0,00"
-                                    android:textColor="#D32F2F"
+                                    android:textColor="@color/text_secondary"
                                     android:textSize="11sp" />
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
@@ -900,8 +900,8 @@
                             app:cardCornerRadius="12dp"
                             app:cardElevation="0dp"
                             app:strokeWidth="1dp"
-                            app:strokeColor="#C8E6C9"
-                            app:cardBackgroundColor="#E8F5E9">
+                            app:strokeColor="@color/accent_green"
+                            app:cardBackgroundColor="@color/accent_green_bg">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -913,7 +913,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="🟢 Saldos a Favor"
-                                    android:textColor="#2E7D32"
+                                    android:textColor="@color/accent_green"
                                     android:textStyle="bold"
                                     android:textSize="11sp" />
 
@@ -923,7 +923,7 @@
                                     android:layout_height="wrap_content"
                                     android:text="$ 0.00"
                                     android:textStyle="bold"
-                                    android:textColor="#2E7D32"
+                                    android:textColor="@color/accent_green"
                                     android:textSize="17sp"
                                     android:layout_marginTop="2dp" />
 
@@ -932,7 +932,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="≈ Bs. 0,00"
-                                    android:textColor="#388E3C"
+                                    android:textColor="@color/text_secondary"
                                     android:textSize="11sp" />
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
@@ -1142,9 +1142,9 @@
                         android:layout_marginBottom="14dp"
                         app:cardCornerRadius="14dp"
                         app:cardElevation="0dp"
-                        app:strokeColor="#B7E4C7"
+                        app:strokeColor="@color/accent_green"
                         app:strokeWidth="1dp"
-                        app:cardBackgroundColor="#F0FDF4">
+                        app:cardBackgroundColor="@color/accent_green_bg">
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -1157,7 +1157,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="🛡️ Seguridad CIEM • Protección Antifraude"
                                 android:textStyle="bold"
-                                android:textColor="#166534"
+                                android:textColor="@color/accent_green"
                                 android:textSize="13sp" />
 
                             <TextView
@@ -1165,7 +1165,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
                                 android:text="Zeasy NUNCA te solicitará contraseñas bancarias ni códigos SMS. Todo tu dinero e información permanecen seguros en tu teléfono. El guardado de cambios en tus datos de cobro y códigos QR está protegido con la Huella o PIN de tu dispositivo."
-                                android:textColor="#15803D"
+                                android:textColor="@color/text_primary"
                                 android:textSize="11.5sp"
                                 android:lineSpacingExtra="2dp" />
 
@@ -1175,7 +1175,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="6dp"
                                 android:text="🔒 Ver Manifiesto de Seguridad y Privacidad ➔"
-                                android:textColor="#166534"
+                                android:textColor="@color/accent_green"
                                 android:textStyle="bold"
                                 android:textSize="11.5sp" />
                         </LinearLayout>
@@ -2350,7 +2350,7 @@
                                 android:layout_marginTop="2dp"
                                 android:text="Exporta tus transacciones y códigos QR para transferirlos a otro teléfono o respaldar en Google Drive / WhatsApp."
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="11.5sp" />
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -2381,6 +2381,45 @@
                                     android:textSize="12sp"
                                     android:textStyle="bold"
                                     app:cornerRadius="8dp" />
+                            </LinearLayout>
+
+                            <!-- Guiño al usuario: Visualización de Respaldo / CSV en Computadora (PC) -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:background="@drawable/bg_badge_rounded"
+                                android:backgroundTint="@color/accent_cyan_bg"
+                                android:orientation="vertical"
+                                android:padding="12dp">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="💻 ¿Quieres ver tus números en grande en una computadora?"
+                                    android:textColor="@color/accent_cyan"
+                                    android:textSize="12.5sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:lineSpacingExtra="2dp"
+                                    android:text="Exporta tu respaldo o tu reporte Excel (.csv) y ábrelo desde tu computadora en nuestro Visor Web para analizar tus ventas, gráficas y cierres en pantalla grande."
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="11.5sp" />
+
+                                <TextView
+                                    android:id="@+id/btnOpenPcViewerHint"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="end"
+                                    android:layout_marginTop="6dp"
+                                    android:text="🌐 Abrir Visor en zeasy.app →"
+                                    android:textColor="@color/accent_cyan"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
                             </LinearLayout>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
@@ -2566,9 +2605,9 @@
                         android:layout_marginBottom="16dp"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
-                        app:strokeColor="#FCA5A5"
+                        app:strokeColor="@color/expense_red"
                         app:strokeWidth="1.5dp"
-                        app:cardBackgroundColor="#FEF2F2">
+                        app:cardBackgroundColor="@color/expense_red_bg">
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -2595,7 +2634,7 @@
                                     android:layout_weight="1"
                                     android:text="Zona de Peligro"
                                     android:textStyle="bold"
-                                    android:textColor="#991B1B"
+                                    android:textColor="@color/expense_red"
                                     android:textSize="15sp" />
                             </LinearLayout>
 
@@ -2604,7 +2643,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="6dp"
                                 android:text="Borra todas las ventas registradas, clientes de la libreta de fiados, bancos vinculados y códigos QR para reiniciar Zeasy desde cero."
-                                android:textColor="#7F1D1D"
+                                android:textColor="@color/text_primary"
                                 android:textSize="12.5sp"
                                 android:lineSpacingExtra="2dp" />
 
@@ -2615,10 +2654,10 @@
                                 android:layout_height="48dp"
                                 android:layout_marginTop="12dp"
                                 android:text="🗑️ Borrar Todos los Datos y Empezar de Cero"
-                                android:textColor="#B91C1C"
+                                android:textColor="@color/white"
                                 android:textStyle="bold"
                                 android:textSize="13sp"
-                                app:backgroundTint="#FEE2E2"
+                                app:backgroundTint="@color/expense_red"
                                 app:cornerRadius="10dp" />
 
                         </LinearLayout>

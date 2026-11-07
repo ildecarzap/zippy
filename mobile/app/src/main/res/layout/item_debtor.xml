@@ -112,12 +112,12 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 app:cornerRadius="12dp"
-                android:backgroundTint="#FEE2E2"
-                android:textColor="#991B1B"
+                android:backgroundTint="@color/expense_red_bg"
+                android:textColor="@color/expense_red"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 app:strokeWidth="1.5dp"
-                app:strokeColor="#FCA5A5" />
+                app:strokeColor="@color/expense_red" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnItemAddPayment"
@@ -130,12 +130,12 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 app:cornerRadius="12dp"
-                android:backgroundTint="#D1FAE5"
-                android:textColor="#065F46"
+                android:backgroundTint="@color/income_green_bg"
+                android:textColor="@color/income_green"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 app:strokeWidth="1.5dp"
-                app:strokeColor="#6EE7B7" />
+                app:strokeColor="@color/income_green" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnItemWhatsApp"

@@ -13,38 +13,30 @@ class BinancePayParserTest {
     private val parser = BinancePayParser()
 
     @Test
-    fun testExactUserGmailNotification() {
-        val packageName = "com.google.android.gm"
+    fun testGmailAndOutlookSpoofingAreBlockedForBinancePay() {
+        val gmailPkg = "com.google.android.gm"
+        val outlookPkg = "com.microsoft.office.outlook"
         val title = "Binance"
         val text = """
             [Binance] Pago recibido correctamente - 2026-10-23 19:12:15 (UTC)
             Pago recibido correctamente
             Recibiste una transferencia:
-            Fecha y hora:
-            2026-10-23 19:12:15(UTC)
             Remitente:
             Mcdh-61869
             Monto:
             0.5 USDT
         """.trimIndent()
 
-        assertTrue(parser.canHandle(packageName, title, text))
-
-        val payment = parser.parse(packageName, title, text, 1729710735000L)
-        assertNotNull("El pago de Binance por Gmail no debe ser nulo", payment)
-        assertEquals(0.5, payment!!.monto, 0.001)
-        assertEquals("USD", payment.moneda)
-        assertEquals(BankCode.BINANCE, payment.bancoCodigo)
-        assertEquals("Binance Pay", payment.bancoEmisor)
-        assertEquals("Mcdh-61869", payment.telefonoOrigen)
-        assertEquals("1869", payment.referenciaUltimos4)
-        assertEquals("EMAIL", payment.canal)
+        assertFalse("Gmail debe estar bloqueado por seguridad anti-spoofing", parser.canHandle(gmailPkg, title, text))
+        assertNull("Gmail no debe parsear pagos de Binance", parser.parse(gmailPkg, title, text, 1729710735000L))
+        assertFalse("Outlook debe estar bloqueado por seguridad anti-spoofing", parser.canHandle(outlookPkg, title, text))
+        assertNull("Outlook no debe parsear pagos de Binance", parser.parse(outlookPkg, title, text, 1729710735000L))
     }
 
     @Test
-    fun testAmountStartingWithDot() {
-        val packageName = "com.google.android.gm"
-        val title = "Binance"
+    fun testAmountStartingWithDotOnOfficialBinanceApp() {
+        val packageName = "com.binance.dev"
+        val title = "Binance Pay"
         val text = """
             [Binance] Pago recibido correctamente
             Remitente:

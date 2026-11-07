@@ -204,8 +204,11 @@ class PocketNotificationListenerService : NotificationListenerService() {
         if (pkg == packageName.lowercase(Locale.ROOT) || pkg.contains("cobrix") || pkg.contains("zeasy") || pkg.contains("zippy")) {
             return false
         }
-        if (isSmsEnabled && ParserUtils.isSmsPackage(pkg)) return true
-        if ((activeBankCodes.isNotEmpty() || isBinanceEnabled) && ParserUtils.isEmailPackage(pkg)) return true
+        val activeCountry = PreferencesHelper.getCountryCode(this)
+        // Solo permitir lectura de SMS en Venezuela si el usuario lo tiene activo (mediante shortcodes numéricos verificados)
+        if (isSmsEnabled && activeCountry == com.cobrix.pocket.data.model.CountryCode.VE && ParserUtils.isSmsPackage(pkg)) {
+            return true
+        }
         if (isBinanceEnabled && BankCode.BINANCE.matchesPackage(pkg)) return true
         return activeBankCodes.any { code ->
             BankCode.fromSudeban(code)?.matchesPackage(pkg) == true

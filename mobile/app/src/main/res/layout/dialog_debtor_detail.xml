@@ -156,8 +156,8 @@
             android:text="Cerrar"
             android:textSize="13sp"
             app:cornerRadius="10dp"
-            android:backgroundTint="#F1F5F9"
-            android:textColor="#475569" />
+            android:backgroundTint="@color/surface_variant"
+            android:textColor="@color/text_primary" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnDetailShareWhatsApp"

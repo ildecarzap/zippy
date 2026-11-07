@@ -221,14 +221,14 @@
             android:textColor="@color/text_primary"
             app:cornerRadius="12dp" />
 
-        <!-- Nota Promocional Web Dashboard -->
+        <!-- Nota Promocional Web Dashboard / Visor en Computadora -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:background="@drawable/bg_badge_rounded"
-            android:backgroundTint="@color/card_background"
-            android:padding="12dp"
+            android:backgroundTint="@color/surface_variant"
+            android:padding="14dp"
             android:layout_marginTop="16dp">
 
             <LinearLayout
@@ -241,15 +241,15 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="💻"
-                    android:textSize="18sp"
+                    android:textSize="20sp"
                     android:layout_marginEnd="10dp" />
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Puedes ver tus métricas en pantalla grande en tu computadora y auditar tus movimientos cargando tu archivo CSV en zeasy.app"
-                    android:textColor="@color/text_secondary"
+                    android:text="¿Prefieres verlo en grande en tu computadora?\nExporta tu archivo Excel (.csv) o tu Respaldo y ábrelo en zeasy.app desde tu PC para analizar tus ventas y gráficas con total comodidad."
+                    android:textColor="@color/text_primary"
                     android:textSize="12.5sp"
                     android:lineSpacingExtra="2dp" />
             </LinearLayout>
@@ -259,9 +259,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
-                android:layout_marginTop="6dp"
-                android:text="🌐 Abrir Web Dashboard →"
-                android:textColor="@color/primary"
+                android:layout_marginTop="8dp"
+                android:text="🌐 Abrir Visor en zeasy.app →"
+                android:textColor="@color/accent_cyan"
                 android:textStyle="bold"
                 android:textSize="12.5sp"
                 android:padding="4dp" />
