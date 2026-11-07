@@ -138,6 +138,7 @@ class MainActivity : AppCompatActivity() {
     private var isLaunchingInternalActivity = false
     private var isShowingBiometricPrompt = false
     private var lastBackgroundTimestampMs = 0L
+    private var pendingScrollToSettingsBankSection = false
 
     companion object {
         private var isAuthenticatedThisSession = false
@@ -1201,6 +1202,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun navigateToSettingsBankSection() {
+        pendingScrollToSettingsBankSection = true
+        binding.bottomNavigation.selectedItemId = R.id.nav_settings
+    }
+
+    private fun scrollSettingsToBankButton() {
+        binding.scrollSettingsContent.post {
+            val rect = android.graphics.Rect()
+            binding.btnAddAnotherBank.getDrawingRect(rect)
+            binding.scrollSettingsContent.offsetDescendantRectToMyCoords(binding.btnAddAnotherBank, rect)
+            val targetY = (rect.top - (binding.scrollSettingsContent.height / 2)).coerceAtLeast(0)
+            binding.scrollSettingsContent.smoothScrollTo(0, targetY)
+        }
+    }
+
     private fun setupNavigation() {
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
@@ -1213,6 +1229,7 @@ class MainActivity : AppCompatActivity() {
                         setupCashierBankSelector()
                         renderCashierBankCards()
                         updateCashierHeaderSummary()
+                        binding.viewCashier.post { binding.viewCashier.scrollTo(0, 0) }
                         binding.bottomNavigation.menu.findItem(R.id.nav_cashier).isChecked = true
                     }
                     binding.viewSettings.visibility != View.VISIBLE || !hasPendingSettingsChanges()
@@ -1224,6 +1241,7 @@ class MainActivity : AppCompatActivity() {
                         binding.viewDebtors.visibility = View.GONE
                         binding.viewSettings.visibility = View.GONE
                         loadTodayLedger()
+                        binding.viewLedger.post { binding.viewLedger.scrollTo(0, 0) }
                         binding.bottomNavigation.menu.findItem(R.id.nav_ledger).isChecked = true
                     }
                     binding.viewSettings.visibility != View.VISIBLE || !hasPendingSettingsChanges()
@@ -1245,9 +1263,26 @@ class MainActivity : AppCompatActivity() {
                     binding.viewDebtors.visibility = View.GONE
                     binding.viewSettings.visibility = View.VISIBLE
                     loadSettings(forceReload = false)
+                    if (pendingScrollToSettingsBankSection) {
+                        pendingScrollToSettingsBankSection = false
+                        scrollSettingsToBankButton()
+                    } else {
+                        binding.scrollSettingsContent.post {
+                            binding.scrollSettingsContent.scrollTo(0, 0)
+                        }
+                    }
                     true
                 }
                 else -> false
+            }
+        }
+
+        binding.bottomNavigation.setOnItemReselectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_cashier -> binding.viewCashier.smoothScrollTo(0, 0)
+                R.id.nav_ledger -> binding.viewLedger.smoothScrollTo(0, 0)
+                R.id.nav_debtors -> binding.rvDebtors.smoothScrollToPosition(0)
+                R.id.nav_settings -> binding.scrollSettingsContent.smoothScrollTo(0, 0)
             }
         }
     }
@@ -1334,9 +1369,9 @@ class MainActivity : AppCompatActivity() {
 
     // --- ACCIONES DE COBRO Y CAJERO FINTECH ---
     private fun setupCashierActions() {
-        // Tarjeta para agregar nuevo QR: navega directamente a Ajustes
+        // Tarjeta para agregar nuevo método de cobro: navega a Ajustes a la altura del botón de agregar banco
         binding.cardCashierAddBank.setOnClickListener {
-            binding.bottomNavigation.selectedItemId = R.id.nav_settings
+            navigateToSettingsBankSection()
         }
 
         // Tarjeta destacada de WhatsApp: Toca para abrir teclado numérico y enviar datos con QR
@@ -1472,6 +1507,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        if (bankCodesToShow.isEmpty()) {
+            binding.tvCashierAddBankTitle.text = "Agregar método de cobro"
+            binding.tvCashierAddBankSubtitle.text = "Toca para configurar tu banco o billetera de cobro"
+        } else {
+            binding.tvCashierAddBankTitle.text = "Agregar nuevo método"
+            binding.tvCashierAddBankSubtitle.text = "Toca para configurar otro banco o billetera en Ajustes"
+        }
+
         bankCodesToShow.forEach { code ->
             val cardBinding = ItemCashierBankCardBinding.inflate(layoutInflater, binding.layoutCashierBankCardsContainer, false)
             val bank = BankCatalog.findByCode(code)
@@ -1545,7 +1588,7 @@ class MainActivity : AppCompatActivity() {
                         cardBinding.btnCardShowQr.text = "⚙️ Configurar Datos de Cobro"
                         cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
                         cardBinding.btnCardShowQr.setOnClickListener {
-                            binding.bottomNavigation.selectedItemId = R.id.nav_settings
+                            navigateToSettingsBankSection()
                         }
                     }
                 } else {
@@ -4267,11 +4310,11 @@ class MainActivity : AppCompatActivity() {
             if (profile.bankCode.isNotEmpty()) listOf(profile.bankCode) else emptyList()
         }
 
-        // Dinámico: si no hay bancos configurados muestra "+ Agregar Banco y código QR", de lo contrario "+ Agregar otro banco..."
+        // Dinámico: si no hay métodos configurados muestra "+ Agregar método de cobro", de lo contrario "+ Agregar nuevo método..."
         if (bankCodes.isEmpty()) {
-            binding.btnAddAnotherBank.text = "➕ Agregar Banco y código QR"
+            binding.btnAddAnotherBank.text = "➕ Agregar método de cobro"
         } else {
-            binding.btnAddAnotherBank.text = "➕ Agregar otro banco y código QR"
+            binding.btnAddAnotherBank.text = "➕ Agregar nuevo método de cobro"
         }
 
         val countryProfile = PreferencesHelper.getCountryProfile(this)

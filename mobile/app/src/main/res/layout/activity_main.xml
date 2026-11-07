@@ -174,18 +174,20 @@
                                     android:orientation="vertical">
 
                                     <TextView
+                                        android:id="@+id/tvCashierAddBankTitle"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="Agregar nuevo QR"
+                                        android:text="Agregar nuevo método"
                                         android:textColor="@color/text_primary"
                                         android:textStyle="bold"
                                         android:textSize="17sp" />
 
                                     <TextView
+                                        android:id="@+id/tvCashierAddBankSubtitle"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:layout_marginTop="2dp"
-                                        android:text="Toca para ir a Ajustes y configurar tu banco y QR"
+                                        android:text="Toca para configurar tu banco o billetera de cobro"
                                         android:textColor="@color/text_secondary"
                                         android:textSize="12sp" />
                                 </LinearLayout>
@@ -1771,8 +1773,9 @@
                                 android:layout_marginVertical="14dp"
                                 android:background="@color/border" />
 
-                            <!-- SECCIÓN UNIFICADA: MIS BANCOS Y CÓDIGOS QR -->
+                            <!-- SECCIÓN UNIFICADA: MIS BANCOS Y MÉTODOS DE COBRO -->
                             <LinearLayout
+                                android:id="@+id/layoutSettingsBanksHeader"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal"
@@ -1782,7 +1785,7 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:text="🏦 Mis Bancos y Códigos QR"
+                                    android:text="🏦 Mis Bancos y Métodos de Cobro"
                                     android:textStyle="bold"
                                     android:textColor="@color/text_primary"
                                     android:textSize="14sp" />
@@ -1803,7 +1806,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Configura tus bancos y carga el código QR de cada uno en un solo lugar:"
+                                android:text="Configura los bancos o billeteras donde recibes tus pagos (QR opcional):"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="12sp" />
 
@@ -1815,14 +1818,14 @@
                                 android:orientation="vertical"
                                 android:layout_marginTop="10dp" />
 
-                            <!-- Botón (+) Agregar Banco y QR -->
+                            <!-- Botón (+) Agregar Método de Cobro -->
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnAddAnotherBank"
                                 style="@style/Widget.Material3.Button.OutlinedButton"
                                 android:layout_width="match_parent"
                                 android:layout_height="50dp"
                                 android:layout_marginTop="4dp"
-                                android:text="➕ Agregar Banco y código QR"
+                                android:text="➕ Agregar nuevo método de cobro"
                                 android:textSize="13sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/accent_cyan"
