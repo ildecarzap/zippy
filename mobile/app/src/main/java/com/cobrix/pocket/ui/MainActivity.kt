@@ -27,6 +27,7 @@ import android.text.TextWatcher
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Toast
@@ -469,9 +470,11 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Gestión de bajorrelieves (insets: status bar / notch y barra de navegación del sistema)
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+        // Gestión de bajorrelieves (insets: status bar / notch, barra de navegación y teclado IME)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val isKeyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
             val density = resources.displayMetrics.density
             val defaultPaddingH = (20 * density).toInt()
             val defaultPaddingBottom = (16 * density).toInt()
@@ -483,7 +486,14 @@ class MainActivity : AppCompatActivity() {
                 defaultPaddingBottom
             )
 
-            binding.bottomNavigation.setPadding(0, 0, 0, systemBars.bottom)
+            if (isKeyboardVisible) {
+                binding.bottomNavigation.visibility = View.GONE
+                view.setPadding(0, 0, 0, imeInsets.bottom)
+            } else {
+                binding.bottomNavigation.visibility = View.VISIBLE
+                binding.bottomNavigation.setPadding(0, 0, 0, systemBars.bottom)
+                view.setPadding(0, 0, 0, 0)
+            }
 
             insets
         }
@@ -1158,6 +1168,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateSaveButtonState() {
         if (isBindingSettingsData) {
             binding.btnQuickSaveSettingsTop.visibility = View.GONE
+            binding.layoutBottomSaveSettingsBar.visibility = View.GONE
             return
         }
 
@@ -1169,10 +1180,12 @@ class MainActivity : AppCompatActivity() {
             binding.btnQuickSaveSettingsTop.text = "💾 Guardar"
             binding.btnQuickSaveSettingsTop.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent_cyan))
             binding.btnQuickSaveSettingsTop.setTextColor(ContextCompat.getColor(this, R.color.white))
+            binding.layoutBottomSaveSettingsBar.visibility = View.VISIBLE
             binding.tvSettingsHeaderStatus.text = "⚠️ Hay cambios sin guardar"
             binding.tvSettingsHeaderStatus.setTextColor(ContextCompat.getColor(this, R.color.warning_orange))
         } else {
             binding.btnQuickSaveSettingsTop.visibility = View.GONE
+            binding.layoutBottomSaveSettingsBar.visibility = View.GONE
             binding.tvSettingsHeaderStatus.text = "Personaliza tus datos de cobro, bancos y alertas"
             binding.tvSettingsHeaderStatus.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
         }
@@ -2467,10 +2480,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Configura un BottomSheetDialog para que se expanda completamente y reajuste su altura
+     * al abrirse el teclado (SOFT_INPUT_ADJUST_RESIZE), manteniendo siempre visible la barra inferior de Guardado.
+     */
+    private fun configureBottomSheetForKeyboard(dialog: BottomSheetDialog) {
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+        dialog.behavior.skipCollapsed = true
+    }
+
+    /**
+     * Configura un Dialog modal para que reajuste su altura cuando aparece el teclado,
+     * evitando que el botón inferior de Guardado quede oculto detrás del teclado.
+     */
+    private fun configureModalDialogForKeyboard(dialog: Dialog) {
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+    }
+
     private fun showAddDebtorDialog() {
         val dialog = BottomSheetDialog(this)
         val dBinding = DialogAddDebtorBinding.inflate(layoutInflater)
         dialog.setContentView(dBinding.root)
+        configureBottomSheetForKeyboard(dialog)
 
         val countryProfile = PreferencesHelper.getCountryProfile(this)
         dBinding.tilNewDebtorPhone.hint = "Teléfono WhatsApp (ej. ${countryProfile.mobilePhonePlaceholder})"
@@ -2522,6 +2556,7 @@ class MainActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val dBinding = DialogAddChargeBinding.inflate(layoutInflater)
         dialog.setContentView(dBinding.root)
+        configureBottomSheetForKeyboard(dialog)
 
         val profile = PreferencesHelper.getUserProfile(this)
         val countryProfile = PreferencesHelper.getCountryProfile(this)
@@ -2655,6 +2690,7 @@ class MainActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val dBinding = DialogAddPaymentBinding.inflate(layoutInflater)
         dialog.setContentView(dBinding.root)
+        configureBottomSheetForKeyboard(dialog)
 
         val profile = PreferencesHelper.getUserProfile(this)
         val countryProfile = PreferencesHelper.getCountryProfile(this)
@@ -3166,8 +3202,7 @@ class MainActivity : AppCompatActivity() {
         val dialog = Dialog(this)
         val dBinding = DialogEditDebtorBinding.inflate(layoutInflater)
         dialog.setContentView(dBinding.root)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        configureModalDialogForKeyboard(dialog)
 
         val countryProfile = PreferencesHelper.getCountryProfile(this)
         dBinding.tilEditDebtorPhone.hint = "Teléfono WhatsApp (ej. ${countryProfile.mobilePhonePlaceholder})"
@@ -3499,8 +3534,7 @@ class MainActivity : AppCompatActivity() {
         val dialog = Dialog(this)
         val dialogBinding = DialogAddIncomeBinding.inflate(layoutInflater)
         dialog.setContentView(dialogBinding.root)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        configureModalDialogForKeyboard(dialog)
 
         val profile = PreferencesHelper.getUserProfile(this)
         val countryProfile = PreferencesHelper.getCountryProfile(this)
@@ -3597,8 +3631,7 @@ class MainActivity : AppCompatActivity() {
         val dialog = Dialog(this)
         val dialogBinding = DialogAddExpenseBinding.inflate(layoutInflater)
         dialog.setContentView(dialogBinding.root)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        configureModalDialogForKeyboard(dialog)
 
         val countryProfile = PreferencesHelper.getCountryProfile(this)
         dialogBinding.tilExpenseAmount.hint = "Monto en ${countryProfile.localCurrencyDisplay}"
@@ -3646,8 +3679,7 @@ class MainActivity : AppCompatActivity() {
         val dialog = Dialog(this)
         val dialogBinding = DialogEditTransactionBinding.inflate(layoutInflater)
         dialog.setContentView(dialogBinding.root)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        configureModalDialogForKeyboard(dialog)
 
         val isIncome = tx.type == TransactionType.INCOME
         dialogBinding.tvEditTxTitle.text = if (isIncome) "Detalle de Ingreso" else "Detalle de Gasto"
@@ -4007,8 +4039,8 @@ class MainActivity : AppCompatActivity() {
 
         val isPro = PlanCapabilityManager.canExportPdf(this)
         if (!isPro) {
-            dialogBinding.btnShareOptionPdf.visibility = View.GONE
-            dialogBinding.btnShareOptionCsv.visibility = View.GONE
+            dialogBinding.layoutSharePdfActions.visibility = View.GONE
+            dialogBinding.layoutShareCsvActions.visibility = View.GONE
             dialogBinding.btnShareOptionsProLocked.visibility = View.VISIBLE
             dialogBinding.btnShareOptionsProLocked.setOnClickListener {
                 AlertDialog.Builder(this)
@@ -4029,8 +4061,8 @@ class MainActivity : AppCompatActivity() {
                     .show()
             }
         } else {
-            dialogBinding.btnShareOptionPdf.visibility = View.VISIBLE
-            dialogBinding.btnShareOptionCsv.visibility = View.VISIBLE
+            dialogBinding.layoutSharePdfActions.visibility = View.VISIBLE
+            dialogBinding.layoutShareCsvActions.visibility = View.VISIBLE
             dialogBinding.btnShareOptionsProLocked.visibility = View.GONE
 
             dialogBinding.btnShareOptionPdf.setOnClickListener {
@@ -4038,6 +4070,16 @@ class MainActivity : AppCompatActivity() {
                 val pdfFile = ReportHelper.generatePdfReport(this, profile, currentFilteredTransactions, filterPeriodLabel)
                 if (pdfFile != null) {
                     ReportHelper.sharePdf(this, pdfFile)
+                } else {
+                    Toast.makeText(this, "No se pudo generar el archivo PDF", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            dialogBinding.btnDownloadOptionPdf.setOnClickListener {
+                dialog.dismiss()
+                val pdfFile = ReportHelper.generatePdfReport(this, profile, currentFilteredTransactions, filterPeriodLabel)
+                if (pdfFile != null) {
+                    ReportHelper.saveFileToDownloads(this, pdfFile, "application/pdf", openAfterSave = true)
                 } else {
                     Toast.makeText(this, "No se pudo generar el archivo PDF", Toast.LENGTH_SHORT).show()
                 }
@@ -4052,6 +4094,28 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     Toast.makeText(this, "No se pudo generar el archivo Excel", Toast.LENGTH_SHORT).show()
                 }
+            }
+
+            dialogBinding.btnDownloadOptionCsv.setOnClickListener {
+                dialog.dismiss()
+                val allDebtors = dbHelper.getAllDebtors()
+                val csvFile = ReportHelper.generateCsvReport(this, profile, currentFilteredTransactions, filterPeriodLabel, allDebtors)
+                if (csvFile != null) {
+                    ReportHelper.saveFileToDownloads(this, csvFile, "text/csv", openAfterSave = true)
+                } else {
+                    Toast.makeText(this, "No se pudo generar el archivo Excel", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        dialogBinding.btnDownloadDashboardCsv.setOnClickListener {
+            dialog.dismiss()
+            val allDebtors = dbHelper.getAllDebtors()
+            val csvFile = ReportHelper.generateCsvReport(this, profile, currentFilteredTransactions, filterPeriodLabel, allDebtors)
+            if (csvFile != null) {
+                ReportHelper.saveFileToDownloads(this, csvFile, "text/csv", openAfterSave = true)
+            } else {
+                Toast.makeText(this, "No se pudo generar el archivo Excel", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -5100,11 +5164,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Botón único superior de Guardar Ajustes
+        // Botón único superior e inferior fijo de Guardar Ajustes
         val handleSaveClick = {
             saveCurrentSettingsFromUi(requireBiometricIfConfigured = true, isExplicitClick = true)
         }
         binding.btnQuickSaveSettingsTop.setOnClickListener { handleSaveClick() }
+        binding.btnSaveSettingsBottom.setOnClickListener { handleSaveClick() }
 
         // Plan PRO y Respaldos en Ajustes
         binding.btnManagePlanPro.setOnClickListener {
@@ -5123,6 +5188,18 @@ class MainActivity : AppCompatActivity() {
         binding.btnRestoreBackup.setOnClickListener {
             isLaunchingInternalActivity = true
             restoreBackupLauncher.launch("*/*")
+        }
+
+        binding.btnDownloadPcViewerCsv.setOnClickListener {
+            val profile = PreferencesHelper.getUserProfile(this)
+            val transactions = dbHelper.getAllTransactions()
+            val allDebtors = dbHelper.getAllDebtors()
+            val csvFile = ReportHelper.generateCsvReport(this, profile, transactions, "Historico-Completo", allDebtors)
+            if (csvFile != null) {
+                ReportHelper.saveFileToDownloads(this, csvFile, "text/csv", openAfterSave = true)
+            } else {
+                Toast.makeText(this, "No se pudo generar el archivo Excel", Toast.LENGTH_SHORT).show()
+            }
         }
 
         binding.btnOpenPcViewerHint.setOnClickListener {

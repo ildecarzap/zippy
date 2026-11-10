@@ -195,33 +195,104 @@
             app:cornerRadius="12dp"
             android:visibility="gone" />
 
-        <!-- Opción 3: PDF Documento Formal (Plan PRO) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnShareOptionPdf"
+        <!-- Opción 3: PDF Documento Formal (Plan PRO: Enviar o Descargar en el Teléfono) -->
+        <LinearLayout
+            android:id="@+id/layoutSharePdfActions"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="📄 Generar Reporte Formal en PDF"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            app:cornerRadius="12dp"
-            android:backgroundTint="@color/accent_cyan"
-            android:textColor="@color/white" />
+            android:orientation="horizontal">
 
-        <!-- Opción 4: Excel (.csv) para auditoría y contabilidad (Plan PRO) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnShareOptionCsv"
-            style="@style/Widget.Material3.Button.TonalButton"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnShareOptionPdf"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="📤 Enviar PDF"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:paddingHorizontal="8dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:cornerRadius="12dp"
+                android:backgroundTint="@color/accent_cyan"
+                android:textColor="@color/white" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDownloadOptionPdf"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="📥 Descargar PDF"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:paddingHorizontal="8dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:cornerRadius="12dp"
+                app:strokeColor="@color/accent_cyan"
+                app:strokeWidth="1.5dp"
+                android:textColor="@color/accent_cyan" />
+        </LinearLayout>
+
+        <!-- Opción 4: Excel (.csv) para auditoría y contabilidad (Plan PRO: Enviar o Descargar) -->
+        <LinearLayout
+            android:id="@+id/layoutShareCsvActions"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="📊 Exportar a Excel (.csv)"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            app:cornerRadius="12dp" />
+            android:orientation="horizontal">
 
-        <!-- Nota Promocional Web Dashboard / Visor en Computadora -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnShareOptionCsv"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="📤 Enviar Excel"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:paddingHorizontal="8dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:textColor="@color/text_primary"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDownloadOptionCsv"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="📥 Descargar Excel"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:paddingHorizontal="8dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:textColor="@color/text_primary"
+                app:strokeColor="@color/border"
+                app:cornerRadius="12dp" />
+        </LinearLayout>
+
+        <!-- Nota Promocional Web Dashboard / Visor en Computadora o Teléfono -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -248,23 +319,57 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="¿Prefieres verlo en grande en tu computadora?\nExporta tu archivo Excel (.csv) o tu Respaldo y ábrelo en la web de Zeasy desde tu PC para analizar tus ventas y gráficas con total comodidad."
+                    android:text="¿Prefieres verlo en el Dashboard Web?\nDescarga tu archivo Excel (.csv) directamente en tu teléfono o envíalo a tu computadora y ábrelo en la web de Zeasy para analizar tus ventas y gráficas."
                     android:textColor="@color/text_primary"
                     android:textSize="12.5sp"
                     android:lineSpacingExtra="2dp" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/btnOpenWebDashboardLink"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:layout_marginTop="8dp"
-                android:text="🌐 Abrir en la web de Zeasy →"
-                android:textColor="@color/accent_cyan"
-                android:textStyle="bold"
-                android:textSize="12.5sp"
-                android:padding="4dp" />
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDownloadDashboardCsv"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:text="📥 Descargar .CSV"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold"
+                    android:singleLine="true"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:paddingHorizontal="8dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnOpenWebDashboardLink"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="🌐 Ir al Dashboard →"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold"
+                    android:singleLine="true"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:paddingHorizontal="8dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:textColor="@color/accent_cyan"
+                    app:strokeColor="@color/accent_cyan"
+                    app:cornerRadius="8dp" />
+            </LinearLayout>
         </LinearLayout>
 
     </LinearLayout>

@@ -4,160 +4,196 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp"
     android:background="@color/surface">
 
-    <!-- Indicador de arrastre superior (Bottom Sheet Handle) -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="22dp"
+            android:paddingTop="18dp"
+            android:paddingBottom="12dp">
+
+            <!-- Indicador de arrastre superior (Bottom Sheet Handle) -->
+            <View
+                android:layout_width="44dp"
+                android:layout_height="5dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_badge_rounded"
+                android:backgroundTint="@color/border" />
+
+            <TextView
+                android:id="@+id/tvChargeTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="➕ Anotar Compra / Fiado"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/tvChargeClientName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Cliente: Doña Carmen"
+                android:textColor="@color/accent_cyan"
+                android:textStyle="bold"
+                android:textSize="15sp" />
+
+            <!-- Banner informativo si tiene saldo a favor -->
+            <LinearLayout
+                android:id="@+id/layoutCreditNoticeBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal"
+                android:background="@color/accent_green_bg"
+                android:padding="10dp"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tvCreditNoticeText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🟢 Este cliente tiene $5.00 a favor. Se descontará automáticamente de este crédito."
+                    android:textColor="@color/accent_green"
+                    android:textStyle="bold"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <!-- Selector de Moneda para Fiar: Bolívares o Dólares -->
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/toggleChargeCurrency"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:singleSelection="true"
+                app:selectionRequired="true"
+                app:checkedButton="@id/btnChargeCurrencyUsd">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnChargeCurrencyVes"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1"
+                    android:text="Bs. Bolívares"
+                    android:textAllCaps="false"
+                    android:textSize="13.5sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnChargeCurrencyUsd"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1"
+                    android:text="$ Dólares (USD)"
+                    android:textAllCaps="false"
+                    android:textSize="13.5sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+
+            <!-- Campo de Monto Gigante -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilChargeAmount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:hint="Monto a Fiar en Dólares ($ USD) *">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etChargeAmountUsd"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:imeOptions="actionNext"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Equivalente calculado en tiempo real y aviso de ajuste diario BCV -->
+            <TextView
+                android:id="@+id/tvChargeEquivBs"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="≈ Bs. 0,00 (Tasa BCV: 45.00)"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
+                android:textSize="13.5sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvChargeBcvNotice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="🔄 La deuda se indexa y ajusta diariamente a la tasa oficial del BCV"
+                android:textColor="@color/text_secondary"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+            <!-- Concepto / Artículos -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilChargeConcept"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:hint="Artículos / Detalle (Opcional, ej. Víveres, Pan, Bebidas)">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etChargeConcept"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionDone"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14.5sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
     <View
-        android:layout_width="44dp"
-        android:layout_height="5dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="14dp"
-        android:background="@drawable/bg_badge_rounded"
-        android:backgroundTint="@color/border" />
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/border" />
 
-    <TextView
-        android:id="@+id/tvChargeTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="➕ Anotar Compra / Fiado"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
-        android:textSize="22sp" />
-
-    <TextView
-        android:id="@+id/tvChargeClientName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Cliente: Doña Carmen"
-        android:textColor="@color/primary"
-        android:textStyle="bold"
-        android:textSize="16sp" />
-
-    <!-- Banner informativo si tiene saldo a favor -->
+    <!-- Barra inferior fija de Guardado (No se esconde al salir el teclado) -->
     <LinearLayout
-        android:id="@+id/layoutCreditNoticeBanner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
         android:orientation="horizontal"
-        android:background="@color/accent_green_bg"
-        android:padding="12dp"
-        android:gravity="center_vertical"
-        android:visibility="gone">
+        android:paddingHorizontal="22dp"
+        android:paddingVertical="12dp"
+        android:background="@color/surface">
 
-        <TextView
-            android:id="@+id/tvCreditNoticeText"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnConfirmCharge"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🟢 Este cliente tiene $5.00 a favor. Se descontará automáticamente de este crédito."
-            android:textColor="@color/accent_green"
+            android:layout_height="50dp"
+            android:text="💾 Guardar en Cuenta"
+            android:textAllCaps="false"
+            android:textSize="15.5sp"
             android:textStyle="bold"
-            android:textSize="13.5sp" />
+            android:singleLine="true"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:cornerRadius="12dp"
+            android:backgroundTint="@color/accent_cyan"
+            android:textColor="@color/white" />
     </LinearLayout>
-
-    <!-- Selector de Moneda para Fiar: Bolívares o Dólares (50dp Touch Target) -->
-    <com.google.android.material.button.MaterialButtonToggleGroup
-        android:id="@+id/toggleChargeCurrency"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
-        app:singleSelection="true"
-        app:selectionRequired="true"
-        app:checkedButton="@id/btnChargeCurrencyUsd">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnChargeCurrencyVes"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="50dp"
-            android:layout_weight="1"
-            android:text="Bs. Bolívares"
-            android:textAllCaps="false"
-            android:textSize="14.5sp"
-            android:textStyle="bold" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnChargeCurrencyUsd"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="50dp"
-            android:layout_weight="1"
-            android:text="$ Dólares (USD)"
-            android:textAllCaps="false"
-            android:textSize="14.5sp"
-            android:textStyle="bold" />
-    </com.google.android.material.button.MaterialButtonToggleGroup>
-
-    <!-- Campo de Monto Gigante (Legible a 1 metro) -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilChargeAmount"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:hint="Monto a Fiar en Dólares ($ USD) *">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etChargeAmountUsd"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="numberDecimal"
-            android:textColor="@color/text_primary"
-            android:textSize="26sp"
-            android:textStyle="bold" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- Equivalente calculado en tiempo real y aviso de ajuste diario BCV -->
-    <TextView
-        android:id="@+id/tvChargeEquivBs"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:text="≈ Bs. 0,00 (Tasa BCV: 45.00)"
-        android:textColor="@color/text_primary"
-        android:textStyle="bold"
-        android:textSize="14.5sp"
-        android:visibility="gone" />
-
-    <TextView
-        android:id="@+id/tvChargeBcvNotice"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:text="🔄 La deuda se indexa y ajusta diariamente a la tasa oficial del BCV"
-        android:textColor="@color/text_secondary"
-        android:textStyle="bold"
-        android:textSize="12.5sp"
-        android:visibility="gone" />
-
-    <!-- Concepto / Artículos -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilChargeConcept"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:hint="Artículos / Detalle (Opcional, ej. Víveres, Pan, Bebidas)">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etChargeConcept"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="@color/text_primary"
-            android:textSize="15.5sp" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnConfirmCharge"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_marginTop="20dp"
-        android:text="Guardar en Cuenta"
-        android:textAllCaps="false"
-        android:textSize="16.5sp"
-        android:textStyle="bold"
-        app:cornerRadius="14dp"
-        android:backgroundTint="#DE350B"
-        android:textColor="@color/white" />
 
 </LinearLayout>

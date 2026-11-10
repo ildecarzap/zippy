@@ -1,5 +1,6 @@
 package com.cobrix.pocket.utils
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
@@ -8,6 +9,9 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.cobrix.pocket.data.model.CountryProfile
@@ -593,6 +597,78 @@ object ReportHelper {
             document.close()
             e.printStackTrace()
             return null
+        }
+    }
+
+    /**
+     * Guarda un archivo (PDF, CSV o Respaldo) directamente en la carpeta pública "Descargas/Zeasy"
+     * del teléfono usando MediaStore (Android 10+) o el directorio público de Descargas (Android 7–9).
+     */
+    fun saveFileToDownloads(
+        context: Context,
+        sourceFile: File,
+        mimeType: String,
+        openAfterSave: Boolean = false
+    ): Uri? {
+        return try {
+            val savedUri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val resolver = context.contentResolver
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, sourceFile.name)
+                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Zeasy")
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                if (uri != null) {
+                    resolver.openOutputStream(uri)?.use { outputStream ->
+                        sourceFile.inputStream().use { inputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                    }
+                    contentValues.clear()
+                    contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                    resolver.update(uri, contentValues, null, null)
+                }
+                uri
+            } else {
+                val publicDownloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val zeasyDir = File(publicDownloads, "Zeasy")
+                val targetDir = if (zeasyDir.exists() || zeasyDir.mkdirs()) {
+                    zeasyDir
+                } else {
+                    context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
+                }
+                val destFile = File(targetDir, sourceFile.name)
+                sourceFile.copyTo(destFile, overwrite = true)
+                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", destFile)
+            }
+
+            if (savedUri != null) {
+                Toast.makeText(
+                    context,
+                    "📥 Descargado en tu teléfono (Carpeta Descargas/Zeasy): ${sourceFile.name}",
+                    Toast.LENGTH_LONG
+                ).show()
+                if (openAfterSave) {
+                    try {
+                        val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(savedUri, mimeType)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(viewIntent)
+                    } catch (_: Exception) {
+                        // Si no hay visor predeterminado instalado, el archivo ya quedó en Descargas/Zeasy
+                    }
+                }
+            } else {
+                Toast.makeText(context, "No se pudo guardar el archivo en Descargas", Toast.LENGTH_SHORT).show()
+            }
+            savedUri
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(context, "Error al descargar archivo: ${e.message}", Toast.LENGTH_SHORT).show()
+            null
         }
     }
 

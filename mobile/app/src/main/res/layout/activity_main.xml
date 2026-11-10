@@ -2426,7 +2426,7 @@
                                     app:cornerRadius="8dp" />
                             </LinearLayout>
 
-                            <!-- Guiño al usuario: Visualización de Respaldo / CSV en Computadora (PC) -->
+                            <!-- Guiño al usuario: Visualización de Respaldo / CSV en Computadora (PC) o Teléfono -->
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -2439,7 +2439,7 @@
                                 <TextView
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:text="💻 ¿Quieres ver tus números en grande en una computadora?"
+                                    android:text="💻 ¿Quieres ver tus números en el Dashboard Web?"
                                     android:textColor="@color/accent_cyan"
                                     android:textSize="12.5sp"
                                     android:textStyle="bold" />
@@ -2449,20 +2449,55 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="4dp"
                                     android:lineSpacingExtra="2dp"
-                                    android:text="Exporta tu respaldo o tu reporte Excel (.csv) y ábrelo desde tu computadora en la web de Zeasy para analizar tus ventas, gráficas y cierres en pantalla grande."
+                                    android:text="Descarga tu reporte Excel (.csv) o tu Respaldo directamente en tu teléfono y ábrelo en la web de Zeasy para analizar tus ventas, gráficas y cierres."
                                     android:textColor="@color/text_primary"
                                     android:textSize="11.5sp" />
 
-                                <TextView
-                                    android:id="@+id/btnOpenPcViewerHint"
-                                    android:layout_width="wrap_content"
+                                <LinearLayout
+                                    android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:layout_gravity="end"
-                                    android:layout_marginTop="6dp"
-                                    android:text="🌐 Abrir Visor en la web de Zeasy →"
-                                    android:textColor="@color/accent_cyan"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
+                                    android:layout_marginTop="8dp"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical">
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnDownloadPcViewerCsv"
+                                        style="@style/Widget.Material3.Button.TonalButton"
+                                        android:layout_width="0dp"
+                                        android:layout_height="38dp"
+                                        android:layout_weight="1"
+                                        android:layout_marginEnd="4dp"
+                                        android:text="📥 Descargar .CSV"
+                                        android:textSize="11.5sp"
+                                        android:textStyle="bold"
+                                        android:singleLine="true"
+                                        android:maxLines="1"
+                                        android:ellipsize="end"
+                                        android:paddingHorizontal="8dp"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        app:cornerRadius="8dp" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnOpenPcViewerHint"
+                                        style="@style/Widget.Material3.Button.OutlinedButton"
+                                        android:layout_width="0dp"
+                                        android:layout_height="38dp"
+                                        android:layout_weight="1"
+                                        android:layout_marginStart="4dp"
+                                        android:text="🌐 Ir al Dashboard →"
+                                        android:textSize="11.5sp"
+                                        android:textStyle="bold"
+                                        android:singleLine="true"
+                                        android:maxLines="1"
+                                        android:ellipsize="end"
+                                        android:paddingHorizontal="8dp"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        android:textColor="@color/accent_cyan"
+                                        app:strokeColor="@color/accent_cyan"
+                                        app:cornerRadius="8dp" />
+                                </LinearLayout>
                             </LinearLayout>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
@@ -2720,6 +2755,47 @@
 
                     </LinearLayout>
                 </ScrollView>
+
+                <!-- BARRA INFERIOR FIJA DE GUARDADO (SIEMPRE EN EL MISMO LUGAR Y SOBRE EL TECLADO) -->
+                <LinearLayout
+                    android:id="@+id/layoutBottomSaveSettingsBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@color/surface"
+                    android:elevation="8dp"
+                    android:visibility="gone">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/border" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="10dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSaveSettingsBottom"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="💾 Guardar Cambios"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:singleLine="true"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            app:cornerRadius="12dp"
+                            android:backgroundTint="@color/accent_cyan"
+                            android:textColor="@color/white" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
 
         </FrameLayout>
