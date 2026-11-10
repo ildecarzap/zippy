@@ -1576,8 +1576,10 @@ class MainActivity : AppCompatActivity() {
             val shortName = bank?.getShortName() ?: code.takeLast(2)
             val hasQr = PreferencesHelper.getBankQrUri(this, code) != null
 
+            cardBinding.viewBankAccentStrip.backgroundTintList = ColorStateList.valueOf(brandColor)
             cardBinding.tvCashierBankBadge.text = shortName
             cardBinding.tvCashierBankBadge.backgroundTintList = ColorStateList.valueOf(brandColor)
+            cardBinding.tvCashierBankBadge.setTextColor(Color.WHITE)
             cardBinding.tvCashierBankName.text = bankName
 
             val bankAccount = PreferencesHelper.getBankAccountIdentifier(this, code)
@@ -1596,6 +1598,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 cardBinding.btnCardShowQr.text = "📸 Mostrar Código QR en Pantalla"
                 cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
+                cardBinding.btnCardShowQr.setTextColor(Color.WHITE)
                 cardBinding.btnCardUploadQrInline.visibility = View.GONE
 
                 // Abrir pantalla completa de QR al tocar la tarjeta o el botón principal
@@ -1716,6 +1719,7 @@ class MainActivity : AppCompatActivity() {
                         cardBinding.tvCashierBankSubtitle.text = "Pago Móvil: $phoneOrDoc"
                         cardBinding.btnCardShowQr.text = "📋 Copiar Datos"
                         cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
+                        cardBinding.btnCardShowQr.setTextColor(Color.WHITE)
                         val copyText = "$bankName ($code) | Tel: ${profile.phoneNumber} | Doc: ${profile.idCard}"
                         val copyAction = View.OnClickListener {
                             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -1733,6 +1737,7 @@ class MainActivity : AppCompatActivity() {
                         cardBinding.tvCashierBankSubtitle.text = "Configura tu Teléfono y Cédula/RIF o sube un QR"
                         cardBinding.btnCardShowQr.text = "📸 Subir Código QR"
                         cardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(brandColor)
+                        cardBinding.btnCardShowQr.setTextColor(Color.WHITE)
                         cardBinding.btnCardShowQr.setOnClickListener {
                             handleUploadQrClick(code, bankName)
                         }
@@ -1774,6 +1779,7 @@ class MainActivity : AppCompatActivity() {
             val binanceYellow = Color.parseColor("#F0B90B")
             val binanceDark = Color.parseColor("#181A20")
 
+            binanceCardBinding.viewBankAccentStrip.backgroundTintList = ColorStateList.valueOf(binanceYellow)
             binanceCardBinding.tvCashierBankBadge.text = "USDT"
             binanceCardBinding.tvCashierBankBadge.backgroundTintList = ColorStateList.valueOf(binanceYellow)
             binanceCardBinding.tvCashierBankBadge.setTextColor(binanceDark)
@@ -1782,6 +1788,7 @@ class MainActivity : AppCompatActivity() {
             val payId = PreferencesHelper.getBinancePayId(this)
             binanceCardBinding.tvCashierBankSubtitle.text = if (payId.isNotBlank()) "Pay ID: $payId • Toca para QR 100%" else "Cripto / USDT • Toca para QR 100%"
             binanceCardBinding.btnCardShowQr.backgroundTintList = ColorStateList.valueOf(binanceYellow)
+            binanceCardBinding.btnCardShowQr.setTextColor(binanceDark)
             binanceCardBinding.btnCardShowQr.iconTint = ColorStateList.valueOf(binanceDark)
 
             val openBinanceQrAction = View.OnClickListener {

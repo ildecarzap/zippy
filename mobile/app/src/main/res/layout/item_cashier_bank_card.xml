@@ -5,10 +5,11 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="12dp"
-    app:cardCornerRadius="24dp"
-    app:cardElevation="4dp"
-    app:strokeWidth="0dp"
-    app:cardBackgroundColor="@android:color/transparent"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="@color/border"
+    app:cardBackgroundColor="@color/surface"
     android:clickable="true"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground">
@@ -16,107 +17,124 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/bg_card_hero_jornada"
-        android:padding="20dp">
+        android:orientation="horizontal">
+
+        <!-- Listón / Borde Lateral Izquierdo de Color del Banco (Propuesta 2) -->
+        <View
+            android:id="@+id/viewBankAccentStrip"
+            android:layout_width="6dp"
+            android:layout_height="match_parent"
+            android:background="@color/brand_primary" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <!-- Badge / Logo del Banco con fondo blanco translúcido -->
-            <TextView
-                android:id="@+id/tvCashierBankBadge"
-                android:layout_width="46dp"
-                android:layout_height="46dp"
-                android:gravity="center"
-                android:text="UB"
-                android:textColor="@color/white"
-                android:textStyle="bold"
-                android:fontFamily="@font/sora"
-                android:textSize="15sp"
-                android:background="@drawable/bg_badge_rounded"
-                android:backgroundTint="#33FFFFFF" />
+            android:orientation="vertical"
+            android:padding="16dp">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="14dp"
-                android:orientation="vertical">
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
+                <!-- Badge / Iniciales del Banco con color oficial (Sin problemas de Copyright) -->
                 <TextView
-                    android:id="@+id/tvCashierBankName"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Ubii App"
+                    android:id="@+id/tvCashierBankBadge"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:gravity="center"
+                    android:text="UB"
                     android:textColor="@color/white"
-                    android:fontFamily="@font/sora"
                     android:textStyle="bold"
-                    android:textSize="18sp" />
+                    android:fontFamily="@font/sora"
+                    android:textSize="15sp"
+                    android:background="@drawable/bg_badge_rounded"
+                    android:backgroundTint="@color/brand_primary" />
 
-                <TextView
-                    android:id="@+id/tvCashierBankSubtitle"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Toca para mostrar QR a brillo 100%"
-                    android:textColor="#E0F2FE"
-                    android:fontFamily="@font/outfit"
-                    android:textSize="13sp" />
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvCashierBankName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ubii App"
+                        android:textColor="@color/text_primary"
+                        android:fontFamily="@font/sora"
+                        android:textStyle="bold"
+                        android:textSize="17sp" />
+
+                    <TextView
+                        android:id="@+id/tvCashierBankSubtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Toca para mostrar QR a brillo 100%"
+                        android:textColor="@color/text_secondary"
+                        android:fontFamily="@font/outfit"
+                        android:textSize="12.5sp" />
+                </LinearLayout>
+
+                <!-- Botón Quitar de la card -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCardDeleteQr"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="🗑️ Quitar"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_muted"
+                    android:paddingHorizontal="6dp" />
             </LinearLayout>
 
-            <!-- Botón Quitar de la card -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCardDeleteQr"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="🗑️ Quitar"
-                android:textSize="12sp"
-                android:textColor="#FEE2E2"
-                android:paddingHorizontal="6dp" />
+            <!-- Fila de Acciones Principales -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCardShowQr"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1"
+                    android:text="📋 Copiar Datos / Mostrar QR"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/outfit"
+                    android:backgroundTint="@color/surface_variant"
+                    android:textColor="@color/text_primary"
+                    app:cornerRadius="12dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCardUploadQrInline"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="46dp"
+                    android:layout_marginStart="8dp"
+                    android:text="📸 Subir QR"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/outfit"
+                    android:textColor="@color/brand_primary"
+                    app:strokeColor="@color/brand_primary"
+                    app:strokeWidth="1.2dp"
+                    app:cornerRadius="12dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
         </LinearLayout>
-
-        <!-- Fila de Acciones Principales -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCardShowQr"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:text="📋 Copiar Datos / Mostrar QR"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:fontFamily="@font/outfit"
-                android:textColor="#0F766E"
-                android:backgroundTint="@color/white"
-                app:cornerRadius="14dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCardUploadQrInline"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:layout_marginStart="8dp"
-                android:text="📸 Subir QR"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:fontFamily="@font/outfit"
-                android:textColor="@color/white"
-                app:strokeColor="@color/white"
-                app:strokeWidth="1.2dp"
-                app:cornerRadius="14dp"
-                android:visibility="gone" />
-        </LinearLayout>
-
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

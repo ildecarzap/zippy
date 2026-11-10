@@ -215,17 +215,18 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- TARJETA DESTACADA PARA COBRAR POR WHATSAPP (Estilo Unificado con Jornada) -->
+                    <!-- TARJETA DESTACADA PARA COBRAR POR WHATSAPP (Propuesta 2: Card con Borde Lateral) -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/cardCashierWhatsApp"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:layout_marginBottom="16dp"
-                        app:cardCornerRadius="24dp"
-                        app:cardElevation="4dp"
-                        app:strokeWidth="0dp"
-                        app:cardBackgroundColor="@android:color/transparent"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="2dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/border"
+                        app:cardBackgroundColor="@color/surface"
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground">
@@ -233,75 +234,88 @@
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:background="@drawable/bg_card_hero_jornada"
-                            android:padding="20dp">
+                            android:orientation="horizontal">
+
+                            <!-- Listón verde WhatsApp -->
+                            <View
+                                android:layout_width="6dp"
+                                android:layout_height="match_parent"
+                                android:background="#25D366" />
 
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical">
-
-                                <TextView
-                                    android:layout_width="46dp"
-                                    android:layout_height="46dp"
-                                    android:gravity="center"
-                                    android:text="💬"
-                                    android:textSize="22sp"
-                                    android:background="@drawable/bg_badge_rounded"
-                                    android:backgroundTint="#33FFFFFF" />
+                                android:orientation="vertical"
+                                android:padding="16dp">
 
                                 <LinearLayout
-                                    android:layout_width="0dp"
+                                    android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:layout_marginStart="14dp"
-                                    android:orientation="vertical">
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical">
+
+                                    <TextView
+                                        android:layout_width="44dp"
+                                        android:layout_height="44dp"
+                                        android:gravity="center"
+                                        android:text="💬"
+                                        android:textSize="22sp"
+                                        android:background="@drawable/bg_badge_rounded"
+                                        android:backgroundTint="#25D366" />
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:layout_marginStart="12dp"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="Cobrar por WhatsApp"
+                                            android:textColor="@color/text_primary"
+                                            android:textStyle="bold"
+                                            android:fontFamily="@font/sora"
+                                            android:textSize="16sp" />
+
+                                        <TextView
+                                            android:id="@+id/tvCashierWhatsAppSubtitle"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="2dp"
+                                            android:text="Toca para digitar monto y enviar datos con QR"
+                                            android:textColor="@color/text_secondary"
+                                            android:fontFamily="@font/outfit"
+                                            android:textSize="12.5sp" />
+                                    </LinearLayout>
 
                                     <TextView
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="Cobrar por WhatsApp"
-                                        android:textColor="@color/white"
+                                        android:text="Enviar ➔"
+                                        android:textSize="13sp"
                                         android:textStyle="bold"
-                                        android:fontFamily="@font/sora"
-                                        android:textSize="17sp" />
-
-                                    <TextView
-                                        android:id="@+id/tvCashierWhatsAppSubtitle"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:layout_marginTop="2dp"
-                                        android:text="Toca para digitar monto y enviar datos con QR"
-                                        android:textColor="#E0F2FE"
                                         android:fontFamily="@font/outfit"
-                                        android:textSize="12.5sp" />
+                                        android:textColor="#25D366" />
                                 </LinearLayout>
 
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Enviar ➔"
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnCashierOpenWhatsAppDialog"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="46dp"
+                                    android:layout_marginTop="12dp"
+                                    android:text="💬 Digitar Monto y Enviar por WhatsApp"
                                     android:textSize="13sp"
                                     android:textStyle="bold"
                                     android:fontFamily="@font/outfit"
-                                    android:textColor="@color/white" />
+                                    android:textColor="@color/white"
+                                    android:backgroundTint="#25D366"
+                                    app:cornerRadius="12dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp" />
+
                             </LinearLayout>
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnCashierOpenWhatsAppDialog"
-                                android:layout_width="match_parent"
-                                android:layout_height="48dp"
-                                android:layout_marginTop="14dp"
-                                android:text="💬 Digitar Monto y Enviar por WhatsApp"
-                                android:textSize="13sp"
-                                android:textStyle="bold"
-                                android:fontFamily="@font/outfit"
-                                android:textColor="#0F766E"
-                                android:backgroundTint="@color/white"
-                                app:cornerRadius="14dp" />
-
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
