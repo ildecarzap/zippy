@@ -20,9 +20,27 @@
 
         <!-- Componentes Globales -->
         <item name="bottomNavigationStyle">@style/Widget.Zeasy.BottomNavigationView</item>
+        <item name="bottomSheetDialogTheme">@style/Widget.Zeasy.BottomSheetDialog</item>
         <item name="materialButtonStyle">@style/Widget.Zeasy.Button.Primary</item>
         <item name="materialCardViewStyle">@style/Widget.Zeasy.Card</item>
         <item name="textInputStyle">@style/Widget.Zeasy.TextInputLayout</item>
+    </style>
+
+    <!-- BottomSheet Dialog Estandarizado (Misma altura, curvatura y comportamiento en toda la app) -->
+    <style name="Widget.Zeasy.BottomSheetDialog" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.Zeasy.BottomSheet</item>
+    </style>
+
+    <style name="Widget.Zeasy.BottomSheet" parent="Widget.Material3.BottomSheet">
+        <item name="shapeAppearance">@style/ShapeAppearance.Zeasy.BottomSheet</item>
+        <item name="backgroundTint">@color/surface</item>
+    </style>
+
+    <style name="ShapeAppearance.Zeasy.BottomSheet" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerSizeTopLeft">24dp</item>
+        <item name="cornerSizeTopRight">24dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
     </style>
 
     <!-- Barra de Navegación Inferior -->

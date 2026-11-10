@@ -3556,10 +3556,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAddIncomeDialog() {
-        val dialog = Dialog(this)
+        val dialog = BottomSheetDialog(this)
         val dialogBinding = DialogAddIncomeBinding.inflate(layoutInflater)
         dialog.setContentView(dialogBinding.root)
-        configureModalDialogForKeyboard(dialog)
+        configureBottomSheetForKeyboard(dialog)
 
         val profile = PreferencesHelper.getUserProfile(this)
         val countryProfile = PreferencesHelper.getCountryProfile(this)
@@ -3653,10 +3653,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAddExpenseDialog() {
-        val dialog = Dialog(this)
+        val dialog = BottomSheetDialog(this)
         val dialogBinding = DialogAddExpenseBinding.inflate(layoutInflater)
         dialog.setContentView(dialogBinding.root)
-        configureModalDialogForKeyboard(dialog)
+        configureBottomSheetForKeyboard(dialog)
 
         val countryProfile = PreferencesHelper.getCountryProfile(this)
         dialogBinding.tilExpenseAmount.hint = "Monto en ${countryProfile.localCurrencyDisplay}"
@@ -4045,22 +4045,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         refreshReportPreview()
-
-        dialogBinding.btnShareOptionWhatsApp.setOnClickListener {
-            dialog.dismiss()
-            val debtorsSummary = dbHelper.getDebtorsSummary()
-            val countryProfile = PreferencesHelper.getCountryProfile(this)
-            val fullTextReport = ReportHelper.generateDetailedTextReport(profile, currentFilteredTransactions, filterPeriodLabel, debtorsSummary, countryProfile)
-            WhatsAppHelper.sendViaWhatsApp(this, "", fullTextReport)
-        }
-
-        dialogBinding.btnShareOptionEmail.setOnClickListener {
-            dialog.dismiss()
-            val debtorsSummary = dbHelper.getDebtorsSummary()
-            val countryProfile = PreferencesHelper.getCountryProfile(this)
-            val fullTextReport = ReportHelper.generateDetailedTextReport(profile, currentFilteredTransactions, filterPeriodLabel, debtorsSummary, countryProfile)
-            ReportHelper.shareViaEmail(this, profile, fullTextReport, filterPeriodLabel)
-        }
 
         val isPro = PlanCapabilityManager.canExportPdf(this)
         if (!isPro) {

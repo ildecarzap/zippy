@@ -154,32 +154,6 @@
             android:textColor="@color/text_primary"
             android:textSize="14sp" />
 
-        <!-- Opción 1: WhatsApp -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnShareOptionWhatsApp"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="8dp"
-            android:text="💬 Enviar por WhatsApp"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            app:cornerRadius="12dp" />
-
-        <!-- Opción 2: Correo -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnShareOptionEmail"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="8dp"
-            android:text="✉️ Enviar por Correo Electrónico"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            app:cornerRadius="12dp" />
-
         <!-- Opción Bloqueada en Plan Básico: Exportar reporte (PDF y Excel) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnShareOptionsProLocked"

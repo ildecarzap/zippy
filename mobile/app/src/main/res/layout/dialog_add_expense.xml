@@ -17,13 +17,22 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingHorizontal="22dp"
-            android:paddingTop="20dp"
+            android:paddingTop="18dp"
             android:paddingBottom="12dp">
+
+            <!-- Indicador de arrastre superior (Bottom Sheet Handle) -->
+            <View
+                android:layout_width="44dp"
+                android:layout_height="5dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_badge_rounded"
+                android:backgroundTint="@color/border" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Registrar Gasto del Día"
+                android:text="💸 Registrar Gasto del Día"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary"
                 android:textSize="20sp" />
