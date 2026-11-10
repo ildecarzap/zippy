@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Brand Primary en Modo Oscuro (Cobalto accesible #3B82F6 / #1C5ADD) -->
+    <!-- Brand Primary en Modo Oscuro (Cobalto accesible #3B82F6) -->
     <color name="brand_primary">#3B82F6</color>
     <color name="brand_primary_hover">#2563EB</color>
     <color name="brand_primary_subtle">#1E293B</color>
 
-    <!-- Compatibilidad con componentes existentes -->
-    <color name="primary">#090D16</color>
-    <color name="primary_light">#111827</color>
+    <!-- Header & App Bar Surface (Deep Gray #111827 en Modo Oscuro) -->
+    <color name="primary">#111827</color>
+    <color name="primary_light">#1F2937</color>
     <color name="accent_cyan">#3B82F6</color>
     <color name="accent_cyan_light">#60A5FA</color>
     <color name="accent_cyan_bg">#1E293B</color>
@@ -36,15 +36,15 @@
     <color name="border_strong">#334155</color>
     <color name="card_background">#111827</color>
 
-    <!-- Jerarquía Tipográfica (30%) -->
-    <color name="text_primary">#F8FAFC</color>
-    <color name="text_secondary">#94A3B8</color>
-    <color name="text_muted">#64748B</color>
+    <!-- Jerarquía Tipográfica de Alto Contraste en Modo Oscuro -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#CBD5E1</color>
+    <color name="text_muted">#94A3B8</color>
     <color name="white">#FFFFFF</color>
 
     <!-- Teclado Numérico -->
     <color name="keypad_bg">#1F2937</color>
-    <color name="keypad_text">#F8FAFC</color>
+    <color name="keypad_text">#FFFFFF</color>
 
     <!-- Colores Minimalistas Fintech (Modo Oscuro) -->
     <color name="ubii_cyan">#3B82F6</color>
@@ -59,11 +59,11 @@
     <color name="slate_200">#1E293B</color>
     <color name="slate_500">#94A3B8</color>
     <color name="slate_700">#CBD5E1</color>
-    <color name="slate_900">#F8FAFC</color>
+    <color name="slate_900">#FFFFFF</color>
 
     <!-- Navegación -->
     <color name="nav_active">#3B82F6</color>
-    <color name="nav_inactive">#64748B</color>
+    <color name="nav_inactive">#94A3B8</color>
 
     <!-- Billeteras Digitales y Cripto -->
     <color name="binance_yellow">#FBBF24</color>

@@ -56,6 +56,17 @@ class DebtorsAdapter(
             val localSym = countryProfile.localCurrencySymbol
 
             binding.tvDebtorName.text = debtor.name
+            val initial = if (debtor.name.isNotBlank()) debtor.name.first().uppercase() else "👤"
+            binding.tvDebtorAvatar.text = initial
+            val pastelTints = intArrayOf(
+                Color.parseColor("#EFF6FF"), // Pastel Blue
+                Color.parseColor("#ECFDF5"), // Pastel Mint
+                Color.parseColor("#FFF7ED"), // Pastel Orange
+                Color.parseColor("#FDF2F8"), // Pastel Pink
+                Color.parseColor("#F5F3FF")  // Pastel Violet
+            )
+            val tintIndex = (debtor.name.hashCode().let { if (it < 0) -it else it }) % pastelTints.size
+            binding.tvDebtorAvatar.backgroundTintList = ColorStateList.valueOf(pastelTints[tintIndex])
 
             val phoneText = if (!debtor.phone.isNullOrBlank()) debtor.phone else "Sin WhatsApp"
             val idText = if (!debtor.identification.isNullOrBlank()) " • ${debtor.identification}" else ""

@@ -668,15 +668,15 @@ class MainActivity : AppCompatActivity() {
         val isActive = PreferencesHelper.isShiftActive(this)
         PocketNotificationListenerService.updateForegroundShiftState(this)
         if (isActive) {
-            binding.btnHeaderShiftToggle.text = "🟢 En Jornada"
-            binding.btnHeaderShiftToggle.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#00875A"))
-            binding.btnHeaderShiftToggle.strokeColor = android.content.res.ColorStateList.valueOf(Color.parseColor("#34D399"))
-            binding.btnHeaderShiftToggle.setTextColor(Color.WHITE)
+            binding.btnHeaderShiftToggle.text = "● En Jornada"
+            binding.btnHeaderShiftToggle.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent_green_bg))
+            binding.btnHeaderShiftToggle.strokeColor = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent_green))
+            binding.btnHeaderShiftToggle.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
         } else {
-            binding.btnHeaderShiftToggle.text = "⏸️ Iniciar Jornada"
-            binding.btnHeaderShiftToggle.backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#DE350B"))
-            binding.btnHeaderShiftToggle.strokeColor = android.content.res.ColorStateList.valueOf(Color.parseColor("#FCA5A5"))
-            binding.btnHeaderShiftToggle.setTextColor(Color.WHITE)
+            binding.btnHeaderShiftToggle.text = "○ Iniciar Jornada"
+            binding.btnHeaderShiftToggle.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.expense_red_bg))
+            binding.btnHeaderShiftToggle.strokeColor = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.expense_red))
+            binding.btnHeaderShiftToggle.setTextColor(ContextCompat.getColor(this, R.color.expense_red))
         }
     }
 
@@ -1336,6 +1336,11 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_debtors -> binding.rvDebtors.smoothScrollToPosition(0)
                 R.id.nav_settings -> binding.scrollSettingsContent.smoothScrollTo(0, 0)
             }
+        }
+
+        binding.btnFloatingCenterAction.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            binding.bottomNavigation.selectedItemId = R.id.nav_cashier
         }
     }
 
@@ -2307,6 +2312,11 @@ class MainActivity : AppCompatActivity() {
             showAddIncomeDialog()
         }
 
+        binding.btnQuickCashier.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            binding.bottomNavigation.selectedItemId = R.id.nav_cashier
+        }
+
         binding.btnAddExpense.setOnClickListener {
             showAddExpenseDialog()
         }
@@ -2440,6 +2450,17 @@ class MainActivity : AppCompatActivity() {
         } else {
             "${countryProfile.flagEmoji} ${countryProfile.localCurrencyCode}"
         }
+
+        // Gráfico circular Soft UI de Libreta (recuperación de fiados vs saldo a favor)
+        val totalActive = summary.totalDebtUsd + summary.totalCreditUsd
+        val debtorProgress = if (summary.totalDebtUsd <= 0.0) {
+            100f
+        } else if (totalActive > 0) {
+            ((summary.totalCreditUsd / totalActive) * 100).toFloat().coerceIn(15f, 95f)
+        } else {
+            100f
+        }
+        binding.donutDebtorsProgress.setProgress(debtorProgress)
 
         filterAndDisplayDebtors()
     }
@@ -3450,6 +3471,28 @@ class MainActivity : AppCompatActivity() {
             "${countryProfile.flagEmoji} ${countryProfile.displayName} (${countryProfile.localCurrencyCode})"
         }
         updateCashierHeaderSummary()
+
+        // Actualizar Widget Donut Progress Ring del Hero Card (Estilo Analytics)
+        val progressVal: Float = if (income > 0.0) {
+            val total = income + expense
+            if (total > 0.0) ((income / total) * 100.0).coerceIn(10.0, 100.0).toFloat() else 80f
+        } else {
+            0f
+        }
+        binding.donutJornadaProgress.setProgress(progressVal)
+
+        // Alimentar Gráfico Analítico de Actividad de Cobros (Últimos 7 Días)
+        val dailyVals = FloatArray(7)
+        val dayLabels = arrayOf("L", "M", "M", "J", "V", "S", "D")
+        for (i in 6 downTo 0) {
+            val c = Calendar.getInstance().apply {
+                add(Calendar.DAY_OF_YEAR, -i)
+            }
+            val (dStart, dEnd) = getTimeRangeForDay(c)
+            val dSum = dbHelper.getTodaySummary(dStart, dEnd)
+            dailyVals[6 - i] = dSum.first.toFloat()
+        }
+        binding.barChartJornadaAnalytics.setData(dailyVals, dayLabels)
 
         // Optimización de rendimiento: Si la pestaña de Historial no está visible, no re-inflar toda la lista
         if (binding.viewLedger.visibility != View.VISIBLE) {

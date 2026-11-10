@@ -5,16 +5,16 @@
     <color name="brand_primary_hover">#1648B0</color>
     <color name="brand_primary_subtle">#EFF6FF</color>
 
-    <!-- Compatibilidad con componentes existentes -->
-    <color name="primary">#0F172A</color>
-    <color name="primary_light">#1E293B</color>
+    <!-- Header & App Bar Surface (Blanco puro en Modo Claro) -->
+    <color name="primary">#FFFFFF</color>
+    <color name="primary_light">#F8FAFC</color>
     <color name="accent_cyan">#1C5ADD</color>
     <color name="accent_cyan_light">#3B82F6</color>
     <color name="accent_cyan_bg">#EFF6FF</color>
     <color name="accent_blue">#1C5ADD</color>
     <color name="accent_blue_bg">#EFF6FF</color>
 
-    <!-- Éxito / Ingresos (Esmeralda Financiero Sutil) -->
+    <!-- Éxito / Ingresos (Esmeralda Financiero de Alto Contraste) -->
     <color name="accent_green">#059669</color>
     <color name="accent_green_dark">#047857</color>
     <color name="accent_green_bg">#ECFDF5</color>
@@ -36,22 +36,22 @@
     <color name="border_strong">#CBD5E1</color>
     <color name="card_background">#FFFFFF</color>
 
-    <!-- Jerarquía Tipográfica (30%) -->
-    <color name="text_primary">#0F172A</color>
-    <color name="text_secondary">#475569</color>
-    <color name="text_muted">#94A3B8</color>
+    <!-- Jerarquía Tipográfica de Alto Contraste (30% - WCAG AAA) -->
+    <color name="text_primary">#0A0F1D</color>
+    <color name="text_secondary">#334155</color>
+    <color name="text_muted">#64748B</color>
     <color name="white">#FFFFFF</color>
 
     <!-- Teclado Numérico -->
     <color name="keypad_bg">#F1F5F9</color>
-    <color name="keypad_text">#0F172A</color>
+    <color name="keypad_text">#0A0F1D</color>
 
     <!-- Colores Minimalistas Fintech -->
     <color name="ubii_cyan">#1C5ADD</color>
     <color name="ubii_cyan_dark">#1648B0</color>
     <color name="ubii_cyan_bg">#EFF6FF</color>
-    <color name="whatsapp_green">#10B981</color>
-    <color name="whatsapp_green_dark">#059669</color>
+    <color name="whatsapp_green">#059669</color>
+    <color name="whatsapp_green_dark">#047857</color>
     <color name="whatsapp_bg">#ECFDF5</color>
     <color name="card_border_light">#E2E8F0</color>
     <color name="slate_50">#F8FAFC</color>
@@ -59,7 +59,7 @@
     <color name="slate_200">#E2E8F0</color>
     <color name="slate_500">#64748B</color>
     <color name="slate_700">#334155</color>
-    <color name="slate_900">#0F172A</color>
+    <color name="slate_900">#0A0F1D</color>
 
     <!-- Navegación -->
     <color name="nav_active">#1C5ADD</color>

@@ -3,23 +3,23 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="@drawable/bg_soft_gradient">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- Top Header Bar con Logo Oficial y Estado de Licencia -->
+        <!-- Top Header Bar con Logo Oficial y Estado de Licencia (Fondo Limpio y Alto Contraste) -->
         <LinearLayout
             android:id="@+id/layoutTopHeaderBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/primary"
+            android:background="@color/surface"
             android:orientation="horizontal"
             android:paddingHorizontal="20dp"
             android:paddingTop="36dp"
-            android:paddingBottom="16dp"
+            android:paddingBottom="14dp"
             android:gravity="center_vertical">
 
             <ImageView
@@ -36,40 +36,49 @@
                 android:orientation="vertical">
 
                 <TextView
+                    android:id="@+id/tvHeaderAppTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Zeasy"
                     android:textStyle="bold"
-                    android:textColor="@color/white"
-                    android:textSize="20sp" />
+                    android:fontFamily="@font/sora"
+                    android:textColor="@color/text_primary"
+                    android:textSize="21sp" />
 
                 <TextView
                     android:id="@+id/tvHeaderSubtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="v1.2.0 • Caja Inteligente de Cobros"
-                    android:textColor="@color/text_muted"
-                    android:textSize="12sp" />
+                    android:textColor="@color/text_secondary"
+                    android:fontFamily="@font/outfit"
+                    android:textSize="12.5sp" />
             </LinearLayout>
 
-            <!-- Botón de Estado de Jornada (Iniciar / Finalizar con confirmación) -->
+            <!-- Botón de Estado de Jornada (Píldora Fintech Refinada) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnHeaderShiftToggle"
                 android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:text="🟢 En Jornada"
+                android:layout_height="36dp"
+                android:text="● En Jornada"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:textColor="@color/white"
-                android:backgroundTint="#00875A"
-                app:cornerRadius="20dp"
+                android:fontFamily="@font/outfit"
+                android:textColor="@color/accent_green"
+                android:backgroundTint="@color/accent_green_bg"
+                app:cornerRadius="18dp"
                 android:paddingHorizontal="14dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                app:strokeWidth="1.5dp"
-                app:strokeColor="#34D399" />
+                app:strokeWidth="1.2dp"
+                app:strokeColor="@color/accent_green" />
 
         </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/border" />
 
         <!-- Banner de Advertencia si falta permiso de notificaciones -->
         <LinearLayout
@@ -114,7 +123,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:fillViewport="true"
-                android:background="@color/background">
+                android:background="@drawable/bg_soft_gradient">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -136,10 +145,10 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:layout_marginBottom="12dp"
-                        app:cardCornerRadius="18dp"
-                        app:cardElevation="1dp"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
                         app:strokeColor="@color/border"
-                        app:strokeWidth="1.5dp"
+                        app:strokeWidth="1dp"
                         app:cardBackgroundColor="@color/surface"
                         android:clickable="true"
                         android:focusable="true"
@@ -162,9 +171,9 @@
                                     android:layout_height="44dp"
                                     android:gravity="center"
                                     android:text="➕"
-                                    android:textSize="22sp"
+                                    android:textSize="20sp"
                                     android:background="@drawable/bg_badge_rounded"
-                                    android:backgroundTint="@color/ubii_cyan_bg" />
+                                    android:backgroundTint="@color/surface_variant" />
 
                                 <LinearLayout
                                     android:layout_width="0dp"
@@ -180,7 +189,8 @@
                                         android:text="Agregar nuevo método"
                                         android:textColor="@color/text_primary"
                                         android:textStyle="bold"
-                                        android:textSize="17sp" />
+                                        android:fontFamily="@font/sora"
+                                        android:textSize="16sp" />
 
                                     <TextView
                                         android:id="@+id/tvCashierAddBankSubtitle"
@@ -189,16 +199,18 @@
                                         android:layout_marginTop="2dp"
                                         android:text="Toca para configurar tu banco o billetera de cobro"
                                         android:textColor="@color/text_secondary"
-                                        android:textSize="12sp" />
+                                        android:fontFamily="@font/outfit"
+                                        android:textSize="12.5sp" />
                                 </LinearLayout>
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Ajustes ➔"
-                                    android:textSize="12sp"
+                                    android:textSize="13sp"
                                     android:textStyle="bold"
-                                    android:textColor="@color/ubii_cyan" />
+                                    android:fontFamily="@font/outfit"
+                                    android:textColor="@color/brand_primary" />
                             </LinearLayout>
 
                         </LinearLayout>
@@ -211,10 +223,10 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:layout_marginBottom="16dp"
-                        app:cardCornerRadius="18dp"
-                        app:cardElevation="1dp"
-                        app:strokeColor="@color/whatsapp_green"
-                        app:strokeWidth="1.5dp"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp"
                         app:cardBackgroundColor="@color/surface"
                         android:clickable="true"
                         android:focusable="true"
@@ -237,9 +249,9 @@
                                     android:layout_height="44dp"
                                     android:gravity="center"
                                     android:text="💬"
-                                    android:textSize="24sp"
+                                    android:textSize="22sp"
                                     android:background="@drawable/bg_badge_rounded"
-                                    android:backgroundTint="@color/whatsapp_bg" />
+                                    android:backgroundTint="@color/accent_green_bg" />
 
                                 <LinearLayout
                                     android:layout_width="0dp"
@@ -254,7 +266,8 @@
                                         android:text="Cobrar por WhatsApp"
                                         android:textColor="@color/text_primary"
                                         android:textStyle="bold"
-                                        android:textSize="17sp" />
+                                        android:fontFamily="@font/sora"
+                                        android:textSize="16sp" />
 
                                     <TextView
                                         android:id="@+id/tvCashierWhatsAppSubtitle"
@@ -263,16 +276,18 @@
                                         android:layout_marginTop="2dp"
                                         android:text="Toca para digitar monto y enviar datos con QR"
                                         android:textColor="@color/text_secondary"
-                                        android:textSize="12sp" />
+                                        android:fontFamily="@font/outfit"
+                                        android:textSize="12.5sp" />
                                 </LinearLayout>
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Enviar ➔"
-                                    android:textSize="12sp"
+                                    android:textSize="13sp"
                                     android:textStyle="bold"
-                                    android:textColor="@color/whatsapp_green_dark" />
+                                    android:fontFamily="@font/outfit"
+                                    android:textColor="@color/accent_green" />
                             </LinearLayout>
 
                             <com.google.android.material.button.MaterialButton
@@ -283,8 +298,9 @@
                                 android:text="💬 Digitar Monto y Enviar por WhatsApp"
                                 android:textSize="13sp"
                                 android:textStyle="bold"
+                                android:fontFamily="@font/outfit"
                                 android:textColor="@color/white"
-                                android:backgroundTint="@color/whatsapp_green"
+                                android:backgroundTint="@color/brand_primary"
                                 app:cornerRadius="12dp" />
 
                         </LinearLayout>
@@ -539,196 +555,396 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Tarjeta Principal de Ganancia Neta (Estilo Fintech Minimalista) -->
-                    <com.google.android.material.card.MaterialCardView
+                    <!-- Hero Widget de Balance con Donut Progress Ring (Estilo Analytics Modern Soft UI) -->
+                    <androidx.cardview.widget.CardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
+                        app:cardCornerRadius="24dp"
+                        app:cardElevation="4dp"
+                        app:cardBackgroundColor="@android:color/transparent">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_card_hero_jornada"
+                            android:orientation="vertical"
+                            android:padding="20dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <!-- Indicador Circular Donut Progress Ring -->
+                                <com.cobrix.pocket.ui.components.DonutProgressView
+                                    android:id="@+id/donutJornadaProgress"
+                                    android:layout_width="92dp"
+                                    android:layout_height="92dp" />
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="16dp"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Progreso del cobro diario"
+                                        android:textColor="#E0F2FE"
+                                        android:fontFamily="@font/outfit"
+                                        android:textStyle="bold"
+                                        android:textSize="12sp" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="Balance"
+                                        android:textColor="#BAE6FD"
+                                        android:fontFamily="@font/outfit"
+                                        android:textSize="11sp" />
+
+                                    <TextView
+                                        android:id="@+id/tvNetProfitVes"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="Bs. 0,00"
+                                        android:textColor="@color/white"
+                                        android:fontFamily="@font/sora"
+                                        android:textSize="26sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvNetProfitUsd"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="≈ $0.00 USD"
+                                        android:textColor="#7DD3FC"
+                                        android:fontFamily="@font/sora"
+                                        android:textSize="13sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Píldoras de desglose sutiles dentro del Hero Widget -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="14dp"
+                                android:orientation="horizontal">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="32dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="6dp"
+                                    android:background="@drawable/bg_badge_rounded"
+                                    android:backgroundTint="#26FFFFFF"
+                                    android:gravity="center"
+                                    android:paddingHorizontal="10dp"
+                                    android:orientation="horizontal">
+
+                                    <TextView
+                                        android:id="@+id/tvIncomeCount"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="● Cobrado:"
+                                        android:textColor="#E0F2FE"
+                                        android:fontFamily="@font/outfit"
+                                        android:textSize="11.5sp" />
+
+                                    <TextView
+                                        android:id="@+id/tvTotalIncomeVes"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="4dp"
+                                        android:text="Bs. 0,00"
+                                        android:textColor="@color/white"
+                                        android:fontFamily="@font/sora"
+                                        android:textStyle="bold"
+                                        android:textSize="12sp" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="32dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="6dp"
+                                    android:background="@drawable/bg_badge_rounded"
+                                    android:backgroundTint="#26FFFFFF"
+                                    android:gravity="center"
+                                    android:paddingHorizontal="10dp"
+                                    android:orientation="horizontal">
+
+                                    <TextView
+                                        android:id="@+id/tvTotalExpenseVesLabel"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="● Gastos:"
+                                        android:textColor="#FEE2E2"
+                                        android:fontFamily="@font/outfit"
+                                        android:textSize="11.5sp" />
+
+                                    <TextView
+                                        android:id="@+id/tvTotalExpenseVes"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="4dp"
+                                        android:text="Bs. 0,00"
+                                        android:textColor="@color/white"
+                                        android:fontFamily="@font/sora"
+                                        android:textStyle="bold"
+                                        android:textSize="12sp" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                        </LinearLayout>
+                    </androidx.cardview.widget.CardView>
+
+                    <!-- Fila de 4 Acciones Rápidas (Squircles Estilo Soft UI: Azul, Celeste, Naranja, Rosa) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp">
+
+                        <!-- 1. Ingreso (Azul) -->
+                        <LinearLayout
+                            android:id="@+id/btnAddIncome"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="54dp"
+                                android:layout_height="54dp"
+                                android:background="@drawable/bg_squircle_blue"
+                                android:gravity="center"
+                                android:elevation="4dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="＋"
+                                    android:textColor="@color/white"
+                                    android:textSize="24sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Ingreso"
+                                android:textColor="@color/text_primary"
+                                android:fontFamily="@font/outfit"
+                                android:textStyle="bold"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- 2. Cobrar QR (Celeste) -->
+                        <LinearLayout
+                            android:id="@+id/btnQuickCashier"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="54dp"
+                                android:layout_height="54dp"
+                                android:background="@drawable/bg_squircle_cyan"
+                                android:gravity="center"
+                                android:elevation="4dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="📸"
+                                    android:textSize="22sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Cobrar"
+                                android:textColor="@color/text_primary"
+                                android:fontFamily="@font/outfit"
+                                android:textStyle="bold"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- 3. Gasto (Naranja) -->
+                        <LinearLayout
+                            android:id="@+id/btnAddExpense"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="54dp"
+                                android:layout_height="54dp"
+                                android:background="@drawable/bg_squircle_orange"
+                                android:gravity="center"
+                                android:elevation="4dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="—"
+                                    android:textColor="@color/white"
+                                    android:textSize="24sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Gasto"
+                                android:textColor="@color/text_primary"
+                                android:fontFamily="@font/outfit"
+                                android:textStyle="bold"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- 4. Voz (Rosa) -->
+                        <LinearLayout
+                            android:id="@+id/btnVoiceRecordMovement"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="54dp"
+                                android:layout_height="54dp"
+                                android:background="@drawable/bg_squircle_pink"
+                                android:gravity="center"
+                                android:elevation="4dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🎙️"
+                                    android:textSize="22sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Voz"
+                                android:textColor="@color/text_primary"
+                                android:fontFamily="@font/outfit"
+                                android:textStyle="bold"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Módulo Analítico: Título Últimos Movimientos + Reportes -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Últimos Movimientos"
+                            android:fontFamily="@font/sora"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"
+                            android:textSize="17sp" />
+
+                        <TextView
+                            android:id="@+id/btnShareSummary"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Reportes ➔"
+                            android:fontFamily="@font/outfit"
+                            android:textStyle="bold"
+                            android:textColor="@color/brand_primary"
+                            android:textSize="13sp"
+                            android:padding="6dp" />
+                    </LinearLayout>
+
+                    <!-- Tarjeta de Gráfico Analítico de Actividad de Cobros -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
                         app:cardCornerRadius="20dp"
-                        app:cardElevation="1dp"
-                        app:strokeColor="@color/border"
-                        app:strokeWidth="1.5dp"
+                        app:cardElevation="2dp"
                         app:cardBackgroundColor="@color/surface">
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="20dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="GANANCIA NETA DE HOY"
-                                android:textColor="@color/text_secondary"
-                                android:textStyle="bold"
-                                android:textSize="13sp" />
-
-                            <TextView
-                                android:id="@+id/tvNetProfitVes"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="Bs. 0,00"
-                                android:textColor="@color/text_primary"
-                                android:textSize="32sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/tvNetProfitUsd"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="≈ $0.00 USD"
-                                android:textColor="@color/ubii_cyan"
-                                android:textSize="15sp"
-                                android:textStyle="bold" />
-
-                            <View
-                                android:layout_width="match_parent"
-                                android:layout_height="1dp"
-                                android:layout_marginVertical="16dp"
-                                android:background="@color/border" />
+                            android:padding="16dp">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:orientation="horizontal">
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
 
-                                <LinearLayout
+                                <TextView
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:orientation="vertical">
+                                    android:text="Actividad de Cobros (7 Días)"
+                                    android:fontFamily="@font/outfit"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="12sp" />
 
-                                    <TextView
-                                        android:id="@+id/tvIncomeCount"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="🟢 Cobrado (0)"
-                                        android:textColor="@color/text_secondary"
-                                        android:textStyle="bold"
-                                        android:textSize="13sp" />
-
-                                    <TextView
-                                        android:id="@+id/tvTotalIncomeVes"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:layout_marginTop="2dp"
-                                        android:text="Bs. 0,00"
-                                        android:textColor="@color/income_green"
-                                        android:textStyle="bold"
-                                        android:textSize="18sp" />
-                                </LinearLayout>
-
-                                <LinearLayout
-                                    android:layout_width="0dp"
+                                <TextView
+                                    android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:orientation="vertical">
-
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="🔴 Gastos"
-                                        android:textColor="@color/text_secondary"
-                                        android:textStyle="bold"
-                                        android:textSize="13sp" />
-
-                                    <TextView
-                                        android:id="@+id/tvTotalExpenseVes"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:layout_marginTop="2dp"
-                                        android:text="Bs. 0,00"
-                                        android:textColor="@color/expense_red"
-                                        android:textStyle="bold"
-                                        android:textSize="18sp" />
-                                </LinearLayout>
+                                    android:text="● Tendencia"
+                                    android:fontFamily="@font/outfit"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/brand_primary"
+                                    android:textSize="11sp" />
                             </LinearLayout>
 
+                            <com.cobrix.pocket.ui.components.MiniAnalyticsBarView
+                                android:id="@+id/barChartJornadaAnalytics"
+                                android:layout_width="match_parent"
+                                android:layout_height="75dp"
+                                android:layout_marginTop="10dp" />
                         </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <!-- Botones Rápidos de Gestión (Ingreso, Gasto, Reportes) -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="14dp">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnAddIncome"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="4dp"
-                            android:text="+ Ingreso"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            android:singleLine="true"
-                            android:maxLines="1"
-                            android:ellipsize="end"
-                            android:paddingHorizontal="6dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:cornerRadius="12dp"
-                            android:backgroundTint="@color/accent_green_bg"
-                            android:textColor="@color/accent_green" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnAddExpense"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:layout_weight="1"
-                            android:layout_marginHorizontal="4dp"
-                            android:text="+ Gasto"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            android:singleLine="true"
-                            android:maxLines="1"
-                            android:ellipsize="end"
-                            android:paddingHorizontal="6dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:cornerRadius="12dp"
-                            android:backgroundTint="@color/expense_red_bg"
-                            android:textColor="@color/expense_red" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnShareSummary"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:layout_weight="1"
-                            android:layout_marginStart="4dp"
-                            android:text="📤 Reportes"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            android:singleLine="true"
-                            android:maxLines="1"
-                            android:ellipsize="end"
-                            android:paddingHorizontal="6dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:cornerRadius="12dp"
-                            android:backgroundTint="@color/accent_blue_bg"
-                            android:textColor="@color/accent_blue" />
-                    </LinearLayout>
-
-                    <!-- Botón Registro por Voz en Jornada -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnVoiceRecordMovement"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:layout_marginTop="10dp"
-                        android:text="🎙️ Cargar Movimiento por Voz"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        app:strokeColor="@color/accent_cyan"
-                        app:strokeWidth="1.5dp"
-                        android:textColor="@color/accent_cyan"
-                        app:cornerRadius="12dp" />
+                    </androidx.cardview.widget.CardView>
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -821,14 +1037,13 @@
                 android:background="@color/background"
                 android:visibility="gone">
 
-                <!-- ENCABEZADO SUPERIOR FIJO RESUMEN DE LIBRETA -->
+                <!-- ENCABEZADO SUPERIOR FIJO RESUMEN DE LIBRETA (Diseño Limpio y Alto Contraste) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="16dp"
-                    android:background="@color/surface"
-                    android:elevation="3dp">
+                    android:background="@color/surface">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -842,6 +1057,7 @@
                             android:layout_weight="1"
                             android:text="📒 Libreta de Clientes"
                             android:textStyle="bold"
+                            android:fontFamily="@font/sora"
                             android:textColor="@color/text_primary"
                             android:textSize="20sp" />
 
@@ -850,116 +1066,133 @@
                             android:layout_width="wrap_content"
                             android:layout_height="38dp"
                             android:text="+ Anotar"
-                            android:textSize="12sp"
+                            android:textSize="12.5sp"
                             android:textStyle="bold"
-                            app:cornerRadius="19dp"
-                            android:backgroundTint="@color/accent_cyan"
+                            android:fontFamily="@font/outfit"
+                            app:cornerRadius="12dp"
+                            android:backgroundTint="@color/brand_primary"
                             android:textColor="@color/white"
+                            app:elevation="0dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp" />
                     </LinearLayout>
 
-                    <!-- Tarjetas de Resumen: En la calle vs Saldos a favor -->
-                    <LinearLayout
+                    <!-- Modern Soft UI Hero Card: Libreta de Clientes (Referencia Mockup Screen 3) -->
+                    <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="12dp">
+                        android:layout_marginTop="12dp"
+                        app:cardCornerRadius="24dp"
+                        app:cardElevation="3dp"
+                        app:strokeWidth="0dp"
+                        app:cardBackgroundColor="@color/surface">
 
-                        <!-- Tarjeta Fiados Por Cobrar -->
-                        <com.google.android.material.card.MaterialCardView
-                            android:layout_width="0dp"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            app:cardCornerRadius="14dp"
-                            app:cardElevation="0dp"
-                            app:strokeWidth="1.5dp"
-                            app:strokeColor="@color/border"
-                            app:cardBackgroundColor="@color/surface_variant">
+                            android:orientation="vertical"
+                            android:padding="16dp">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:padding="12dp">
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
 
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="🔴 Por Cobrar (Fiados)"
-                                    android:textColor="@color/text_secondary"
-                                    android:textStyle="bold"
-                                    android:textSize="12sp" />
+                                <!-- Gráfico Circular de Cartera Libreta -->
+                                <com.cobrix.pocket.ui.components.DonutProgressView
+                                    android:id="@+id/donutDebtorsProgress"
+                                    android:layout_width="90dp"
+                                    android:layout_height="90dp"
+                                    android:layout_marginEnd="16dp" />
 
-                                <TextView
-                                    android:id="@+id/tvDebtorsTotalStreetUsd"
-                                    android:layout_width="wrap_content"
+                                <LinearLayout
+                                    android:layout_width="0dp"
                                     android:layout_height="wrap_content"
-                                    android:text="$ 0.00"
-                                    android:textStyle="bold"
-                                    android:textColor="@color/expense_red"
-                                    android:textSize="18sp"
-                                    android:layout_marginTop="4dp" />
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
 
-                                <TextView
-                                    android:id="@+id/tvDebtorsTotalStreetVes"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="≈ Bs. 0,00"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="11.5sp"
-                                    android:layout_marginTop="2dp" />
+                                    <!-- Fiados Por Cobrar -->
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="● Total Fiado (Por Cobrar)"
+                                            android:textColor="@color/expense_red"
+                                            android:fontFamily="@font/outfit"
+                                            android:textStyle="bold"
+                                            android:textSize="11.5sp" />
+
+                                        <TextView
+                                            android:id="@+id/tvDebtorsTotalStreetUsd"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="$ 0.00"
+                                            android:textStyle="bold"
+                                            android:fontFamily="@font/sora"
+                                            android:textColor="@color/text_primary"
+                                            android:textSize="18sp"
+                                            android:layout_marginTop="2dp" />
+
+                                        <TextView
+                                            android:id="@+id/tvDebtorsTotalStreetVes"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="≈ Bs. 0,00"
+                                            android:textColor="@color/text_secondary"
+                                            android:fontFamily="@font/outfit"
+                                            android:textSize="11.5sp" />
+                                    </LinearLayout>
+
+                                    <View
+                                        android:layout_width="match_parent"
+                                        android:layout_height="1dp"
+                                        android:background="@color/border"
+                                        android:layout_marginVertical="6dp" />
+
+                                    <!-- Saldos a Favor / Cobrado -->
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="● Saldos a Favor / Cobrado"
+                                            android:textColor="@color/income_green"
+                                            android:fontFamily="@font/outfit"
+                                            android:textStyle="bold"
+                                            android:textSize="11.5sp" />
+
+                                        <TextView
+                                            android:id="@+id/tvDebtorsTotalCreditUsd"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="$ 0.00"
+                                            android:textStyle="bold"
+                                            android:fontFamily="@font/sora"
+                                            android:textColor="@color/text_primary"
+                                            android:textSize="18sp"
+                                            android:layout_marginTop="2dp" />
+
+                                        <TextView
+                                            android:id="@+id/tvDebtorsTotalCreditVes"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="≈ Bs. 0,00"
+                                            android:textColor="@color/text_secondary"
+                                            android:fontFamily="@font/outfit"
+                                            android:textSize="11.5sp" />
+                                    </LinearLayout>
+                                </LinearLayout>
                             </LinearLayout>
-                        </com.google.android.material.card.MaterialCardView>
-
-                        <!-- Tarjeta Saldos a Favor -->
-                        <com.google.android.material.card.MaterialCardView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="6dp"
-                            app:cardCornerRadius="14dp"
-                            app:cardElevation="0dp"
-                            app:strokeWidth="1.5dp"
-                            app:strokeColor="@color/border"
-                            app:cardBackgroundColor="@color/surface_variant">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:padding="12dp">
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="🟢 Saldos a Favor"
-                                    android:textColor="@color/text_secondary"
-                                    android:textStyle="bold"
-                                    android:textSize="12sp" />
-
-                                <TextView
-                                    android:id="@+id/tvDebtorsTotalCreditUsd"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="$ 0.00"
-                                    android:textStyle="bold"
-                                    android:textColor="@color/income_green"
-                                    android:textSize="18sp"
-                                    android:layout_marginTop="4dp" />
-
-                                <TextView
-                                    android:id="@+id/tvDebtorsTotalCreditVes"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="≈ Bs. 0,00"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="11.5sp"
-                                    android:layout_marginTop="2dp" />
-                            </LinearLayout>
-                        </com.google.android.material.card.MaterialCardView>
-                    </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
 
                     <!-- Barra de Búsqueda de Clientes -->
                     <com.google.android.material.textfield.TextInputLayout
@@ -972,6 +1205,7 @@
                         app:boxCornerRadiusBottomStart="10dp"
                         app:boxCornerRadiusBottomEnd="10dp"
                         app:boxStrokeWidth="1dp"
+                        app:boxStrokeColor="@color/brand_primary"
                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -979,7 +1213,10 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="textPersonName"
-                            android:textSize="13sp"
+                            android:textSize="13.5sp"
+                            android:fontFamily="@font/outfit"
+                            android:textColor="@color/text_primary"
+                            android:textColorHint="@color/text_muted"
                             android:paddingVertical="10dp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -1065,6 +1302,7 @@
                             android:layout_marginTop="12dp"
                             android:text="Tu libreta está al día"
                             android:textStyle="bold"
+                            android:fontFamily="@font/sora"
                             android:textColor="@color/text_primary"
                             android:textSize="18sp" />
 
@@ -1075,7 +1313,9 @@
                             android:gravity="center"
                             android:text="No tienes cuentas fiadas ni saldos pendientes. Presiona '+ Anotar' para registrar un nuevo cliente o cuenta corriente."
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:fontFamily="@font/outfit"
+                            android:textSize="13.5sp"
+                            android:lineSpacingExtra="3dp" />
                     </LinearLayout>
                 </FrameLayout>
             </LinearLayout>
@@ -1099,8 +1339,7 @@
                     android:paddingEnd="16dp"
                     android:paddingTop="12dp"
                     android:paddingBottom="12dp"
-                    android:background="@color/surface"
-                    android:elevation="4dp">
+                    android:background="@color/surface">
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -1113,6 +1352,7 @@
                             android:layout_height="wrap_content"
                             android:text="⚙️ Configuración"
                             android:textStyle="bold"
+                            android:fontFamily="@font/sora"
                             android:textColor="@color/text_primary"
                             android:textSize="18sp" />
 
@@ -1123,7 +1363,8 @@
                             android:layout_marginTop="2dp"
                             android:text="Datos de cobro y seguridad"
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
+                            android:fontFamily="@font/outfit"
+                            android:textSize="12.5sp" />
                     </LinearLayout>
 
                     <com.google.android.material.button.MaterialButton
@@ -1133,9 +1374,11 @@
                         android:text="💾 Guardar"
                         android:textSize="12.5sp"
                         android:textStyle="bold"
+                        android:fontFamily="@font/outfit"
                         app:cornerRadius="10dp"
+                        app:elevation="0dp"
                         android:visibility="gone"
-                        android:backgroundTint="@color/accent_cyan"
+                        android:backgroundTint="@color/brand_primary"
                         android:textColor="@color/white" />
                 </LinearLayout>
 
@@ -2800,13 +3043,51 @@
 
         </FrameLayout>
 
-        <!-- Bottom Navigation -->
-        <com.google.android.material.bottomnavigation.BottomNavigationView
-            android:id="@+id/bottomNavigation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:menu="@menu/bottom_nav_menu" />
-
     </LinearLayout>
+
+    <!-- Contenedor Flotante de Barra de Navegación (Floating Soft Dock Estilo Referencia) -->
+    <FrameLayout
+        android:id="@+id/layoutFloatingBottomNavContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="12dp">
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="62dp"
+            android:layout_gravity="bottom"
+            app:cardCornerRadius="31dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="@color/surface">
+
+            <com.google.android.material.bottomnavigation.BottomNavigationView
+                android:id="@+id/bottomNavigation"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                app:elevation="0dp"
+                app:labelVisibilityMode="unlabeled"
+                app:itemIconTint="@color/nav_selector"
+                app:itemTextColor="@color/nav_selector"
+                app:itemRippleColor="@color/brand_primary_subtle"
+                app:menu="@menu/bottom_nav_menu" />
+        </androidx.cardview.widget.CardView>
+
+        <!-- Botón Central Protagónico Flotante (Floating Center Action: Cobro Rápido / QR) -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btnFloatingCenterAction"
+            android:layout_width="54dp"
+            android:layout_height="54dp"
+            android:layout_gravity="center_horizontal|bottom"
+            android:layout_marginBottom="10dp"
+            app:backgroundTint="#0F766E"
+            app:tint="@color/white"
+            app:fabCustomSize="54dp"
+            app:elevation="10dp"
+            android:contentDescription="Acción rápida de cobro"
+            app:srcCompat="@drawable/ic_cashier" />
+    </FrameLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
