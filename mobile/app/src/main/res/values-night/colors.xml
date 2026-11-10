@@ -1,67 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Paleta inspirada en el logo Zeasy (Modo Oscuro Deep Teal Petrol #00212B) -->
-    <color name="primary">#001A23</color>
-    <color name="primary_light">#002E3D</color>
-    <color name="accent_cyan">#00B4D8</color>
-    <color name="accent_cyan_light">#48CAE4</color>
-    <color name="accent_cyan_bg">#003B4D</color>
-    <color name="accent_blue">#38BDF8</color>
-    <color name="accent_blue_bg">#003447</color>
+    <!-- Brand Primary en Modo Oscuro (Cobalto accesible #3B82F6 / #1C5ADD) -->
+    <color name="brand_primary">#3B82F6</color>
+    <color name="brand_primary_hover">#2563EB</color>
+    <color name="brand_primary_subtle">#1E293B</color>
 
-    <!-- Éxito / Ingresos (Esmeralda Neón) -->
-    <color name="accent_green">#00D084</color>
-    <color name="accent_green_dark">#00A86B</color>
-    <color name="accent_green_bg">#053322</color>
-    <color name="income_green">#00D084</color>
-    <color name="income_green_bg">#053322</color>
+    <!-- Compatibilidad con componentes existentes -->
+    <color name="primary">#090D16</color>
+    <color name="primary_light">#111827</color>
+    <color name="accent_cyan">#3B82F6</color>
+    <color name="accent_cyan_light">#60A5FA</color>
+    <color name="accent_cyan_bg">#1E293B</color>
+    <color name="accent_blue">#3B82F6</color>
+    <color name="accent_blue_bg">#1E293B</color>
+
+    <!-- Éxito / Ingresos (Esmeralda Neón Controlado) -->
+    <color name="accent_green">#10B981</color>
+    <color name="accent_green_dark">#059669</color>
+    <color name="accent_green_bg">#064E3B</color>
+    <color name="income_green">#10B981</color>
+    <color name="income_green_bg">#064E3B</color>
 
     <!-- Gastos & Alertas -->
-    <color name="expense_red">#FF6B6B</color>
-    <color name="expense_red_bg">#421212</color>
-    <color name="warning_orange">#FFB020</color>
-    <color name="warning_orange_bg">#422805</color>
+    <color name="expense_red">#EF4444</color>
+    <color name="expense_red_bg">#450A0A</color>
+    <color name="warning_orange">#F59E0B</color>
+    <color name="warning_orange_bg">#451A03</color>
 
-    <!-- Superficies Modo Oscuro (Deep Teal Petrol #00212B) -->
-    <color name="background">#00212B</color>
-    <color name="surface">#002E3D</color>
-    <color name="surface_variant">#003B4D</color>
-    <color name="border">#004E66</color>
-    <color name="border_subtle">#003E52</color>
-    <color name="card_background">#002E3D</color>
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#B8DCE8</color>
-    <color name="text_muted">#7FA8B8</color>
+    <!-- Superficies Modo Oscuro (Deep Midnight #090D16 + Cards #111827 + Bordes 1dp #1E293B) -->
+    <color name="background">#090D16</color>
+    <color name="surface">#111827</color>
+    <color name="surface_variant">#1F2937</color>
+    <color name="border">#1E293B</color>
+    <color name="border_subtle">#1E293B</color>
+    <color name="border_strong">#334155</color>
+    <color name="card_background">#111827</color>
+
+    <!-- Jerarquía Tipográfica (30%) -->
+    <color name="text_primary">#F8FAFC</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="text_muted">#64748B</color>
     <color name="white">#FFFFFF</color>
 
     <!-- Teclado Numérico -->
-    <color name="keypad_bg">#00384A</color>
-    <color name="keypad_text">#FFFFFF</color>
+    <color name="keypad_bg">#1F2937</color>
+    <color name="keypad_text">#F8FAFC</color>
 
-    <!-- Colores Minimalistas Fintech (Adaptados a Modo Oscuro Deep Teal Petrol) -->
-    <color name="ubii_cyan">#00B4D8</color>
-    <color name="ubii_cyan_dark">#48CAE4</color>
-    <color name="ubii_cyan_bg">#003D52</color>
-    <color name="whatsapp_green">#25D366</color>
-    <color name="whatsapp_green_dark">#34E875</color>
-    <color name="whatsapp_bg">#053B23</color>
-    <color name="card_border_light">#004E66</color>
-    <color name="slate_50">#00212B</color>
-    <color name="slate_100">#00384A</color>
-    <color name="slate_200">#004E66</color>
-    <color name="slate_500">#B8DCE8</color>
-    <color name="slate_700">#E0F4FA</color>
-    <color name="slate_900">#FFFFFF</color>
+    <!-- Colores Minimalistas Fintech (Modo Oscuro) -->
+    <color name="ubii_cyan">#3B82F6</color>
+    <color name="ubii_cyan_dark">#2563EB</color>
+    <color name="ubii_cyan_bg">#1E293B</color>
+    <color name="whatsapp_green">#10B981</color>
+    <color name="whatsapp_green_dark">#059669</color>
+    <color name="whatsapp_bg">#064E3B</color>
+    <color name="card_border_light">#1E293B</color>
+    <color name="slate_50">#090D16</color>
+    <color name="slate_100">#111827</color>
+    <color name="slate_200">#1E293B</color>
+    <color name="slate_500">#94A3B8</color>
+    <color name="slate_700">#CBD5E1</color>
+    <color name="slate_900">#F8FAFC</color>
 
     <!-- Navegación -->
-    <color name="nav_active">#00B4D8</color>
-    <color name="nav_inactive">#7FA8B8</color>
+    <color name="nav_active">#3B82F6</color>
+    <color name="nav_inactive">#64748B</color>
 
-    <!-- Billeteras Digitales y Cripto (Adaptados a Modo Oscuro) -->
-    <color name="binance_yellow">#F0B90B</color>
-    <color name="binance_yellow_dark">#FCD535</color>
-    <color name="binance_black">#181A20</color>
-    <color name="binance_badge_bg">#332806</color>
-    <color name="zinli_magenta">#FF4D88</color>
-    <color name="zinli_magenta_bg">#380B1E</color>
+    <!-- Billeteras Digitales y Cripto -->
+    <color name="binance_yellow">#FBBF24</color>
+    <color name="binance_yellow_dark">#F59E0B</color>
+    <color name="binance_black">#0F172A</color>
+    <color name="binance_badge_bg">#451A03</color>
+    <color name="zinli_magenta">#FB7185</color>
+    <color name="zinli_magenta_bg">#4C0519</color>
 </resources>

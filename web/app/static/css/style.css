@@ -1,59 +1,64 @@
 /* ==========================================================================
-   ZEASY PASTEL DESIGN SYSTEM - Ciem Tech Solutions C.A
-   Paleta suave, elegante, sin saturaciones agresivas ni colores radioactivos.
+   ZEASY FINTECH DESIGN SYSTEM v2.0 - Ciem Tech Solutions C.A
+   Inspirado en interfaces financieras de clase mundial (Stripe, Mercury, Revolut).
+   Regla estricta 60-30-10: Canvas #F8FAFC, Cards #FFFFFF, Texto #0F172A, Acento Cobalto #1C5ADD.
    ========================================================================== */
 
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Sora:wght@500;600;700;800&display=swap');
+
 :root {
-  /* Tonos Principales Pasteles */
-  --color-bg: #F8FAF9;
-  --color-surface: #FFFFFF;
-  --color-surface-soft: #F1F5F4;
-  --color-surface-hover: #E8EFEF;
-  --color-border: #E2E8E7;
-  --color-border-subtle: #EDF2F1;
+  /* Marca: Cobalto Fintech #1C5ADD (10% de acento clave) */
+  --color-primary: #1C5ADD;
+  --color-primary-light: #2563EB;
+  --color-primary-dark: #1648B0;
+  --color-primary-soft: #EFF6FF;
+  --color-primary-border: #BFDBFE;
 
-  /* Colores de Marca Suaves */
-  --color-primary: #3D6B69;         /* Verde Salvia Oscuro / Elegante */
-  --color-primary-light: #4E8785;   /* Salvia Medio */
-  --color-primary-soft: #E6F0EE;    /* Fondo Pastel Menta Salvia */
-  --color-primary-border: #BCD9D6;
+  --color-accent: #1C5ADD;
+  --color-accent-soft: #EFF6FF;
 
-  --color-accent: #5B6B8A;          /* Azul Pizarra Suave */
-  --color-accent-soft: #EBF0F7;
+  /* Superficies y Fondos (60%) */
+  --color-bg: #F8FAFC;              /* Slate-50: Canvas ultra limpio */
+  --color-surface: #FFFFFF;         /* Blanco puro para tarjetas */
+  --color-surface-soft: #F1F5F9;    /* Slate-100 para contenedores secundarios */
+  --color-surface-hover: #F8FAFC;
+  --color-border: #E2E8F0;          /* Slate-200: Borde fino sutil de 1px */
+  --color-border-subtle: #E2E8F0;
 
-  /* Texto */
-  --color-text-main: #273434;
-  --color-text-muted: #647473;
-  --color-text-light: #8E9E9D;
+  /* Jerarquía de Texto (30%) */
+  --color-text-main: #0F172A;       /* Slate-900: Negro profundo de alto contraste */
+  --color-text-muted: #475569;      /* Slate-600: Textos secundarios accesibles */
+  --color-text-light: #94A3B8;      /* Slate-400: Micro-datos, fechas, horas */
 
-  /* Estados y Badges en Tonos Pasteles */
-  --badge-pro-bg: #E3F5EC;
-  --badge-pro-text: #246A48;
-  --badge-pro-border: #B7E8D0;
+  /* Estados y Badges */
+  --badge-pro-bg: #EFF6FF;
+  --badge-pro-text: #1C5ADD;
+  --badge-pro-border: #BFDBFE;
 
-  --badge-trial-bg: #EAEBFB;
-  --badge-trial-text: #4147A3;
-  --badge-trial-border: #CBD0FA;
+  --badge-trial-bg: #F1F5F9;
+  --badge-trial-text: #0F172A;
+  --badge-trial-border: #CBD5E1;
 
-  --badge-basic-bg: #EEF2F4;
-  --badge-basic-text: #4F616E;
-  --badge-basic-border: #D8E0E5;
+  --badge-basic-bg: #F8FAFC;
+  --badge-basic-text: #475569;
+  --badge-basic-border: #E2E8F0;
 
-  --badge-danger-bg: #FCECEE;
-  --badge-danger-text: #963842;
-  --badge-danger-border: #F7C6CB;
+  --badge-danger-bg: #FEF2F2;
+  --badge-danger-text: #DC2626;
+  --badge-danger-border: #FECACA;
 
-  /* Tipografía y Espaciado */
+  /* Tipografías Estandarizadas (Sora para Cifras/Display, Outfit para UI/Cuerpo) */
+  --font-display: 'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --radius-sm: 8px;
   --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
 
-  /* Sombras Atenuadas */
-  --shadow-sm: 0 1px 3px rgba(39, 52, 52, 0.04);
-  --shadow-md: 0 4px 12px rgba(39, 52, 52, 0.05);
-  --shadow-lg: 0 10px 25px rgba(39, 52, 52, 0.06);
+  /* Elevación Plana con Borde (Minimalismo sin sombras sucias) */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.05);
 }
 
 * {
@@ -68,6 +73,11 @@ body {
   color: var(--color-text-main);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .metric-value, .stat-value, .amount, .price, .balance-amount, .display-num {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 /* Enlaces */

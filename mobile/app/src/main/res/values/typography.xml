@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Jerarquía Tipográfica Zeasy (Sora para Cifras/Display, Outfit para Interfaz/Cuerpo) -->
+
+    <!-- Monto Principal (Display) -->
+    <style name="TextAppearance.Zeasy.DisplayAmount" parent="TextAppearance.Material3.DisplayMedium">
+        <item name="fontFamily">@font/sora</item>
+        <item name="android:fontFamily">@font/sora</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">32sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+
+    <!-- Sub-Monto o Monto Secundario (Display Small) -->
+    <style name="TextAppearance.Zeasy.AmountMedium" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="fontFamily">@font/sora</item>
+        <item name="android:fontFamily">@font/sora</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:letterSpacing">-0.01</item>
+    </style>
+
+    <!-- Títulos de Pantalla / Modales -->
+    <style name="TextAppearance.Zeasy.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
+        <item name="fontFamily">@font/sora</item>
+        <item name="android:fontFamily">@font/sora</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- Títulos de Sección / Encabezados de Tarjeta -->
+    <style name="TextAppearance.Zeasy.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="fontFamily">@font/sora</item>
+        <item name="android:fontFamily">@font/sora</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- Cuerpo Principal (Body Large) -->
+    <style name="TextAppearance.Zeasy.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
+        <item name="fontFamily">@font/outfit</item>
+        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- Texto Regular / Descripciones de Transacciones (Body Regular) -->
+    <style name="TextAppearance.Zeasy.BodyRegular" parent="TextAppearance.Material3.BodyMedium">
+        <item name="fontFamily">@font/outfit</item>
+        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:textSize">13.5sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <!-- Metadatos / Fechas / Referencias (Caption / Micro) -->
+    <style name="TextAppearance.Zeasy.Caption" parent="TextAppearance.Material3.BodySmall">
+        <item name="fontFamily">@font/outfit</item>
+        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/text_muted</item>
+    </style>
+
+    <!-- Etiquetas de Botones (Button Text) -->
+    <style name="TextAppearance.Zeasy.Button" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">@font/outfit</item>
+        <item name="android:fontFamily">@font/outfit</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:letterSpacing">0.01</item>
+    </style>
+</resources>
+

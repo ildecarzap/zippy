@@ -1,50 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Paleta inspirada en el logo Cobrix Pocket (Cyan Eléctrico & Deep Navy) -->
-    <color name="primary">#0A2540</color>
-    <color name="primary_light">#133E87</color>
-    <color name="accent_cyan">#0096C7</color>
-    <color name="accent_cyan_light">#00B4D8</color>
-    <color name="accent_cyan_bg">#E0F2FE</color>
-    <color name="accent_blue">#0052FF</color>
+    <!-- Brand Primary (Fintech Electric Cobalt #1C5ADD) -->
+    <color name="brand_primary">#1C5ADD</color>
+    <color name="brand_primary_hover">#1648B0</color>
+    <color name="brand_primary_subtle">#EFF6FF</color>
+
+    <!-- Compatibilidad con componentes existentes -->
+    <color name="primary">#0F172A</color>
+    <color name="primary_light">#1E293B</color>
+    <color name="accent_cyan">#1C5ADD</color>
+    <color name="accent_cyan_light">#3B82F6</color>
+    <color name="accent_cyan_bg">#EFF6FF</color>
+    <color name="accent_blue">#1C5ADD</color>
     <color name="accent_blue_bg">#EFF6FF</color>
 
-    <!-- Éxito / Ingresos (Esmeralda Financiero de Alto Contraste) -->
-    <color name="accent_green">#00875A</color>
-    <color name="accent_green_dark">#006644</color>
-    <color name="accent_green_bg">#E3FCEF</color>
-    <color name="income_green">#00875A</color>
-    <color name="income_green_bg">#E3FCEF</color>
+    <!-- Éxito / Ingresos (Esmeralda Financiero Sutil) -->
+    <color name="accent_green">#059669</color>
+    <color name="accent_green_dark">#047857</color>
+    <color name="accent_green_bg">#ECFDF5</color>
+    <color name="income_green">#059669</color>
+    <color name="income_green_bg">#ECFDF5</color>
 
     <!-- Gastos & Alertas -->
-    <color name="expense_red">#DE350B</color>
-    <color name="expense_red_bg">#FFEBE6</color>
-    <color name="warning_orange">#FF8B00</color>
-    <color name="warning_orange_bg">#FFFAE6</color>
+    <color name="expense_red">#DC2626</color>
+    <color name="expense_red_bg">#FEF2F2</color>
+    <color name="warning_orange">#D97706</color>
+    <color name="warning_orange_bg">#FFFBEB</color>
 
-    <!-- Superficies Modo Claro (Alto Contraste) -->
-    <color name="background">#F4F8FC</color>
+    <!-- Superficies Modo Claro (Regla 60-30-10: Canvas #F8FAFC + Cards #FFFFFF + Bordes 1dp #E2E8F0) -->
+    <color name="background">#F8FAFC</color>
     <color name="surface">#FFFFFF</color>
-    <color name="surface_variant">#EBF2FA</color>
-    <color name="border">#CFE0F5</color>
-    <color name="border_subtle">#CFE0F5</color>
+    <color name="surface_variant">#F1F5F9</color>
+    <color name="border">#E2E8F0</color>
+    <color name="border_subtle">#E2E8F0</color>
+    <color name="border_strong">#CBD5E1</color>
     <color name="card_background">#FFFFFF</color>
-    <color name="text_primary">#0A192F</color>
-    <color name="text_secondary">#1E293B</color>
-    <color name="text_muted">#334155</color>
+
+    <!-- Jerarquía Tipográfica (30%) -->
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#475569</color>
+    <color name="text_muted">#94A3B8</color>
     <color name="white">#FFFFFF</color>
 
     <!-- Teclado Numérico -->
-    <color name="keypad_bg">#E2EBF6</color>
-    <color name="keypad_text">#0A192F</color>
+    <color name="keypad_bg">#F1F5F9</color>
+    <color name="keypad_text">#0F172A</color>
 
-    <!-- Colores Minimalistas Fintech (Inspirados en Ubii App & Cobros Rápidos) -->
-    <color name="ubii_cyan">#00B2FE</color>
-    <color name="ubii_cyan_dark">#0096C7</color>
-    <color name="ubii_cyan_bg">#E0F7FE</color>
-    <color name="whatsapp_green">#25D366</color>
-    <color name="whatsapp_green_dark">#128C7E</color>
-    <color name="whatsapp_bg">#F0FDF4</color>
+    <!-- Colores Minimalistas Fintech -->
+    <color name="ubii_cyan">#1C5ADD</color>
+    <color name="ubii_cyan_dark">#1648B0</color>
+    <color name="ubii_cyan_bg">#EFF6FF</color>
+    <color name="whatsapp_green">#10B981</color>
+    <color name="whatsapp_green_dark">#059669</color>
+    <color name="whatsapp_bg">#ECFDF5</color>
     <color name="card_border_light">#E2E8F0</color>
     <color name="slate_50">#F8FAFC</color>
     <color name="slate_100">#F1F5F9</color>
@@ -54,14 +62,14 @@
     <color name="slate_900">#0F172A</color>
 
     <!-- Navegación -->
-    <color name="nav_active">#00B2FE</color>
-    <color name="nav_inactive">#627D98</color>
+    <color name="nav_active">#1C5ADD</color>
+    <color name="nav_inactive">#64748B</color>
 
-    <!-- Billeteras Digitales y Cripto (Exclusivo Plan PRO) -->
-    <color name="binance_yellow">#F0B90B</color>
-    <color name="binance_yellow_dark">#DDA600</color>
-    <color name="binance_black">#181A20</color>
-    <color name="binance_badge_bg">#FFF8E1</color>
-    <color name="zinli_magenta">#FF0055</color>
-    <color name="zinli_magenta_bg">#FFF0F5</color>
+    <!-- Billeteras Digitales y Cripto -->
+    <color name="binance_yellow">#EAB308</color>
+    <color name="binance_yellow_dark">#CA8A04</color>
+    <color name="binance_black">#0F172A</color>
+    <color name="binance_badge_bg">#FEF9C3</color>
+    <color name="zinli_magenta">#E11D48</color>
+    <color name="zinli_magenta_bg">#FFE4E6</color>
 </resources>

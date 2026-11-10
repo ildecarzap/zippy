@@ -1,28 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Zeasy" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Brand Colors -->
-        <item name="colorPrimary">@color/accent_green</item>
-        <item name="colorPrimaryContainer">@color/accent_green_bg</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/accent_blue</item>
-        <item name="colorSecondaryContainer">@color/accent_blue_bg</item>
+        <!-- Tipografía Global: Outfit como familia predeterminada para toda la app -->
+        <item name="fontFamily">@font/outfit</item>
+        <item name="android:fontFamily">@font/outfit</item>
 
-        <!-- System Bars & Background (Gestionados con enableEdgeToEdge para Android 15+) -->
+        <!-- Brand Colors (Regla 60-30-10) -->
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorPrimaryContainer">@color/brand_primary_subtle</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/brand_primary</item>
+        <item name="colorSecondaryContainer">@color/brand_primary_subtle</item>
+
+        <!-- System Bars & Background -->
         <item name="android:colorBackground">@color/background</item>
 
         <!-- Default text color -->
         <item name="android:textColor">@color/text_primary</item>
 
-        <!-- Components -->
+        <!-- Componentes Globales -->
         <item name="bottomNavigationStyle">@style/Widget.Zeasy.BottomNavigationView</item>
+        <item name="materialButtonStyle">@style/Widget.Zeasy.Button.Primary</item>
+        <item name="materialCardViewStyle">@style/Widget.Zeasy.Card</item>
+        <item name="textInputStyle">@style/Widget.Zeasy.TextInputLayout</item>
     </style>
 
+    <!-- Barra de Navegación Inferior -->
     <style name="Widget.Zeasy.BottomNavigationView" parent="Widget.Material3.BottomNavigationView">
-        <item name="itemRippleColor">@color/accent_green_bg</item>
+        <item name="itemRippleColor">@color/brand_primary_subtle</item>
         <item name="android:background">@color/surface</item>
         <item name="itemIconTint">@color/nav_selector</item>
         <item name="itemTextColor">@color/nav_selector</item>
+        <item name="itemTextAppearanceActive">@style/TextAppearance.Zeasy.Caption</item>
+        <item name="itemTextAppearanceInactive">@style/TextAppearance.Zeasy.Caption</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <!-- Botón Primario (Cobalto #1C5ADD, 12dp radio, sin sombras pesadas) -->
+    <style name="Widget.Zeasy.Button.Primary" parent="Widget.Material3.Button">
+        <item name="cornerRadius">12dp</item>
+        <item name="backgroundTint">@color/brand_primary</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textAppearance">@style/TextAppearance.Zeasy.Button</item>
+        <item name="elevation">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- Botón Outlined (Borde sutil 1.2dp, fondo blanco/superficie) -->
+    <style name="Widget.Zeasy.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="cornerRadius">12dp</item>
+        <item name="strokeColor">@color/border</item>
+        <item name="strokeWidth">1.2dp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textAppearance">@style/TextAppearance.Zeasy.Button</item>
+        <item name="elevation">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- Botón Tonal (Fondo suave surface_variant, texto cobalto) -->
+    <style name="Widget.Zeasy.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="cornerRadius">12dp</item>
+        <item name="backgroundTint">@color/surface_variant</item>
+        <item name="android:textColor">@color/brand_primary</item>
+        <item name="android:textAppearance">@style/TextAppearance.Zeasy.Button</item>
+        <item name="elevation">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- Tarjetas Minimalistas (Borde 1dp, 14dp radio, elevación plana) -->
+    <style name="Widget.Zeasy.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="cardCornerRadius">14dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/border</item>
+        <item name="cardBackgroundColor">@color/surface</item>
+    </style>
+
+    <!-- Campos de Entrada (10dp radio, foco en Cobalto) -->
+    <style name="Widget.Zeasy.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">10dp</item>
+        <item name="boxCornerRadiusTopEnd">10dp</item>
+        <item name="boxCornerRadiusBottomStart">10dp</item>
+        <item name="boxCornerRadiusBottomEnd">10dp</item>
+        <item name="boxStrokeColor">@color/brand_primary</item>
+        <item name="boxStrokeWidth">1.2dp</item>
+        <item name="boxStrokeWidthFocused">1.8dp</item>
+        <item name="hintTextColor">@color/brand_primary</item>
     </style>
 
     <!-- Retrocompatibility aliases -->
