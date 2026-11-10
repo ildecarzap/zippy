@@ -110,10 +110,11 @@ async def admin_dashboard(
     page_size: int = 15,
     q: Optional[str] = None,
     filter_plan: Optional[str] = None,
+    filter_version: Optional[str] = None,
     current_admin: AdminUser = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """Panel principal de gestión de licencias Zeasy con paginación optimizada."""
+    """Panel principal de gestión de licencias Zeasy con paginación optimizada y filtros de versión."""
     try:
         # Barrer automáticamente deudas expiradas para anularlas en CobrixPay
         cleanup_expired_pending_debts(db)
@@ -134,6 +135,31 @@ async def admin_dashboard(
     ).count()
     basic_devices = max(0, total_devices - pro_devices - trial_devices)
 
+    # Detección y ordenamiento semántico de versiones registradas
+    import re
+    def parse_version_tuple(v: Optional[str]):
+        if not v:
+            return (0, 0, 0)
+        parts = re.findall(r'\d+', str(v))
+        return tuple(int(p) for p in parts) if parts else (0, 0, 0)
+
+    raw_versions = [
+        v[0].strip() for v in db.query(DeviceLicense.app_version).distinct().all()
+        if v[0] and v[0].strip()
+    ]
+    all_known_versions = set(raw_versions)
+    all_known_versions.add("1.4.7")  # Versión oficial más reciente de Zeasy
+    unique_versions = sorted(all_known_versions, key=parse_version_tuple, reverse=True)
+    latest_version = unique_versions[0] if unique_versions else "1.4.7"
+
+    # Estadísticas globales de versiones
+    latest_version_count = db.query(DeviceLicense).filter(
+        DeviceLicense.app_version == latest_version
+    ).count()
+    outdated_version_count = db.query(DeviceLicense).filter(
+        (DeviceLicense.app_version != latest_version) | (DeviceLicense.app_version.is_(None))
+    ).count()
+
     query = db.query(DeviceLicense)
 
     if q:
@@ -147,6 +173,16 @@ async def admin_dashboard(
 
     if filter_plan and filter_plan in ["PRO", "TRIAL", "BASIC"]:
         query = query.filter(DeviceLicense.plan_type == filter_plan)
+
+    if filter_version and filter_version != "ALL":
+        if filter_version == "LATEST":
+            query = query.filter(DeviceLicense.app_version == latest_version)
+        elif filter_version == "OUTDATED":
+            query = query.filter(
+                (DeviceLicense.app_version != latest_version) | (DeviceLicense.app_version.is_(None))
+            )
+        else:
+            query = query.filter(DeviceLicense.app_version == filter_version)
 
     total_filtered = query.count()
     total_pages = max(1, math.ceil(total_filtered / page_size))
@@ -178,6 +214,11 @@ async def admin_dashboard(
             "basic_devices": basic_devices,
             "q": q or "",
             "filter_plan": filter_plan or "ALL",
+            "filter_version": filter_version or "ALL",
+            "unique_versions": unique_versions,
+            "latest_version": latest_version,
+            "latest_version_count": latest_version_count,
+            "outdated_version_count": outdated_version_count,
             "page": page,
             "page_size": page_size,
             "total_pages": total_pages,
@@ -449,6 +490,8 @@ async def get_license_details(
         "is_active": device.is_active,
         "remaining_days": device.remaining_days,
         "app_version": device.app_version or "1.0.0",
+        "latest_version": "1.4.7",
+        "is_latest_version": (device.app_version == "1.4.7"),
         "activation_code": getattr(device, "activation_code", "") or "",
         "created_at": device.created_at.strftime("%d/%m/%Y %H:%M") if device.created_at else "",
         "last_sync_at": device.last_sync_at.strftime("%d/%m/%Y %H:%M") if device.last_sync_at else "Nunca",

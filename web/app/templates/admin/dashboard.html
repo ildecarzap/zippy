@@ -90,11 +90,22 @@
             <option value="TRIAL" {% if filter_plan == 'TRIAL' %}selected{% endif %}>Solo Pruebas</option>
             <option value="BASIC" {% if filter_plan == 'BASIC' %}selected{% endif %}>Solo Básicos</option>
           </select>
+
+          <select name="filter_version" class="form-control" style="width: auto; padding: 8px 14px; font-size: 0.9rem;">
+            <option value="ALL" {% if filter_version == 'ALL' %}selected{% endif %}>Todas las Versiones</option>
+            <option value="LATEST" {% if filter_version == 'LATEST' %}selected{% endif %}>🚀 Última versión (v{{ latest_version }} • {{ latest_version_count }})</option>
+            <option value="OUTDATED" {% if filter_version == 'OUTDATED' %}selected{% endif %}>⚠️ Desactualizados (&lt; v{{ latest_version }} • {{ outdated_version_count }})</option>
+            {% for v in unique_versions %}
+              {% if v != latest_version %}
+              <option value="{{ v }}" {% if filter_version == v %}selected{% endif %}>Versión {{ v }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
         </div>
 
         <div style="display: flex; gap: 10px;">
           <button type="submit" class="btn btn-primary btn-sm">🔍 Filtrar</button>
-          {% if q or filter_plan != 'ALL' %}
+          {% if q or filter_plan != 'ALL' or filter_version != 'ALL' %}
           <a href="/{{ secret_path }}/dashboard" class="btn btn-outline btn-sm">Limpiar</a>
           {% endif %}
         </div>
@@ -153,15 +164,26 @@
                 {% else %}
                 <span style="font-size: 0.82rem; color: var(--color-text-light);">Sin documento</span>
                 {% endif %}
-                <span style="color: var(--color-text-light); font-size: 0.8rem;">• v{{ device.app_version or '1.0' }}</span>
+                {% if device.app_version == latest_version %}
+                <span style="font-size: 0.74rem; background: #E8F5E9; color: #1B5E20; padding: 2px 6px; border-radius: 4px; border: 1px solid #A5D6A7; font-weight: 700; margin-left: 4px;" title="Dispositivo al día en la última versión">✓ v{{ device.app_version }}</span>
+                {% else %}
+                <span style="font-size: 0.74rem; background: #FFF3E0; color: #E65100; padding: 2px 6px; border-radius: 4px; border: 1px solid #FFCC80; font-weight: 700; margin-left: 4px;" title="Versión desactualizada. Última versión oficial disponible: v{{ latest_version }}">⚠️ v{{ device.app_version or '1.0' }}</span>
+                {% endif %}
               </td>
 
               <!-- Teléfono -->
               <td>
                 {% if device.phone %}
-                <a href="https://wa.me/{{ device.phone | replace('+', '') | replace(' ', '') }}" target="_blank" style="color: var(--color-primary); font-weight: 500;">
+                <a href="https://wa.me/{{ device.phone | replace('+', '') | replace(' ', '') | replace('-', '') }}" target="_blank" style="color: var(--color-primary); font-weight: 600;">
                   📲 {{ device.phone }}
                 </a>
+                {% if device.app_version != latest_version %}
+                <div style="margin-top: 5px;">
+                  <a href="https://wa.me/{{ device.phone | replace('+', '') | replace(' ', '') | replace('-', '') }}?text=Hola%20{{ (device.merchant_name or 'amigo') | urlencode }}%2C%20te%20saludamos%20del%20equipo%20de%20Zeasy.%20Tenemos%20disponible%20la%20nueva%20versi%C3%B3n%20v{{ latest_version }}%20en%20Google%20Play%20con%20mejoras%20importantes%20de%20rendimiento%20y%20cobros.%20Te%20invitamos%20a%20actualizarla%20gratis%3A%20https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.ciem.cobrixpay" target="_blank" class="btn btn-outline btn-sm" style="font-size: 0.70rem; padding: 2px 7px; color: #B45309; border-color: #FCD34D; background: #FFFBEB; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;" title="Contactar por WhatsApp para sugerir actualización">
+                    🚀 Sugerir Actualizar
+                  </a>
+                </div>
+                {% endif %}
                 {% else %}
                 <span style="color: var(--color-text-light); font-size: 0.85rem;">No registrado</span>
                 {% endif %}
@@ -222,8 +244,8 @@
         {% if total_pages > 1 %}
         <div style="display: flex; gap: 6px; align-items: center;">
           {% if has_prev %}
-          <a href="/{{ secret_path }}/dashboard?page=1&q={{ q }}&filter_plan={{ filter_plan }}" class="btn btn-outline btn-sm" title="Primera página">«</a>
-          <a href="/{{ secret_path }}/dashboard?page={{ prev_page }}&q={{ q }}&filter_plan={{ filter_plan }}" class="btn btn-outline btn-sm" title="Página anterior">‹ Anterior</a>
+          <a href="/{{ secret_path }}/dashboard?page=1&q={{ q }}&filter_plan={{ filter_plan }}&filter_version={{ filter_version }}" class="btn btn-outline btn-sm" title="Primera página">«</a>
+          <a href="/{{ secret_path }}/dashboard?page={{ prev_page }}&q={{ q }}&filter_plan={{ filter_plan }}&filter_version={{ filter_version }}" class="btn btn-outline btn-sm" title="Página anterior">‹ Anterior</a>
           {% endif %}
 
           <span style="font-size: 0.85rem; font-weight: 600; padding: 4px 10px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px;">
@@ -231,8 +253,8 @@
           </span>
 
           {% if has_next %}
-          <a href="/{{ secret_path }}/dashboard?page={{ next_page }}&q={{ q }}&filter_plan={{ filter_plan }}" class="btn btn-outline btn-sm" title="Página siguiente">Siguiente ›</a>
-          <a href="/{{ secret_path }}/dashboard?page={{ total_pages }}&q={{ q }}&filter_plan={{ filter_plan }}" class="btn btn-outline btn-sm" title="Última página">»</a>
+          <a href="/{{ secret_path }}/dashboard?page={{ next_page }}&q={{ q }}&filter_plan={{ filter_plan }}&filter_version={{ filter_version }}" class="btn btn-outline btn-sm" title="Página siguiente">Siguiente ›</a>
+          <a href="/{{ secret_path }}/dashboard?page={{ total_pages }}&q={{ q }}&filter_plan={{ filter_plan }}&filter_version={{ filter_version }}" class="btn btn-outline btn-sm" title="Última página">»</a>
           {% endif %}
         </div>
         {% endif %}
@@ -637,7 +659,11 @@
 
         document.getElementById('udEmail').innerText = d.email || 'No registrado';
         document.getElementById('udDeviceId').innerText = d.device_id;
-        document.getElementById('udAppSync').innerText = `v${d.app_version} • Última sinc: ${d.last_sync_at}`;
+        const isLatest = d.is_latest_version || (d.app_version === '1.4.7');
+        const versionBadge = isLatest
+          ? `<span style="color: #1B5E20; background: #E8F5E9; padding: 2px 6px; border-radius: 4px; font-weight: 700;">✓ v${d.app_version} (Al día)</span>`
+          : `<span style="color: #E65100; background: #FFF3E0; padding: 2px 6px; border-radius: 4px; font-weight: 700;">⚠️ v${d.app_version} (Desactualizado, última: v${d.latest_version || '1.4.7'})</span>`;
+        document.getElementById('udAppSync').innerHTML = `${versionBadge} &nbsp;•&nbsp; Última sinc: ${d.last_sync_at}`;
 
         document.getElementById('udFormActivateTrial').action = `/${secretPath}/licenses/${d.id}/activate-trial`;
         document.getElementById('udFormActivate30').action = `/${secretPath}/licenses/${d.id}/activate-pro`;
