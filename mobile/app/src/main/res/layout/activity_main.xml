@@ -775,7 +775,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="📸"
+                                    android:text="💵"
                                     android:textSize="22sp" />
                             </LinearLayout>
 
@@ -867,85 +867,7 @@
                         </LinearLayout>
                     </LinearLayout>
 
-                    <!-- Módulo Analítico: Título Últimos Movimientos + Reportes -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="10dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Últimos Movimientos"
-                            android:fontFamily="@font/sora"
-                            android:textStyle="bold"
-                            android:textColor="@color/text_primary"
-                            android:textSize="17sp" />
-
-                        <TextView
-                            android:id="@+id/btnShareSummary"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Reportes ➔"
-                            android:fontFamily="@font/outfit"
-                            android:textStyle="bold"
-                            android:textColor="@color/brand_primary"
-                            android:textSize="13sp"
-                            android:padding="6dp" />
-                    </LinearLayout>
-
-                    <!-- Tarjeta de Gráfico Analítico de Actividad de Cobros -->
-                    <androidx.cardview.widget.CardView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="14dp"
-                        app:cardCornerRadius="20dp"
-                        app:cardElevation="2dp"
-                        app:cardBackgroundColor="@color/surface">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="16dp">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical">
-
-                                <TextView
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:text="Actividad de Cobros (7 Días)"
-                                    android:fontFamily="@font/outfit"
-                                    android:textStyle="bold"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="12sp" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="● Tendencia"
-                                    android:fontFamily="@font/outfit"
-                                    android:textStyle="bold"
-                                    android:textColor="@color/brand_primary"
-                                    android:textSize="11sp" />
-                            </LinearLayout>
-
-                            <com.cobrix.pocket.ui.components.MiniAnalyticsBarView
-                                android:id="@+id/barChartJornadaAnalytics"
-                                android:layout_width="match_parent"
-                                android:layout_height="75dp"
-                                android:layout_marginTop="10dp" />
-                        </LinearLayout>
-                    </androidx.cardview.widget.CardView>
-
+                    <!-- Encabezado de Movimientos + Acceso a Reportes + Filtros -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -960,9 +882,23 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="MOVIMIENTOS"
+                            android:fontFamily="@font/sora"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"
-                            android:textSize="15sp" />
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/btnShareSummary"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Reportes ➔"
+                            android:fontFamily="@font/outfit"
+                            android:textStyle="bold"
+                            android:textColor="@color/brand_primary"
+                            android:textSize="13sp"
+                            android:paddingHorizontal="6dp"
+                            android:paddingVertical="4dp"
+                            android:layout_marginEnd="6dp" />
 
                         <com.google.android.material.chip.ChipGroup
                             android:id="@+id/chipGroupLedgerFilter"
@@ -3043,51 +2979,13 @@
 
         </FrameLayout>
 
-    </LinearLayout>
-
-    <!-- Contenedor Flotante de Barra de Navegación (Floating Soft Dock Estilo Referencia) -->
-    <FrameLayout
-        android:id="@+id/layoutFloatingBottomNavContainer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="12dp">
-
-        <androidx.cardview.widget.CardView
+        <!-- Bottom Navigation (Fijo abajo, sin superponerse ni tapar el botón de guardar) -->
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomNavigation"
             android:layout_width="match_parent"
-            android:layout_height="62dp"
-            android:layout_gravity="bottom"
-            app:cardCornerRadius="31dp"
-            app:cardElevation="6dp"
-            app:cardBackgroundColor="@color/surface">
+            android:layout_height="wrap_content"
+            app:menu="@menu/bottom_nav_menu" />
 
-            <com.google.android.material.bottomnavigation.BottomNavigationView
-                android:id="@+id/bottomNavigation"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@android:color/transparent"
-                app:elevation="0dp"
-                app:labelVisibilityMode="unlabeled"
-                app:itemIconTint="@color/nav_selector"
-                app:itemTextColor="@color/nav_selector"
-                app:itemRippleColor="@color/brand_primary_subtle"
-                app:menu="@menu/bottom_nav_menu" />
-        </androidx.cardview.widget.CardView>
-
-        <!-- Botón Central Protagónico Flotante (Floating Center Action: Cobro Rápido / QR) -->
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/btnFloatingCenterAction"
-            android:layout_width="54dp"
-            android:layout_height="54dp"
-            android:layout_gravity="center_horizontal|bottom"
-            android:layout_marginBottom="10dp"
-            app:backgroundTint="#0F766E"
-            app:tint="@color/white"
-            app:fabCustomSize="54dp"
-            app:elevation="10dp"
-            android:contentDescription="Acción rápida de cobro"
-            app:srcCompat="@drawable/ic_cashier" />
-    </FrameLayout>
+    </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

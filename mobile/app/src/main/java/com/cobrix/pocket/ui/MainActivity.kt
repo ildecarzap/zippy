@@ -1337,11 +1337,6 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_settings -> binding.scrollSettingsContent.smoothScrollTo(0, 0)
             }
         }
-
-        binding.btnFloatingCenterAction.setOnClickListener {
-            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            binding.bottomNavigation.selectedItemId = R.id.nav_cashier
-        }
     }
 
     // --- TECLADO DE CAJA ---
@@ -3480,19 +3475,6 @@ class MainActivity : AppCompatActivity() {
             0f
         }
         binding.donutJornadaProgress.setProgress(progressVal)
-
-        // Alimentar Gráfico Analítico de Actividad de Cobros (Últimos 7 Días)
-        val dailyVals = FloatArray(7)
-        val dayLabels = arrayOf("L", "M", "M", "J", "V", "S", "D")
-        for (i in 6 downTo 0) {
-            val c = Calendar.getInstance().apply {
-                add(Calendar.DAY_OF_YEAR, -i)
-            }
-            val (dStart, dEnd) = getTimeRangeForDay(c)
-            val dSum = dbHelper.getTodaySummary(dStart, dEnd)
-            dailyVals[6 - i] = dSum.first.toFloat()
-        }
-        binding.barChartJornadaAnalytics.setData(dailyVals, dayLabels)
 
         // Optimización de rendimiento: Si la pestaña de Historial no está visible, no re-inflar toda la lista
         if (binding.viewLedger.visibility != View.VISIBLE) {
